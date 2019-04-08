@@ -12,7 +12,7 @@ import (
 	"os"
 	"time"
 
-	// "github.com/sylabs/singularity/internal/pkg/sylog"
+	"github.com/golang/glog"
 	"github.com/sylabs/singularity/pkg/util/user-agent"
 	"gopkg.in/cheggaaa/pb.v1"
 )
@@ -31,7 +31,7 @@ func UploadImage(filePath string, libraryRef string, libraryURL string, authToke
 	if err != nil {
 		return err
 	}
-	// sylog.Debugf("Image hash computed as %s\n", imageHash)
+	glog.V(2).Infof("Image hash computed as %s", imageHash)
 
 	entityName, collectionName, containerName, tags := parseLibraryRef(libraryRef)
 
@@ -41,7 +41,7 @@ func UploadImage(filePath string, libraryRef string, libraryURL string, authToke
 		return err
 	}
 	if !found {
-		// sylog.Verbosef("Entity %s does not exist in library - creating it.\n", entityName)
+		glog.V(1).Infof("Entity %s does not exist in library - creating it.", entityName)
 		entity, err = createEntity(libraryURL, authToken, entityName)
 		if err != nil {
 			return err
@@ -54,7 +54,7 @@ func UploadImage(filePath string, libraryRef string, libraryURL string, authToke
 		return err
 	}
 	if !found {
-		// sylog.Verbosef("Collection %s does not exist in library - creating it.\n", collectionName)
+		glog.V(1).Infof("Collection %s does not exist in library - creating it.", collectionName)
 		collection, err = createCollection(libraryURL, authToken, collectionName, entity.GetID().Hex())
 		if err != nil {
 			return err
@@ -67,7 +67,7 @@ func UploadImage(filePath string, libraryRef string, libraryURL string, authToke
 		return err
 	}
 	if !found {
-		// sylog.Verbosef("Container %s does not exist in library - creating it.\n", containerName)
+		glog.V(1).Infof("Container %s does not exist in library - creating it.", containerName)
 		container, err = createContainer(libraryURL, authToken, containerName, collection.GetID().Hex())
 		if err != nil {
 			return err
@@ -80,7 +80,7 @@ func UploadImage(filePath string, libraryRef string, libraryURL string, authToke
 		return err
 	}
 	if !found {
-		// sylog.Verbosef("Image %s does not exist in library - creating it.\n", imageHash)
+		glog.V(1).Infof("Image %s does not exist in library - creating it.", imageHash)
 		image, err = createImage(libraryURL, authToken, imageHash, container.GetID().Hex(), description)
 		if err != nil {
 			return err
@@ -88,18 +88,18 @@ func UploadImage(filePath string, libraryRef string, libraryURL string, authToke
 	}
 
 	if !image.Uploaded {
-		// sylog.Infof("Now uploading %s to the library\n", filePath)
+		glog.Infof("Now uploading %s to the library", filePath)
 		err = postFile(libraryURL, authToken, filePath, image.GetID().Hex())
 		if err != nil {
 			return err
 		}
-		// sylog.Debugf("Upload completed OK\n")
+		glog.V(2).Infof("Upload completed OK")
 	}
 	// } else {
-	// sylog.Infof("Image is already present in the library - not uploading.\n")
+	glog.Infof("Image is already present in the library - not uploading.")
 	// }
 
-	// sylog.Debugf("Setting tags against uploaded image\n")
+	glog.V(2).Infof("Setting tags against uploaded image")
 	err = setTags(libraryURL, authToken, container.GetID().Hex(), image.GetID().Hex(), tags)
 	if err != nil {
 		return err
@@ -122,7 +122,7 @@ func postFile(baseURL string, authToken string, filePath string, imageID string)
 	fileSize := fi.Size()
 
 	postURL := baseURL + "/v1/imagefile/" + imageID
-	// sylog.Debugf("postFile calling %s\n", postURL)
+	glog.V(2).Infof("postFile calling %s", postURL)
 
 	b := bufio.NewReader(f)
 
