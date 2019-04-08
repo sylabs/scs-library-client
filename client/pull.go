@@ -18,8 +18,8 @@ import (
 	pb "gopkg.in/cheggaaa/pb.v1"
 )
 
-// Timeout for an image pull in seconds - could be a large download...
-const pullTimeout = 1800
+// Timeout for an image pull - could be a large download...
+const pullTimeout = time.Duration(1800 * time.Second)
 
 // DownloadImage will retrieve an image from the Container Library,
 // saving it into the specified file
@@ -52,7 +52,7 @@ func DownloadImage(filePath string, libraryRef string, libraryURL string, Force 
 	}
 
 	client := &http.Client{
-		Timeout: pullTimeout * time.Second,
+		Timeout: pullTimeout,
 	}
 
 	req, err := http.NewRequest(http.MethodGet, url, nil)

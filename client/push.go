@@ -17,8 +17,8 @@ import (
 	"gopkg.in/cheggaaa/pb.v1"
 )
 
-// Timeout in seconds for the main upload (not api calls)
-const pushTimeout = 1800
+// Timeout for the main upload (not api calls)
+const pushTimeout = time.Duration(1800 * time.Second)
 
 // UploadImage will push a specified image up to the Container Library,
 func UploadImage(filePath string, libraryRef string, libraryURL string, authToken string, description string) error {
@@ -146,7 +146,7 @@ func postFile(baseURL string, authToken string, filePath string, imageID string)
 	// Content length is required by the API
 	req.ContentLength = fileSize
 	client := &http.Client{
-		Timeout: pushTimeout * time.Second,
+		Timeout: pushTimeout,
 	}
 	res, err := client.Do(req)
 

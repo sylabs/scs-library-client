@@ -19,8 +19,7 @@ import (
 	"github.com/sylabs/singularity/pkg/util/user-agent"
 )
 
-// HTTP timeout in seconds
-const httpTimeout = 10
+const httpTimeout = time.Duration(10 * time.Second)
 
 func getEntity(baseURL string, authToken string, entityRef string) (entity Entity, found bool, err error) {
 	url := (baseURL + "/v1/entities/" + entityRef)
@@ -215,7 +214,7 @@ func apiCreate(o interface{}, url string, authToken string) (objJSON []byte, err
 	req.Header.Set("User-Agent", useragent.Value())
 
 	client := &http.Client{
-		Timeout: (httpTimeout * time.Second),
+		Timeout: httpTimeout,
 	}
 	res, err := client.Do(req)
 	if err != nil {
@@ -239,7 +238,7 @@ func apiCreate(o interface{}, url string, authToken string) (objJSON []byte, err
 func apiGet(url string, authToken string) (objJSON []byte, found bool, err error) {
 	// sylog.Debugf("apiGet calling %s\n", url)
 	client := &http.Client{
-		Timeout: (httpTimeout * time.Second),
+		Timeout: httpTimeout,
 	}
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
@@ -276,7 +275,7 @@ func apiGet(url string, authToken string) (objJSON []byte, found bool, err error
 func apiGetTags(url string, authToken string) (tags TagMap, err error) {
 	// sylog.Debugf("apiGetTags calling %s\n", url)
 	client := &http.Client{
-		Timeout: (httpTimeout * time.Second),
+		Timeout: httpTimeout,
 	}
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
@@ -320,7 +319,7 @@ func apiSetTag(url string, authToken string, t ImageTag) (err error) {
 	}
 	req.Header.Set("User-Agent", useragent.Value())
 	client := &http.Client{
-		Timeout: (httpTimeout * time.Second),
+		Timeout: httpTimeout,
 	}
 	res, err := client.Do(req)
 	if err != nil {
