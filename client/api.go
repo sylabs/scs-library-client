@@ -15,7 +15,7 @@ import (
 	"time"
 
 	"github.com/globalsign/mgo/bson"
-	// "github.com/sylabs/singularity/internal/pkg/sylog"
+	"github.com/golang/glog"
 	"github.com/sylabs/singularity/pkg/util/user-agent"
 )
 
@@ -154,17 +154,17 @@ func createImage(baseURL string, authToken string, hash string, containerID stri
 
 func setTags(baseURL string, authToken string, containerID string, imageID string, tags []string) error {
 	// Get existing tags, so we know which will be replaced
-	_, err := apiGetTags(baseURL+"/v1/tags/"+containerID, authToken)
+	existingTags, err := apiGetTags(baseURL+"/v1/tags/"+containerID, authToken)
 	if err != nil {
 		return err
 	}
 
 	for _, tag := range tags {
-		// sylog.Infof("Setting tag %s\n", tag)
+		glog.Infof("Setting tag %s\n", tag)
 
-		// if _, ok := existingTags[tag]; ok {
-		// sylog.Warningf("%s replaces an existing tag\n", tag)
-		// }
+		if _, ok := existingTags[tag]; ok {
+			glog.Warningf("%s replaces an existing tag\n", tag)
+		}
 
 		imgTag := ImageTag{
 			tag,
@@ -201,7 +201,7 @@ func search(baseURL string, authToken string, value string) (results SearchResul
 }
 
 func apiCreate(o interface{}, url string, authToken string) (objJSON []byte, err error) {
-	// sylog.Debugf("apiCreate calling %s\n", url)
+	glog.V(2).Infof("apiCreate calling %s\n", url)
 	s, err := json.Marshal(o)
 	if err != nil {
 		return []byte{}, fmt.Errorf("error encoding object to JSON:\n\t%v", err)
@@ -236,7 +236,7 @@ func apiCreate(o interface{}, url string, authToken string) (objJSON []byte, err
 }
 
 func apiGet(url string, authToken string) (objJSON []byte, found bool, err error) {
-	// sylog.Debugf("apiGet calling %s\n", url)
+	glog.V(2).Infof("apiGet calling %s\n", url)
 	client := &http.Client{
 		Timeout: httpTimeout,
 	}
@@ -273,7 +273,7 @@ func apiGet(url string, authToken string) (objJSON []byte, found bool, err error
 }
 
 func apiGetTags(url string, authToken string) (tags TagMap, err error) {
-	// sylog.Debugf("apiGetTags calling %s\n", url)
+	glog.V(2).Infof("apiGetTags calling %s\n", url)
 	client := &http.Client{
 		Timeout: httpTimeout,
 	}
@@ -307,7 +307,7 @@ func apiGetTags(url string, authToken string) (tags TagMap, err error) {
 }
 
 func apiSetTag(url string, authToken string, t ImageTag) (err error) {
-	// sylog.Debugf("apiSetTag calling %s\n", url)
+	glog.V(2).Infof("apiSetTag calling %s\n", url)
 	s, err := json.Marshal(t)
 	if err != nil {
 		return fmt.Errorf("error encoding object to JSON:\n\t%v", err)
