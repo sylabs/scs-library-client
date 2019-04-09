@@ -21,7 +21,7 @@ import (
 const pushTimeout = time.Duration(1800 * time.Second)
 
 // UploadImage will push a specified image up to the Container Library,
-func UploadImage(c *Client, filePath string, libraryRef string, description string) error {
+func UploadImage(c *Client, filePath, libraryRef, description string) error {
 
 	if !IsLibraryPushRef(libraryRef) {
 		return fmt.Errorf("Not a valid library reference: %s", libraryRef)
@@ -107,7 +107,7 @@ func UploadImage(c *Client, filePath string, libraryRef string, description stri
 	return nil
 }
 
-func postFile(c *Client, filePath string, imageID string) error {
+func postFile(c *Client, filePath, imageID string) error {
 
 	f, err := os.Open(filePath)
 	if err != nil {
