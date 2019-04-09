@@ -12,18 +12,14 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"time"
 
 	"github.com/globalsign/mgo/bson"
 	"github.com/golang/glog"
-	"github.com/sylabs/singularity/pkg/util/user-agent"
 )
 
-const httpTimeout = time.Duration(10 * time.Second)
-
-func getEntity(baseURL string, authToken string, entityRef string) (entity Entity, found bool, err error) {
-	url := (baseURL + "/v1/entities/" + entityRef)
-	entJSON, found, err := apiGet(url, authToken)
+func getEntity(c *Client, entityRef string) (entity Entity, found bool, err error) {
+	url := "/v1/entities/" + entityRef
+	entJSON, found, err := c.apiGet(url)
 	if err != nil {
 		return entity, false, err
 	}
@@ -37,9 +33,9 @@ func getEntity(baseURL string, authToken string, entityRef string) (entity Entit
 	return res.Data, found, nil
 }
 
-func getCollection(baseURL string, authToken string, collectionRef string) (collection Collection, found bool, err error) {
-	url := baseURL + "/v1/collections/" + collectionRef
-	colJSON, found, err := apiGet(url, authToken)
+func getCollection(c *Client, collectionRef string) (collection Collection, found bool, err error) {
+	url := "/v1/collections/" + collectionRef
+	colJSON, found, err := c.apiGet(url)
 	if err != nil {
 		return collection, false, err
 	}
@@ -53,9 +49,9 @@ func getCollection(baseURL string, authToken string, collectionRef string) (coll
 	return res.Data, found, nil
 }
 
-func getContainer(baseURL string, authToken string, containerRef string) (container Container, found bool, err error) {
-	url := baseURL + "/v1/containers/" + containerRef
-	conJSON, found, err := apiGet(url, authToken)
+func getContainer(c *Client, containerRef string) (container Container, found bool, err error) {
+	url := "/v1/containers/" + containerRef
+	conJSON, found, err := c.apiGet(url)
 	if err != nil {
 		return container, false, err
 	}
@@ -69,9 +65,9 @@ func getContainer(baseURL string, authToken string, containerRef string) (contai
 	return res.Data, found, nil
 }
 
-func getImage(baseURL string, authToken string, imageRef string) (image Image, found bool, err error) {
-	url := baseURL + "/v1/images/" + imageRef
-	imgJSON, found, err := apiGet(url, authToken)
+func getImage(c *Client, imageRef string) (image Image, found bool, err error) {
+	url := "/v1/images/" + imageRef
+	imgJSON, found, err := c.apiGet(url)
 	if err != nil {
 		return image, false, err
 	}
@@ -85,12 +81,12 @@ func getImage(baseURL string, authToken string, imageRef string) (image Image, f
 	return res.Data, found, nil
 }
 
-func createEntity(baseURL string, authToken string, name string) (entity Entity, err error) {
+func createEntity(c *Client, name string) (entity Entity, err error) {
 	e := Entity{
 		Name:        name,
 		Description: "No description",
 	}
-	entJSON, err := apiCreate(e, baseURL+"/v1/entities", authToken)
+	entJSON, err := apiCreate(c, "/v1/entities", e)
 	if err != nil {
 		return entity, err
 	}
@@ -101,15 +97,15 @@ func createEntity(baseURL string, authToken string, name string) (entity Entity,
 	return res.Data, nil
 }
 
-func createCollection(baseURL string, authToken string, name string, entityID string) (collection Collection, err error) {
-	c := Collection{
+func createCollection(c *Client, name string, entityID string) (collection Collection, err error) {
+	newCollection := Collection{
 		Name:        name,
 		Description: "No description",
 		Entity:      bson.ObjectIdHex(entityID),
 	}
-	colJSON, err := apiCreate(c, baseURL+"/v1/collections", authToken)
+	colJSON, err := apiCreate(c, "/v1/collections", newCollection)
 	if err != nil {
-		return collection, err
+		return newCollection, err
 	}
 	var res CollectionResponse
 	if err := json.Unmarshal(colJSON, &res); err != nil {
@@ -118,15 +114,15 @@ func createCollection(baseURL string, authToken string, name string, entityID st
 	return res.Data, nil
 }
 
-func createContainer(baseURL string, authToken string, name string, collectionID string) (container Container, err error) {
-	c := Container{
+func createContainer(c *Client, name string, collectionID string) (container Container, err error) {
+	newContainer := Container{
 		Name:        name,
 		Description: "No description",
 		Collection:  bson.ObjectIdHex(collectionID),
 	}
-	conJSON, err := apiCreate(c, baseURL+"/v1/containers", authToken)
+	conJSON, err := apiCreate(c, "/v1/containers", newContainer)
 	if err != nil {
-		return container, err
+		return newContainer, err
 	}
 	var res ContainerResponse
 	if err := json.Unmarshal(conJSON, &res); err != nil {
@@ -135,13 +131,13 @@ func createContainer(baseURL string, authToken string, name string, collectionID
 	return res.Data, nil
 }
 
-func createImage(baseURL string, authToken string, hash string, containerID string, description string) (image Image, err error) {
+func createImage(c *Client, hash string, containerID string, description string) (image Image, err error) {
 	i := Image{
 		Hash:        hash,
 		Description: description,
 		Container:   bson.ObjectIdHex(containerID),
 	}
-	imgJSON, err := apiCreate(i, baseURL+"/v1/images", authToken)
+	imgJSON, err := apiCreate(c, "/v1/images", i)
 	if err != nil {
 		return image, err
 	}
@@ -152,9 +148,9 @@ func createImage(baseURL string, authToken string, hash string, containerID stri
 	return res.Data, nil
 }
 
-func setTags(baseURL string, authToken string, containerID string, imageID string, tags []string) error {
+func setTags(c *Client, containerID, imageID string, tags []string) error {
 	// Get existing tags, so we know which will be replaced
-	existingTags, err := apiGetTags(baseURL+"/v1/tags/"+containerID, authToken)
+	existingTags, err := apiGetTags(c, "/v1/tags/"+containerID)
 	if err != nil {
 		return err
 	}
@@ -170,7 +166,7 @@ func setTags(baseURL string, authToken string, containerID string, imageID strin
 			tag,
 			bson.ObjectIdHex(imageID),
 		}
-		err := apiSetTag(baseURL+"/v1/tags/"+containerID, authToken, imgTag)
+		err := apiSetTag(c, "/v1/tags/"+containerID, imgTag)
 		if err != nil {
 			return err
 		}
@@ -178,8 +174,8 @@ func setTags(baseURL string, authToken string, containerID string, imageID strin
 	return nil
 }
 
-func search(baseURL string, authToken string, value string) (results SearchResults, err error) {
-	u, err := url.Parse(baseURL + "/v1/search")
+func search(c *Client, value string) (results SearchResults, err error) {
+	u, err := url.Parse("/v1/search")
 	if err != nil {
 		return
 	}
@@ -187,36 +183,31 @@ func search(baseURL string, authToken string, value string) (results SearchResul
 	q.Set("value", value)
 	u.RawQuery = q.Encode()
 
-	resJSON, _, err := apiGet(u.String(), authToken)
+	resJSON, _, err := c.apiGet(u.String())
 	if err != nil {
 		return results, err
 	}
 
 	var res SearchResponse
 	if err := json.Unmarshal(resJSON, &res); err != nil {
-		return results, fmt.Errorf("error decoding reesults: %v", err)
+		return results, fmt.Errorf("error decoding results: %v", err)
 	}
 
 	return res.Data, nil
 }
 
-func apiCreate(o interface{}, url string, authToken string) (objJSON []byte, err error) {
+func apiCreate(c *Client, url string, o interface{}) (objJSON []byte, err error) {
 	glog.V(2).Infof("apiCreate calling %s", url)
 	s, err := json.Marshal(o)
 	if err != nil {
 		return []byte{}, fmt.Errorf("error encoding object to JSON:\n\t%v", err)
 	}
-	req, _ := http.NewRequest("POST", url, bytes.NewBuffer(s))
-	req.Header.Set("Content-Type", "application/json")
-	if authToken != "" {
-		req.Header.Set("Authorization", "Bearer "+authToken)
+	req, err := c.NewRequest("POST", url, "", bytes.NewBuffer(s))
+	if err != nil {
+		return []byte{}, fmt.Errorf("error creating POST request:\n\t%v", err)
 	}
-	req.Header.Set("User-Agent", useragent.Value())
 
-	client := &http.Client{
-		Timeout: httpTimeout,
-	}
-	res, err := client.Do(req)
+	res, err := c.HTTPClient.Do(req)
 	if err != nil {
 		return []byte{}, fmt.Errorf("error making request to server:\n\t%v", err)
 	}
@@ -235,20 +226,13 @@ func apiCreate(o interface{}, url string, authToken string) (objJSON []byte, err
 	return objJSON, nil
 }
 
-func apiGet(url string, authToken string) (objJSON []byte, found bool, err error) {
+func (c *Client) apiGet(url string) (objJSON []byte, found bool, err error) {
 	glog.V(2).Infof("apiGet calling %s", url)
-	client := &http.Client{
-		Timeout: httpTimeout,
-	}
-	req, err := http.NewRequest(http.MethodGet, url, nil)
+	req, err := c.NewRequest(http.MethodGet, url, "", nil)
 	if err != nil {
 		return []byte{}, false, fmt.Errorf("error creating request to server:\n\t%v", err)
 	}
-	if authToken != "" {
-		req.Header.Set("Authorization", "Bearer "+authToken)
-	}
-	req.Header.Set("User-Agent", useragent.Value())
-	res, err := client.Do(req)
+	res, err := c.HTTPClient.Do(req)
 	if err != nil {
 		return []byte{}, false, fmt.Errorf("error making request to server:\n\t%v", err)
 	}
@@ -272,20 +256,13 @@ func apiGet(url string, authToken string) (objJSON []byte, found bool, err error
 		jRes.Error.Code, jRes.Error.Status, jRes.Error.Message)
 }
 
-func apiGetTags(url string, authToken string) (tags TagMap, err error) {
+func apiGetTags(c *Client, url string) (tags TagMap, err error) {
 	glog.V(2).Infof("apiGetTags calling %s", url)
-	client := &http.Client{
-		Timeout: httpTimeout,
-	}
-	req, err := http.NewRequest(http.MethodGet, url, nil)
+	req, err := c.NewRequest(http.MethodGet, url, "", nil)
 	if err != nil {
 		return nil, fmt.Errorf("error creating request to server:\n\t%v", err)
 	}
-	if authToken != "" {
-		req.Header.Set("Authorization", "Bearer "+authToken)
-	}
-	req.Header.Set("User-Agent", useragent.Value())
-	res, err := client.Do(req)
+	res, err := c.HTTPClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("error making request to server:\n\t%v", err)
 	}
@@ -306,22 +283,17 @@ func apiGetTags(url string, authToken string) (tags TagMap, err error) {
 
 }
 
-func apiSetTag(url string, authToken string, t ImageTag) (err error) {
+func apiSetTag(c *Client, url string, t ImageTag) (err error) {
 	glog.V(2).Infof("apiSetTag calling %s", url)
 	s, err := json.Marshal(t)
 	if err != nil {
 		return fmt.Errorf("error encoding object to JSON:\n\t%v", err)
 	}
-	req, _ := http.NewRequest("POST", url, bytes.NewBuffer(s))
-	req.Header.Set("Content-Type", "application/json")
-	if authToken != "" {
-		req.Header.Set("Authorization", "Bearer "+authToken)
+	req, err := c.NewRequest("POST", url, "", bytes.NewBuffer(s))
+	if err != nil {
+		return fmt.Errorf("error creating POST request:\n\t%v", err)
 	}
-	req.Header.Set("User-Agent", useragent.Value())
-	client := &http.Client{
-		Timeout: httpTimeout,
-	}
-	res, err := client.Do(req)
+	res, err := c.HTTPClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("error making request to server:\n\t%v", err)
 	}
@@ -337,10 +309,10 @@ func apiSetTag(url string, authToken string, t ImageTag) (err error) {
 }
 
 // GetImage returns the Image object if exists, otherwise returns error
-func GetImage(baseURL string, authToken string, imageRef string) (image Image, err error) {
+func GetImage(c *Client, imageRef string) (image Image, err error) {
 	entityName, collectionName, containerName, tags := parseLibraryRef(imageRef)
 
-	i, f, err := getImage(baseURL, authToken, entityName+"/"+collectionName+"/"+containerName+":"+tags[0])
+	i, f, err := getImage(c, entityName+"/"+collectionName+"/"+containerName+":"+tags[0])
 	if err != nil {
 		return Image{}, err
 	} else if !f {

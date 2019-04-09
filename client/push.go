@@ -7,13 +7,13 @@ package client
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"net/http"
 	"os"
 	"time"
 
 	"github.com/golang/glog"
-	"github.com/sylabs/singularity/pkg/util/user-agent"
 	"gopkg.in/cheggaaa/pb.v1"
 )
 
@@ -21,7 +21,7 @@ import (
 const pushTimeout = time.Duration(1800 * time.Second)
 
 // UploadImage will push a specified image up to the Container Library,
-func UploadImage(filePath string, libraryRef string, libraryURL string, authToken string, description string) error {
+func UploadImage(c *Client, filePath string, libraryRef string, description string) error {
 
 	if !IsLibraryPushRef(libraryRef) {
 		return fmt.Errorf("Not a valid library reference: %s", libraryRef)
@@ -36,52 +36,52 @@ func UploadImage(filePath string, libraryRef string, libraryURL string, authToke
 	entityName, collectionName, containerName, tags := parseLibraryRef(libraryRef)
 
 	// Find or create entity
-	entity, found, err := getEntity(libraryURL, authToken, entityName)
+	entity, found, err := getEntity(c, entityName)
 	if err != nil {
 		return err
 	}
 	if !found {
 		glog.V(1).Infof("Entity %s does not exist in library - creating it.", entityName)
-		entity, err = createEntity(libraryURL, authToken, entityName)
+		entity, err = createEntity(c, entityName)
 		if err != nil {
 			return err
 		}
 	}
 
 	// Find or create collection
-	collection, found, err := getCollection(libraryURL, authToken, entityName+"/"+collectionName)
+	collection, found, err := getCollection(c, entityName+"/"+collectionName)
 	if err != nil {
 		return err
 	}
 	if !found {
 		glog.V(1).Infof("Collection %s does not exist in library - creating it.", collectionName)
-		collection, err = createCollection(libraryURL, authToken, collectionName, entity.GetID().Hex())
+		collection, err = createCollection(c, collectionName, entity.GetID().Hex())
 		if err != nil {
 			return err
 		}
 	}
 
 	// Find or create container
-	container, found, err := getContainer(libraryURL, authToken, entityName+"/"+collectionName+"/"+containerName)
+	container, found, err := getContainer(c, entityName+"/"+collectionName+"/"+containerName)
 	if err != nil {
 		return err
 	}
 	if !found {
 		glog.V(1).Infof("Container %s does not exist in library - creating it.", containerName)
-		container, err = createContainer(libraryURL, authToken, containerName, collection.GetID().Hex())
+		container, err = createContainer(c, containerName, collection.GetID().Hex())
 		if err != nil {
 			return err
 		}
 	}
 
 	// Find or create image
-	image, found, err := getImage(libraryURL, authToken, entityName+"/"+collectionName+"/"+containerName+":"+imageHash)
+	image, found, err := getImage(c, entityName+"/"+collectionName+"/"+containerName+":"+imageHash)
 	if err != nil {
 		return err
 	}
 	if !found {
 		glog.V(1).Infof("Image %s does not exist in library - creating it.", imageHash)
-		image, err = createImage(libraryURL, authToken, imageHash, container.GetID().Hex(), description)
+		image, err = createImage(c, imageHash, container.GetID().Hex(), description)
 		if err != nil {
 			return err
 		}
@@ -89,7 +89,7 @@ func UploadImage(filePath string, libraryRef string, libraryURL string, authToke
 
 	if !image.Uploaded {
 		glog.Infof("Now uploading %s to the library", filePath)
-		err = postFile(libraryURL, authToken, filePath, image.GetID().Hex())
+		err = postFile(c, filePath, image.GetID().Hex())
 		if err != nil {
 			return err
 		}
@@ -99,7 +99,7 @@ func UploadImage(filePath string, libraryRef string, libraryURL string, authToke
 	}
 
 	glog.V(2).Infof("Setting tags against uploaded image")
-	err = setTags(libraryURL, authToken, container.GetID().Hex(), image.GetID().Hex(), tags)
+	err = setTags(c, container.GetID().Hex(), image.GetID().Hex(), tags)
 	if err != nil {
 		return err
 	}
@@ -107,7 +107,7 @@ func UploadImage(filePath string, libraryRef string, libraryURL string, authToke
 	return nil
 }
 
-func postFile(baseURL string, authToken string, filePath string, imageID string) error {
+func postFile(c *Client, filePath string, imageID string) error {
 
 	f, err := os.Open(filePath)
 	if err != nil {
@@ -120,7 +120,7 @@ func postFile(baseURL string, authToken string, filePath string, imageID string)
 	}
 	fileSize := fi.Size()
 
-	postURL := baseURL + "/v1/imagefile/" + imageID
+	postURL := "/v1/imagefile/" + imageID
 	glog.V(2).Infof("postFile calling %s", postURL)
 
 	b := bufio.NewReader(f)
@@ -134,19 +134,15 @@ func postFile(baseURL string, authToken string, filePath string, imageID string)
 	bar.Start()
 	// create proxy reader
 	bodyProgress := bar.NewProxyReader(b)
+
+	ctx, cancel := context.WithTimeout(context.Background(), pushTimeout)
+	defer cancel()
+
 	// Make an upload request
-	req, _ := http.NewRequest("POST", postURL, bodyProgress)
-	req.Header.Set("Content-Type", "application/octet-stream")
-	if authToken != "" {
-		req.Header.Set("Authorization", "Bearer "+authToken)
-	}
-	req.Header.Set("User-Agent", useragent.Value())
+	req, _ := c.NewRequest("POST", postURL, "", bodyProgress)
 	// Content length is required by the API
 	req.ContentLength = fileSize
-	client := &http.Client{
-		Timeout: pushTimeout,
-	}
-	res, err := client.Do(req)
+	res, err := c.HTTPClient.Do(req.WithContext(ctx))
 
 	bar.Finish()
 

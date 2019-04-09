@@ -9,12 +9,10 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"reflect"
 	"testing"
 
 	"github.com/globalsign/mgo/bson"
-	useragent "github.com/sylabs/singularity/pkg/util/user-agent"
 )
 
 const testToken = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWUsImlhdCI6MTUxNjIzOTAyMn0.TCYt5XsITJX1CxPCT8yAV-TVkIEq_PbChOMqsLfRoPsnsgw5WEuts01mq-pQy7UJiN5mgRxD-WUcX16dUEMGlv50aqzpqh4Qktb3rk-BuQy72IFLOqV0G_zS245-kronKb78cPN25DGlcTwLtjPAYuNzVBAh4vGHSrQyHUdBBPM"
@@ -74,12 +72,6 @@ type mockService struct {
 	httpPath    string
 	httpServer  *httptest.Server
 	baseURI     string
-}
-
-func TestMain(m *testing.M) {
-	useragent.InitValue("singularity", "3.0.0-alpha.1-303-gaed8d30-dirty")
-
-	os.Exit(m.Run())
 }
 
 func (m *mockService) Run() {
@@ -150,6 +142,11 @@ func Test_getEntity(t *testing.T) {
 		},
 	}
 
+	c, err := NewClient(&Config{AuthToken: testToken})
+	if err != nil {
+		t.Errorf("Error initializing client: %v", err)
+	}
+
 	// Loop over test cases
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
@@ -164,7 +161,7 @@ func Test_getEntity(t *testing.T) {
 
 			m.Run()
 
-			entity, found, err := getEntity(m.baseURI, testToken, tt.entityRef)
+			entity, found, err := getEntity(c, tt.entityRef)
 
 			if err != nil && !tt.expectError {
 				t.Errorf("Unexpected error: %v", err)
@@ -230,6 +227,11 @@ func Test_getCollection(t *testing.T) {
 		},
 	}
 
+	c, err := NewClient(&Config{AuthToken: testToken})
+	if err != nil {
+		t.Errorf("Error initializing client: %v", err)
+	}
+
 	// Loop over test cases
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
@@ -244,7 +246,7 @@ func Test_getCollection(t *testing.T) {
 
 			m.Run()
 
-			collection, found, err := getCollection(m.baseURI, testToken, tt.collectionRef)
+			collection, found, err := getCollection(c, tt.collectionRef)
 
 			if err != nil && !tt.expectError {
 				t.Errorf("Unexpected error: %v", err)
@@ -310,6 +312,11 @@ func Test_getContainer(t *testing.T) {
 		},
 	}
 
+	c, err := NewClient(&Config{AuthToken: testToken})
+	if err != nil {
+		t.Errorf("Error initializing client: %v", err)
+	}
+
 	// Loop over test cases
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
@@ -324,7 +331,7 @@ func Test_getContainer(t *testing.T) {
 
 			m.Run()
 
-			container, found, err := getContainer(m.baseURI, testToken, tt.containerRef)
+			container, found, err := getContainer(c, tt.containerRef)
 
 			if err != nil && !tt.expectError {
 				t.Errorf("Unexpected error: %v", err)
@@ -390,6 +397,11 @@ func Test_getImage(t *testing.T) {
 		},
 	}
 
+	c, err := NewClient(&Config{AuthToken: testToken})
+	if err != nil {
+		t.Errorf("Error initializing client: %v", err)
+	}
+
 	// Loop over test cases
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
@@ -404,7 +416,7 @@ func Test_getImage(t *testing.T) {
 
 			m.Run()
 
-			image, found, err := getImage(m.baseURI, testToken, tt.imageRef)
+			image, found, err := getImage(c, tt.imageRef)
 
 			if err != nil && !tt.expectError {
 				t.Errorf("Unexpected error: %v", err)
@@ -455,6 +467,11 @@ func Test_createEntity(t *testing.T) {
 		},
 	}
 
+	c, err := NewClient(&Config{AuthToken: testToken})
+	if err != nil {
+		t.Errorf("Error initializing client: %v", err)
+	}
+
 	// Loop over test cases
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
@@ -469,7 +486,7 @@ func Test_createEntity(t *testing.T) {
 
 			m.Run()
 
-			entity, err := createEntity(m.baseURI, testToken, tt.entityRef)
+			entity, err := createEntity(c, tt.entityRef)
 
 			if err != nil && !tt.expectError {
 				t.Errorf("Unexpected error: %v", err)
@@ -517,6 +534,11 @@ func Test_createCollection(t *testing.T) {
 		},
 	}
 
+	c, err := NewClient(&Config{AuthToken: testToken})
+	if err != nil {
+		t.Errorf("Error initializing client: %v", err)
+	}
+
 	// Loop over test cases
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
@@ -531,7 +553,7 @@ func Test_createCollection(t *testing.T) {
 
 			m.Run()
 
-			collection, err := createCollection(m.baseURI, testToken, tt.collectionRef, bson.NewObjectId().Hex())
+			collection, err := createCollection(c, tt.collectionRef, bson.NewObjectId().Hex())
 
 			if err != nil && !tt.expectError {
 				t.Errorf("Unexpected error: %v", err)
@@ -579,6 +601,11 @@ func Test_createContainer(t *testing.T) {
 		},
 	}
 
+	c, err := NewClient(&Config{AuthToken: testToken})
+	if err != nil {
+		t.Errorf("Error initializing client: %v", err)
+	}
+
 	// Loop over test cases
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
@@ -593,7 +620,7 @@ func Test_createContainer(t *testing.T) {
 
 			m.Run()
 
-			container, err := createContainer(m.baseURI, testToken, tt.containerRef, bson.NewObjectId().Hex())
+			container, err := createContainer(c, tt.containerRef, bson.NewObjectId().Hex())
 
 			if err != nil && !tt.expectError {
 				t.Errorf("Unexpected error: %v", err)
@@ -641,6 +668,11 @@ func Test_createImage(t *testing.T) {
 		},
 	}
 
+	c, err := NewClient(&Config{AuthToken: testToken})
+	if err != nil {
+		t.Errorf("Error initializing client: %v", err)
+	}
+
 	// Loop over test cases
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
@@ -655,7 +687,7 @@ func Test_createImage(t *testing.T) {
 
 			m.Run()
 
-			image, err := createImage(m.baseURI, testToken, tt.imageRef, bson.NewObjectId().Hex(), "No Description")
+			image, err := createImage(c, tt.imageRef, bson.NewObjectId().Hex(), "No Description")
 
 			if err != nil && !tt.expectError {
 				t.Errorf("Unexpected error: %v", err)
@@ -703,6 +735,11 @@ func Test_setTags(t *testing.T) {
 		},
 	}
 
+	c, err := NewClient(&Config{AuthToken: testToken})
+	if err != nil {
+		t.Errorf("Error initializing client: %v", err)
+	}
+
 	// Loop over test cases
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
@@ -716,7 +753,7 @@ func Test_setTags(t *testing.T) {
 
 			m.Run()
 
-			err := setTags(m.baseURI, testToken, tt.containerRef, tt.imageRef, tt.tags)
+			err := setTags(c, tt.containerRef, tt.imageRef, tt.tags)
 
 			if err != nil && !tt.expectError {
 				t.Errorf("Unexpected error: %v", err)
@@ -764,6 +801,11 @@ func Test_search(t *testing.T) {
 		},
 	}
 
+	c, err := NewClient(&Config{AuthToken: testToken})
+	if err != nil {
+		t.Errorf("Error initializing client: %v", err)
+	}
+
 	// Loop over test cases
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
@@ -778,7 +820,7 @@ func Test_search(t *testing.T) {
 
 			m.Run()
 
-			results, err := search(m.baseURI, testToken, tt.value)
+			results, err := search(c, tt.value)
 
 			if err != nil && !tt.expectError {
 				t.Errorf("Unexpected error: %v", err)

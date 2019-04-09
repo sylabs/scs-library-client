@@ -10,12 +10,12 @@ import (
 )
 
 // SearchLibrary will search the library for a given query and display results
-func SearchLibrary(value string, libraryURL string, authToken string) error {
+func SearchLibrary(c *Client, value string) error {
 	if len(value) < 3 {
 		return fmt.Errorf("Bad query '%s'. You must search for at least 3 characters", value)
 	}
 
-	results, err := search(libraryURL, authToken, value)
+	results, err := search(c, value)
 	if err != nil {
 		return err
 	}
