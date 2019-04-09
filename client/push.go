@@ -94,10 +94,9 @@ func UploadImage(filePath string, libraryRef string, libraryURL string, authToke
 			return err
 		}
 		glog.V(2).Infof("Upload completed OK")
+	} else {
+		glog.Infof("Image is already present in the library - not uploading.")
 	}
-	// } else {
-	glog.Infof("Image is already present in the library - not uploading.")
-	// }
 
 	glog.V(2).Infof("Setting tags against uploaded image")
 	err = setTags(libraryURL, authToken, container.GetID().Hex(), image.GetID().Hex(), tags)
