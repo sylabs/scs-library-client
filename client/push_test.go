@@ -10,7 +10,6 @@ import (
 	"testing"
 
 	"github.com/globalsign/mgo/bson"
-	"github.com/sylabs/scs-library-client/internal/pkg/test"
 )
 
 //func postFile(baseURL string, filePath string, imageID string) error {
@@ -52,7 +51,7 @@ func Test_postFile(t *testing.T) {
 
 	// Loop over test cases
 	for _, tt := range tests {
-		t.Run(tt.description, test.WithoutPrivilege(func(t *testing.T) {
+		t.Run(tt.description, func(t *testing.T) {
 
 			m := mockService{
 				t:        t,
@@ -73,7 +72,7 @@ func Test_postFile(t *testing.T) {
 
 			m.Stop()
 
-		}))
+		})
 
 	}
 }

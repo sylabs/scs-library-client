@@ -14,9 +14,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"testing"
-
 	// "github.com/sylabs/singularity/internal/pkg/sylog"
-	"github.com/sylabs/scs-library-client/internal/pkg/test"
 )
 
 type mockRawService struct {
@@ -89,7 +87,7 @@ func Test_DownloadImage(t *testing.T) {
 		{"Should not overwrite", "entity/collection/image:tag", tempFile, false, http.StatusOK, "test_data/test_sha256", "test_data/test_token", true, true},
 	}
 	for _, tt := range tests {
-		t.Run(tt.name, test.WithoutPrivilege(func(t *testing.T) {
+		t.Run(tt.name, func(t *testing.T) {
 
 			m := mockRawService{
 				t:        t,
@@ -124,6 +122,6 @@ func Test_DownloadImage(t *testing.T) {
 				}
 			}
 
-		}))
+		})
 	}
 }
