@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	// "github.com/sylabs/singularity/internal/pkg/sylog"
+	"github.com/golang/glog"
 	useragent "github.com/sylabs/singularity/pkg/util/user-agent"
 	pb "gopkg.in/cheggaaa/pb.v1"
 )
@@ -32,7 +32,7 @@ func DownloadImage(filePath string, libraryRef string, libraryURL string, Force 
 	if filePath == "" {
 		_, _, container, tags := parseLibraryRef(libraryRef)
 		filePath = fmt.Sprintf("%s_%s.sif", container, tags[0])
-		// sylog.Infof("Download filename not provided. Downloading to: %s\n", filePath)
+		glog.Infof("Download filename not provided. Downloading to: %s", filePath)
 	}
 
 	libraryRef = strings.TrimPrefix(libraryRef, "library://")
@@ -43,7 +43,7 @@ func DownloadImage(filePath string, libraryRef string, libraryURL string, Force 
 
 	url := libraryURL + "/v1/imagefile/" + libraryRef
 
-	// sylog.Debugf("Pulling from URL: %s\n", url)
+	glog.V(2).Infof("Pulling from URL: %s", url)
 
 	if !Force {
 		if _, err := os.Stat(filePath); err == nil {
@@ -84,7 +84,7 @@ func DownloadImage(filePath string, libraryRef string, libraryURL string, Force 
 			jRes.Error.Code, jRes.Error.Status, jRes.Error.Message)
 	}
 
-	// sylog.Debugf("OK response received, beginning body download\n")
+	glog.V(2).Infof("OK response received, beginning body download")
 
 	// Perms are 777 *prior* to umask
 	out, err := os.OpenFile(filePath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0777)
@@ -93,13 +93,12 @@ func DownloadImage(filePath string, libraryRef string, libraryURL string, Force 
 	}
 	defer out.Close()
 
-	// sylog.Debugf("Created output file: %s\n", filePath)
+	glog.V(2).Infof("Created output file: %s", filePath)
 
 	bodySize := res.ContentLength
 	bar := pb.New(int(bodySize)).SetUnits(pb.U_BYTES)
-	//	if sylog.GetLevel() < 0 {
-	//		bar.NotPrint = true
-	//	}
+	// TODO: reinstate ability to disable progress bar output
+	// bar.NotPrint = true
 	bar.ShowTimeLeft = true
 	bar.ShowSpeed = true
 
@@ -116,7 +115,7 @@ func DownloadImage(filePath string, libraryRef string, libraryURL string, Force 
 
 	bar.Finish()
 
-	// sylog.Debugf("Download complete\n")
+	glog.V(2).Infof("Download complete")
 
 	return nil
 

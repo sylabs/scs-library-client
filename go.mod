@@ -5,6 +5,7 @@ go 1.12
 require (
 	github.com/fatih/color v1.7.0 // indirect
 	github.com/globalsign/mgo v0.0.0-20181015135952-eeefdecb41b8
+	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
 	github.com/kr/pretty v0.1.0 // indirect
 	github.com/mattn/go-colorable v0.1.1 // indirect
 	github.com/mattn/go-runewidth v0.0.4 // indirect

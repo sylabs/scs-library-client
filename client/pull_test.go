@@ -14,7 +14,8 @@ import (
 	"net/http/httptest"
 	"os"
 	"testing"
-	// "github.com/sylabs/singularity/internal/pkg/sylog"
+
+	"github.com/golang/glog"
 )
 
 type mockRawService struct {
@@ -52,10 +53,10 @@ func (m *mockRawService) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	defer inFile.Close()
 
-	_, _ = io.Copy(w, bufio.NewReader(inFile))
-	// if err != nil {
-	// sylog.Fatalf("Test HTTP server unable to output file: %v", err)
-	// }
+	_, err = io.Copy(w, bufio.NewReader(inFile))
+	if err != nil {
+		glog.Fatalf("Test HTTP server unable to output file: %v", err)
+	}
 
 }
 
