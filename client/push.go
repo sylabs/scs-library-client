@@ -127,9 +127,8 @@ func postFile(baseURL string, authToken string, filePath string, imageID string)
 
 	// create and start bar
 	bar := pb.New(int(fileSize)).SetUnits(pb.U_BYTES)
-	//	if sylog.GetLevel() < 0 {
-	//		bar.NotPrint = true
-	//	}
+	// TODO: reinstate ability to disable progress bar output
+	// bar.NotPrint = true
 	bar.ShowTimeLeft = true
 	bar.ShowSpeed = true
 	bar.Start()
