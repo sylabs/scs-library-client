@@ -9,19 +9,30 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"time"
 
 	"github.com/golang/glog"
-	"gopkg.in/cheggaaa/pb.v1"
 )
 
 // Timeout for the main upload (not api calls)
 const pushTimeout = time.Duration(1800 * time.Second)
 
+// UploadCallback defines an interface used to perform a call-out to
+// set up the source file Reader.
+type UploadCallback interface {
+	// Initializes the callback given a file size and source file Reader
+	InitUpload(int64, io.Reader)
+	// (optionally) can return a proxied Reader
+	GetReader() io.Reader
+	// called when the upload operation is complete
+	Finish()
+}
+
 // UploadImage will push a specified image up to the Container Library,
-func UploadImage(c *Client, filePath, libraryRef, description string) error {
+func UploadImage(c *Client, filePath, libraryRef, description string, callback UploadCallback) error {
 
 	if !IsLibraryPushRef(libraryRef) {
 		return fmt.Errorf("Not a valid library reference: %s", libraryRef)
@@ -89,7 +100,7 @@ func UploadImage(c *Client, filePath, libraryRef, description string) error {
 
 	if !image.Uploaded {
 		glog.Infof("Now uploading %s to the library", filePath)
-		err = postFile(c, filePath, image.GetID().Hex())
+		err = postFile(c, filePath, image.GetID().Hex(), callback)
 		if err != nil {
 			return err
 		}
@@ -107,7 +118,7 @@ func UploadImage(c *Client, filePath, libraryRef, description string) error {
 	return nil
 }
 
-func postFile(c *Client, filePath, imageID string) error {
+func postFile(c *Client, filePath, imageID string, callback UploadCallback) error {
 
 	f, err := os.Open(filePath)
 	if err != nil {
@@ -125,15 +136,17 @@ func postFile(c *Client, filePath, imageID string) error {
 
 	b := bufio.NewReader(f)
 
-	// create and start bar
-	bar := pb.New(int(fileSize)).SetUnits(pb.U_BYTES)
-	// TODO: reinstate ability to disable progress bar output
-	// bar.NotPrint = true
-	bar.ShowTimeLeft = true
-	bar.ShowSpeed = true
-	bar.Start()
-	// create proxy reader
-	bodyProgress := bar.NewProxyReader(b)
+	var bodyProgress io.Reader
+
+	if callback != nil {
+		// use callback to set up source file reader
+		callback.InitUpload(fileSize, b)
+		defer callback.Finish()
+
+		bodyProgress = callback.GetReader()
+	} else {
+		bodyProgress = b
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), pushTimeout)
 	defer cancel()
@@ -143,8 +156,6 @@ func postFile(c *Client, filePath, imageID string) error {
 	// Content length is required by the API
 	req.ContentLength = fileSize
 	res, err := c.HTTPClient.Do(req.WithContext(ctx))
-
-	bar.Finish()
 
 	if err != nil {
 		return fmt.Errorf("Error uploading file to server: %s", err.Error())
