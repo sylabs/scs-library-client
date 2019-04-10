@@ -175,15 +175,9 @@ func setTags(c *Client, containerID, imageID string, tags []string) error {
 }
 
 func search(c *Client, value string) (results SearchResults, err error) {
-	u, err := url.Parse("/v1/search")
-	if err != nil {
-		return
-	}
-	q := u.Query()
-	q.Set("value", value)
-	u.RawQuery = q.Encode()
+	url := fmt.Sprintf("/v1/search?value=%s", url.QueryEscape(value))
 
-	resJSON, _, err := c.apiGet(u.String())
+	resJSON, _, err := c.apiGet(url)
 	if err != nil {
 		return results, err
 	}
@@ -226,9 +220,16 @@ func apiCreate(c *Client, url string, o interface{}) (objJSON []byte, err error)
 	return objJSON, nil
 }
 
-func (c *Client) apiGet(url string) (objJSON []byte, found bool, err error) {
-	glog.V(2).Infof("apiGet calling %s", url)
-	req, err := c.NewRequest(http.MethodGet, url, "", nil)
+func (c *Client) apiGet(path string) (objJSON []byte, found bool, err error) {
+	glog.V(2).Infof("apiGet calling %s", path)
+
+	// split url containing query into component pieces (path and raw query)
+	u, err := url.Parse(path)
+	if err != nil {
+		return []byte{}, false, fmt.Errorf("error parsing url:\n\t%v", err)
+	}
+
+	req, err := c.NewRequest(http.MethodGet, u.Path, u.RawQuery, nil)
 	if err != nil {
 		return []byte{}, false, fmt.Errorf("error creating request to server:\n\t%v", err)
 	}
