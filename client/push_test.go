@@ -49,11 +49,6 @@ func Test_postFile(t *testing.T) {
 		},
 	}
 
-	c, err := NewClient(&Config{AuthToken: "aabbccddee"})
-	if err != nil {
-		t.Errorf("Error initializing client: %v", err)
-	}
-
 	// Loop over test cases
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
@@ -65,8 +60,14 @@ func Test_postFile(t *testing.T) {
 			}
 
 			m.Run()
+			defer m.httpServer.Close()
 
-			err := postFile(c, tt.testFile, tt.imageRef, nil)
+			c, err := NewClient(&Config{AuthToken: testToken, BaseURL: m.baseURI})
+			if err != nil {
+				t.Errorf("Error initializing client: %v", err)
+			}
+
+			err = postFile(c, tt.testFile, tt.imageRef, nil)
 
 			if err != nil && !tt.expectError {
 				t.Errorf("Unexpected error: %v", err)

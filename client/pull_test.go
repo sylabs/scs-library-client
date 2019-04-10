@@ -77,19 +77,15 @@ func Test_DownloadImage(t *testing.T) {
 		force        bool
 		code         int
 		testFile     string
+		tokenFile    string
 		checkContent bool
 		expectError  bool
 	}{
-		{"Bad filename", "entity/collection/image:tag", "notadir/test.sif", false, http.StatusBadRequest, "test_data/test_sha256", false, true},
-		{"Bad library ref", "entity/collection/im,age:tag", tempFile, false, http.StatusBadRequest, "test_data/test_sha256", false, true},
-		{"Server error", "entity/collection/image:tag", tempFile, false, http.StatusInternalServerError, "test_data/test_sha256", false, true},
-		{"Good Download", "entity/collection/image:tag", tempFile, false, http.StatusOK, "test_data/test_sha256", true, false},
-		{"Should not overwrite", "entity/collection/image:tag", tempFile, false, http.StatusOK, "test_data/test_sha256", true, true},
-	}
-
-	c, err := NewClient(&Config{AuthToken: "aabbccdd"})
-	if err != nil {
-		t.Errorf("Error initializing client: %v", err)
+		{"Bad filename", "entity/collection/image:tag", "notadir/test.sif", false, http.StatusBadRequest, "test_data/test_sha256", "test_data/test_token", false, true},
+		{"Bad library ref", "entity/collection/im,age:tag", tempFile, false, http.StatusBadRequest, "test_data/test_sha256", "test_data/test_token", false, true},
+		{"Server error", "entity/collection/image:tag", tempFile, false, http.StatusInternalServerError, "test_data/test_sha256", "test_data/test_token", false, true},
+		{"Good Download", "entity/collection/image:tag", tempFile, false, http.StatusOK, "test_data/test_sha256", "test_data/test_token", true, false},
+		{"Should not overwrite", "entity/collection/image:tag", tempFile, false, http.StatusOK, "test_data/test_sha256", "test_data/test_token", true, true},
 	}
 
 	for _, tt := range tests {
@@ -105,7 +101,12 @@ func Test_DownloadImage(t *testing.T) {
 			m.Run()
 			defer m.Stop()
 
-			err := DownloadImage(c, tt.outFile, tt.libraryRef, tt.force, nil)
+			c, err := NewClient(&Config{AuthToken: tt.tokenFile, BaseURL: m.baseURI})
+			if err != nil {
+				t.Errorf("Error initializing client: %v", err)
+			}
+
+			err = DownloadImage(c, tt.outFile, tt.libraryRef, tt.force, nil)
 
 			if err != nil && !tt.expectError {
 				t.Errorf("Unexpected error: %v", err)

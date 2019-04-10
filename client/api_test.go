@@ -142,11 +142,6 @@ func Test_getEntity(t *testing.T) {
 		},
 	}
 
-	c, err := NewClient(&Config{AuthToken: testToken})
-	if err != nil {
-		t.Errorf("Error initializing client: %v", err)
-	}
-
 	// Loop over test cases
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
@@ -160,6 +155,12 @@ func Test_getEntity(t *testing.T) {
 			}
 
 			m.Run()
+			defer m.httpServer.Close()
+
+			c, err := NewClient(&Config{AuthToken: testToken, BaseURL: m.baseURI})
+			if err != nil {
+				t.Errorf("Error initializing client: %v", err)
+			}
 
 			entity, found, err := getEntity(c, tt.entityRef)
 
@@ -227,11 +228,6 @@ func Test_getCollection(t *testing.T) {
 		},
 	}
 
-	c, err := NewClient(&Config{AuthToken: testToken})
-	if err != nil {
-		t.Errorf("Error initializing client: %v", err)
-	}
-
 	// Loop over test cases
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
@@ -245,6 +241,12 @@ func Test_getCollection(t *testing.T) {
 			}
 
 			m.Run()
+			defer m.httpServer.Close()
+
+			c, err := NewClient(&Config{AuthToken: testToken, BaseURL: m.baseURI})
+			if err != nil {
+				t.Errorf("Error initializing client: %v", err)
+			}
 
 			collection, found, err := getCollection(c, tt.collectionRef)
 
@@ -312,11 +314,6 @@ func Test_getContainer(t *testing.T) {
 		},
 	}
 
-	c, err := NewClient(&Config{AuthToken: testToken})
-	if err != nil {
-		t.Errorf("Error initializing client: %v", err)
-	}
-
 	// Loop over test cases
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
@@ -330,6 +327,12 @@ func Test_getContainer(t *testing.T) {
 			}
 
 			m.Run()
+			defer m.httpServer.Close()
+
+			c, err := NewClient(&Config{AuthToken: testToken, BaseURL: m.baseURI})
+			if err != nil {
+				t.Errorf("Error initializing client: %v", err)
+			}
 
 			container, found, err := getContainer(c, tt.containerRef)
 
@@ -397,11 +400,6 @@ func Test_getImage(t *testing.T) {
 		},
 	}
 
-	c, err := NewClient(&Config{AuthToken: testToken})
-	if err != nil {
-		t.Errorf("Error initializing client: %v", err)
-	}
-
 	// Loop over test cases
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
@@ -415,6 +413,12 @@ func Test_getImage(t *testing.T) {
 			}
 
 			m.Run()
+			defer m.httpServer.Close()
+
+			c, err := NewClient(&Config{AuthToken: testToken, BaseURL: m.baseURI})
+			if err != nil {
+				t.Errorf("Error initializing client: %v", err)
+			}
 
 			image, found, err := getImage(c, tt.imageRef)
 
@@ -467,11 +471,6 @@ func Test_createEntity(t *testing.T) {
 		},
 	}
 
-	c, err := NewClient(&Config{AuthToken: testToken})
-	if err != nil {
-		t.Errorf("Error initializing client: %v", err)
-	}
-
 	// Loop over test cases
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
@@ -485,6 +484,12 @@ func Test_createEntity(t *testing.T) {
 			}
 
 			m.Run()
+			defer m.httpServer.Close()
+
+			c, err := NewClient(&Config{AuthToken: testToken, BaseURL: m.baseURI})
+			if err != nil {
+				t.Errorf("Error initializing client: %v", err)
+			}
 
 			entity, err := createEntity(c, tt.entityRef)
 
@@ -524,19 +529,6 @@ func Test_createCollection(t *testing.T) {
 			expectCollection: Collection{Name: "test"},
 			expectError:      false,
 		},
-		{
-			description:      "Error response",
-			code:             http.StatusInternalServerError,
-			body:             Collection{},
-			collectionRef:    "test",
-			expectCollection: Collection{},
-			expectError:      true,
-		},
-	}
-
-	c, err := NewClient(&Config{AuthToken: testToken})
-	if err != nil {
-		t.Errorf("Error initializing client: %v", err)
 	}
 
 	// Loop over test cases
@@ -552,6 +544,11 @@ func Test_createCollection(t *testing.T) {
 			}
 
 			m.Run()
+
+			c, err := NewClient(&Config{AuthToken: testToken, BaseURL: m.baseURI})
+			if err != nil {
+				t.Errorf("Error initializing client: %v", err)
+			}
 
 			collection, err := createCollection(c, tt.collectionRef, bson.NewObjectId().Hex())
 
@@ -591,19 +588,6 @@ func Test_createContainer(t *testing.T) {
 			expectContainer: Container{Name: "test"},
 			expectError:     false,
 		},
-		{
-			description:     "Error response",
-			code:            http.StatusInternalServerError,
-			body:            Container{},
-			containerRef:    "test",
-			expectContainer: Container{},
-			expectError:     true,
-		},
-	}
-
-	c, err := NewClient(&Config{AuthToken: testToken})
-	if err != nil {
-		t.Errorf("Error initializing client: %v", err)
 	}
 
 	// Loop over test cases
@@ -619,6 +603,12 @@ func Test_createContainer(t *testing.T) {
 			}
 
 			m.Run()
+			defer m.httpServer.Close()
+
+			c, err := NewClient(&Config{AuthToken: testToken, BaseURL: m.baseURI})
+			if err != nil {
+				t.Errorf("Error initializing client: %v", err)
+			}
 
 			container, err := createContainer(c, tt.containerRef, bson.NewObjectId().Hex())
 
@@ -668,11 +658,6 @@ func Test_createImage(t *testing.T) {
 		},
 	}
 
-	c, err := NewClient(&Config{AuthToken: testToken})
-	if err != nil {
-		t.Errorf("Error initializing client: %v", err)
-	}
-
 	// Loop over test cases
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
@@ -686,6 +671,12 @@ func Test_createImage(t *testing.T) {
 			}
 
 			m.Run()
+			defer m.httpServer.Close()
+
+			c, err := NewClient(&Config{AuthToken: testToken, BaseURL: m.baseURI})
+			if err != nil {
+				t.Errorf("Error initializing client: %v", err)
+			}
 
 			image, err := createImage(c, tt.imageRef, bson.NewObjectId().Hex(), "No Description")
 
@@ -735,11 +726,6 @@ func Test_setTags(t *testing.T) {
 		},
 	}
 
-	c, err := NewClient(&Config{AuthToken: testToken})
-	if err != nil {
-		t.Errorf("Error initializing client: %v", err)
-	}
-
 	// Loop over test cases
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
@@ -752,8 +738,14 @@ func Test_setTags(t *testing.T) {
 			}
 
 			m.Run()
+			defer m.httpServer.Close()
 
-			err := setTags(c, tt.containerRef, tt.imageRef, tt.tags)
+			c, err := NewClient(&Config{AuthToken: testToken, BaseURL: m.baseURI})
+			if err != nil {
+				t.Errorf("Error initializing client: %v", err)
+			}
+
+			err = setTags(c, tt.containerRef, tt.imageRef, tt.tags)
 
 			if err != nil && !tt.expectError {
 				t.Errorf("Unexpected error: %v", err)
@@ -801,11 +793,6 @@ func Test_search(t *testing.T) {
 		},
 	}
 
-	c, err := NewClient(&Config{AuthToken: testToken})
-	if err != nil {
-		t.Errorf("Error initializing client: %v", err)
-	}
-
 	// Loop over test cases
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
@@ -819,6 +806,12 @@ func Test_search(t *testing.T) {
 			}
 
 			m.Run()
+			defer m.httpServer.Close()
+
+			c, err := NewClient(&Config{AuthToken: testToken, BaseURL: m.baseURI})
+			if err != nil {
+				t.Errorf("Error initializing client: %v", err)
+			}
 
 			results, err := search(c, tt.value)
 
