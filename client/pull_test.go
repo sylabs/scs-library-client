@@ -87,6 +87,7 @@ func Test_DownloadImage(t *testing.T) {
 		{"Good Download", "entity/collection/image:tag", tempFile, false, http.StatusOK, "test_data/test_sha256", "test_data/test_token", true, false},
 		{"Should not overwrite", "entity/collection/image:tag", tempFile, false, http.StatusOK, "test_data/test_sha256", "test_data/test_token", true, true},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 
@@ -100,7 +101,12 @@ func Test_DownloadImage(t *testing.T) {
 			m.Run()
 			defer m.Stop()
 
-			err := DownloadImage(tt.outFile, tt.libraryRef, m.baseURI, tt.force, tt.tokenFile)
+			c, err := NewClient(&Config{AuthToken: tt.tokenFile, BaseURL: m.baseURI})
+			if err != nil {
+				t.Errorf("Error initializing client: %v", err)
+			}
+
+			err = DownloadImage(c, tt.outFile, tt.libraryRef, tt.force, nil)
 
 			if err != nil && !tt.expectError {
 				t.Errorf("Unexpected error: %v", err)

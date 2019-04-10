@@ -7,21 +7,32 @@ package client
 
 import (
 	"bufio"
+	"context"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"time"
 
 	"github.com/golang/glog"
-	"github.com/sylabs/singularity/pkg/util/user-agent"
-	"gopkg.in/cheggaaa/pb.v1"
 )
 
 // Timeout for the main upload (not api calls)
 const pushTimeout = time.Duration(1800 * time.Second)
 
+// UploadCallback defines an interface used to perform a call-out to
+// set up the source file Reader.
+type UploadCallback interface {
+	// Initializes the callback given a file size and source file Reader
+	InitUpload(int64, io.Reader)
+	// (optionally) can return a proxied Reader
+	GetReader() io.Reader
+	// called when the upload operation is complete
+	Finish()
+}
+
 // UploadImage will push a specified image up to the Container Library,
-func UploadImage(filePath string, libraryRef string, libraryURL string, authToken string, description string) error {
+func UploadImage(c *Client, filePath, libraryRef, description string, callback UploadCallback) error {
 
 	if !IsLibraryPushRef(libraryRef) {
 		return fmt.Errorf("Not a valid library reference: %s", libraryRef)
@@ -36,52 +47,52 @@ func UploadImage(filePath string, libraryRef string, libraryURL string, authToke
 	entityName, collectionName, containerName, tags := parseLibraryRef(libraryRef)
 
 	// Find or create entity
-	entity, found, err := getEntity(libraryURL, authToken, entityName)
+	entity, found, err := getEntity(c, entityName)
 	if err != nil {
 		return err
 	}
 	if !found {
 		glog.V(1).Infof("Entity %s does not exist in library - creating it.", entityName)
-		entity, err = createEntity(libraryURL, authToken, entityName)
+		entity, err = createEntity(c, entityName)
 		if err != nil {
 			return err
 		}
 	}
 
 	// Find or create collection
-	collection, found, err := getCollection(libraryURL, authToken, entityName+"/"+collectionName)
+	collection, found, err := getCollection(c, entityName+"/"+collectionName)
 	if err != nil {
 		return err
 	}
 	if !found {
 		glog.V(1).Infof("Collection %s does not exist in library - creating it.", collectionName)
-		collection, err = createCollection(libraryURL, authToken, collectionName, entity.GetID().Hex())
+		collection, err = createCollection(c, collectionName, entity.GetID().Hex())
 		if err != nil {
 			return err
 		}
 	}
 
 	// Find or create container
-	container, found, err := getContainer(libraryURL, authToken, entityName+"/"+collectionName+"/"+containerName)
+	container, found, err := getContainer(c, entityName+"/"+collectionName+"/"+containerName)
 	if err != nil {
 		return err
 	}
 	if !found {
 		glog.V(1).Infof("Container %s does not exist in library - creating it.", containerName)
-		container, err = createContainer(libraryURL, authToken, containerName, collection.GetID().Hex())
+		container, err = createContainer(c, containerName, collection.GetID().Hex())
 		if err != nil {
 			return err
 		}
 	}
 
 	// Find or create image
-	image, found, err := getImage(libraryURL, authToken, entityName+"/"+collectionName+"/"+containerName+":"+imageHash)
+	image, found, err := getImage(c, entityName+"/"+collectionName+"/"+containerName+":"+imageHash)
 	if err != nil {
 		return err
 	}
 	if !found {
 		glog.V(1).Infof("Image %s does not exist in library - creating it.", imageHash)
-		image, err = createImage(libraryURL, authToken, imageHash, container.GetID().Hex(), description)
+		image, err = createImage(c, imageHash, container.GetID().Hex(), description)
 		if err != nil {
 			return err
 		}
@@ -89,7 +100,7 @@ func UploadImage(filePath string, libraryRef string, libraryURL string, authToke
 
 	if !image.Uploaded {
 		glog.Infof("Now uploading %s to the library", filePath)
-		err = postFile(libraryURL, authToken, filePath, image.GetID().Hex())
+		err = postFile(c, filePath, image.GetID().Hex(), callback)
 		if err != nil {
 			return err
 		}
@@ -99,7 +110,7 @@ func UploadImage(filePath string, libraryRef string, libraryURL string, authToke
 	}
 
 	glog.V(2).Infof("Setting tags against uploaded image")
-	err = setTags(libraryURL, authToken, container.GetID().Hex(), image.GetID().Hex(), tags)
+	err = setTags(c, container.GetID().Hex(), image.GetID().Hex(), tags)
 	if err != nil {
 		return err
 	}
@@ -107,7 +118,7 @@ func UploadImage(filePath string, libraryRef string, libraryURL string, authToke
 	return nil
 }
 
-func postFile(baseURL string, authToken string, filePath string, imageID string) error {
+func postFile(c *Client, filePath, imageID string, callback UploadCallback) error {
 
 	f, err := os.Open(filePath)
 	if err != nil {
@@ -120,35 +131,31 @@ func postFile(baseURL string, authToken string, filePath string, imageID string)
 	}
 	fileSize := fi.Size()
 
-	postURL := baseURL + "/v1/imagefile/" + imageID
+	postURL := "/v1/imagefile/" + imageID
 	glog.V(2).Infof("postFile calling %s", postURL)
 
 	b := bufio.NewReader(f)
 
-	// create and start bar
-	bar := pb.New(int(fileSize)).SetUnits(pb.U_BYTES)
-	// TODO: reinstate ability to disable progress bar output
-	// bar.NotPrint = true
-	bar.ShowTimeLeft = true
-	bar.ShowSpeed = true
-	bar.Start()
-	// create proxy reader
-	bodyProgress := bar.NewProxyReader(b)
-	// Make an upload request
-	req, _ := http.NewRequest("POST", postURL, bodyProgress)
-	req.Header.Set("Content-Type", "application/octet-stream")
-	if authToken != "" {
-		req.Header.Set("Authorization", "Bearer "+authToken)
+	var bodyProgress io.Reader
+
+	if callback != nil {
+		// use callback to set up source file reader
+		callback.InitUpload(fileSize, b)
+		defer callback.Finish()
+
+		bodyProgress = callback.GetReader()
+	} else {
+		bodyProgress = b
 	}
-	req.Header.Set("User-Agent", useragent.Value())
+
+	ctx, cancel := context.WithTimeout(context.Background(), pushTimeout)
+	defer cancel()
+
+	// Make an upload request
+	req, _ := c.NewRequest("POST", postURL, "", bodyProgress)
 	// Content length is required by the API
 	req.ContentLength = fileSize
-	client := &http.Client{
-		Timeout: pushTimeout,
-	}
-	res, err := client.Do(req)
-
-	bar.Finish()
+	res, err := c.HTTPClient.Do(req.WithContext(ctx))
 
 	if err != nil {
 		return fmt.Errorf("Error uploading file to server: %s", err.Error())

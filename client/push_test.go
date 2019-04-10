@@ -60,8 +60,14 @@ func Test_postFile(t *testing.T) {
 			}
 
 			m.Run()
+			defer m.httpServer.Close()
 
-			err := postFile(m.baseURI, testToken, tt.testFile, tt.imageRef)
+			c, err := NewClient(&Config{AuthToken: testToken, BaseURL: m.baseURI})
+			if err != nil {
+				t.Errorf("Error initializing client: %v", err)
+			}
+
+			err = postFile(c, tt.testFile, tt.imageRef, nil)
 
 			if err != nil && !tt.expectError {
 				t.Errorf("Unexpected error: %v", err)
