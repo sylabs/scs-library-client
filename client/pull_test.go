@@ -105,7 +105,7 @@ func Test_DownloadImage(t *testing.T) {
 			m.Run()
 			defer m.Stop()
 
-			err := DownloadImage(c, tt.outFile, tt.libraryRef, tt.force)
+			err := DownloadImage(c, tt.outFile, tt.libraryRef, tt.force, nil)
 
 			if err != nil && !tt.expectError {
 				t.Errorf("Unexpected error: %v", err)
