@@ -14,7 +14,7 @@ import (
 
 // Config contains the client configuration.
 type Config struct {
-	// Base URL of the service (https://keys.sylabs.io is used if not supplied).
+	// Base URL of the service.
 	BaseURL string
 	// Auth token to include in the Authorization header of each request (if supplied).
 	AuthToken string
@@ -40,7 +40,7 @@ type Client struct {
 }
 
 // NewClient sets up a new Cloud-Library Service client with the specified base URL and auth token.
-func NewClient(cfg *Config) (c *Client, err error) {
+func NewClient(cfg *Config) (*Client, error) {
 	if cfg == nil {
 		cfg = DefaultConfig
 	}
@@ -55,7 +55,7 @@ func NewClient(cfg *Config) (c *Client, err error) {
 		return nil, err
 	}
 
-	c = &Client{
+	c := &Client{
 		BaseURL:   baseURL,
 		AuthToken: cfg.AuthToken,
 		UserAgent: cfg.UserAgent,
@@ -71,19 +71,18 @@ func NewClient(cfg *Config) (c *Client, err error) {
 	return c, nil
 }
 
-// newRequest returns a new Request given a method, path, query, and optional body.
-func (c *Client) newRequest(method, path, rawQuery string, body io.Reader) (r *http.Request, err error) {
+// NewRequest initializes HTTP request and sets up headers based on configuration
+func (c *Client) NewRequest(method, path, rawQuery string, body io.Reader) (*http.Request, error) {
 	u := c.BaseURL.ResolveReference(&url.URL{
 		Path:     path,
 		RawQuery: rawQuery,
 	})
-
-	r, err = http.NewRequest(method, u.String(), body)
+	r, err := http.NewRequest(method, u.String(), body)
 	if err != nil {
 		return nil, err
 	}
 	if v := c.AuthToken; v != "" {
-		r.Header.Set("Authorization", fmt.Sprintf("BEARER %s", v))
+		r.Header.Set("Authorization", fmt.Sprintf("Bearer %s", v))
 	}
 	if v := c.UserAgent; v != "" {
 		r.Header.Set("User-Agent", v)

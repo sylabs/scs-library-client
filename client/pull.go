@@ -6,6 +6,7 @@
 package client
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -14,8 +15,6 @@ import (
 	"time"
 
 	"github.com/golang/glog"
-	useragent "github.com/sylabs/singularity/pkg/util/user-agent"
-	pb "gopkg.in/cheggaaa/pb.v1"
 )
 
 // Timeout for an image pull - could be a large download...
@@ -23,7 +22,7 @@ const pullTimeout = time.Duration(1800 * time.Second)
 
 // DownloadImage will retrieve an image from the Container Library,
 // saving it into the specified file
-func DownloadImage(filePath string, libraryRef string, libraryURL string, Force bool, authToken string) error {
+func DownloadImage(c *Client, filePath, libraryRef string, force bool, callback func(int64, io.Reader, io.Writer) error) error {
 
 	if !IsLibraryPullRef(libraryRef) {
 		return fmt.Errorf("Not a valid library reference: %s", libraryRef)
@@ -41,31 +40,25 @@ func DownloadImage(filePath string, libraryRef string, libraryURL string, Force 
 		libraryRef += ":latest"
 	}
 
-	url := libraryURL + "/v1/imagefile/" + libraryRef
+	url := "/v1/imagefile/" + libraryRef
 
 	glog.V(2).Infof("Pulling from URL: %s", url)
 
-	if !Force {
+	if !force {
 		if _, err := os.Stat(filePath); err == nil {
 			return fmt.Errorf("image file already exists - will not overwrite")
 		}
 	}
 
-	client := &http.Client{
-		Timeout: pullTimeout,
-	}
-
-	req, err := http.NewRequest(http.MethodGet, url, nil)
+	req, err := c.NewRequest(http.MethodGet, url, "", nil)
 	if err != nil {
 		return err
 	}
 
-	if authToken != "" {
-		req.Header.Set("Authorization", "Bearer "+authToken)
-	}
-	req.Header.Set("User-Agent", useragent.Value())
+	ctx, cancel := context.WithTimeout(context.Background(), pullTimeout)
+	defer cancel()
 
-	res, err := client.Do(req)
+	res, err := c.HTTPClient.Do(req.WithContext(ctx))
 	if err != nil {
 		return err
 	}
@@ -95,25 +88,14 @@ func DownloadImage(filePath string, libraryRef string, libraryURL string, Force 
 
 	glog.V(2).Infof("Created output file: %s", filePath)
 
-	bodySize := res.ContentLength
-	bar := pb.New(int(bodySize)).SetUnits(pb.U_BYTES)
-	// TODO: reinstate ability to disable progress bar output
-	// bar.NotPrint = true
-	bar.ShowTimeLeft = true
-	bar.ShowSpeed = true
-
-	// create proxy reader
-	bodyProgress := bar.NewProxyReader(res.Body)
-
-	bar.Start()
-
-	// Write the body to file
-	_, err = io.Copy(out, bodyProgress)
+	if callback != nil {
+		err = callback(res.ContentLength, res.Body, out)
+	} else {
+		_, err = io.Copy(out, res.Body)
+	}
 	if err != nil {
 		return err
 	}
-
-	bar.Finish()
 
 	glog.V(2).Infof("Download complete")
 
