@@ -107,7 +107,7 @@ func Test_getEntity(t *testing.T) {
 		body         interface{}
 		reqCallback  func(*http.Request, *testing.T)
 		entityRef    string
-		expectEntity Entity
+		expectEntity *Entity
 		expectFound  bool
 		expectError  bool
 	}{
@@ -117,7 +117,7 @@ func Test_getEntity(t *testing.T) {
 			body:         jsonresp.Response{Error: &jsonresp.Error{Code: http.StatusNotFound}},
 			reqCallback:  nil,
 			entityRef:    "notthere",
-			expectEntity: Entity{},
+			expectEntity: nil,
 			expectFound:  false,
 			expectError:  false,
 		},
@@ -127,7 +127,7 @@ func Test_getEntity(t *testing.T) {
 			body:         jsonresp.Response{Error: &jsonresp.Error{Code: http.StatusUnauthorized}},
 			reqCallback:  nil,
 			entityRef:    "notmine",
-			expectEntity: Entity{},
+			expectEntity: nil,
 			expectFound:  false,
 			expectError:  true,
 		},
@@ -137,7 +137,7 @@ func Test_getEntity(t *testing.T) {
 			body:         EntityResponse{Data: testEntity},
 			reqCallback:  nil,
 			entityRef:    "test-user",
-			expectEntity: testEntity,
+			expectEntity: &testEntity,
 			expectFound:  true,
 			expectError:  false,
 		},
@@ -193,7 +193,7 @@ func Test_getCollection(t *testing.T) {
 		body             interface{}
 		reqCallback      func(*http.Request, *testing.T)
 		collectionRef    string
-		expectCollection Collection
+		expectCollection *Collection
 		expectFound      bool
 		expectError      bool
 	}{
@@ -203,7 +203,7 @@ func Test_getCollection(t *testing.T) {
 			body:             jsonresp.Response{Error: &jsonresp.Error{Code: http.StatusNotFound}},
 			reqCallback:      nil,
 			collectionRef:    "notthere",
-			expectCollection: Collection{},
+			expectCollection: nil,
 			expectFound:      false,
 			expectError:      false,
 		},
@@ -213,7 +213,7 @@ func Test_getCollection(t *testing.T) {
 			body:             jsonresp.Response{Error: &jsonresp.Error{Code: http.StatusUnauthorized}},
 			reqCallback:      nil,
 			collectionRef:    "notmine",
-			expectCollection: Collection{},
+			expectCollection: nil,
 			expectFound:      false,
 			expectError:      true,
 		},
@@ -223,7 +223,7 @@ func Test_getCollection(t *testing.T) {
 			body:             CollectionResponse{Data: testCollection},
 			reqCallback:      nil,
 			collectionRef:    "test-entity/test-collection",
-			expectCollection: testCollection,
+			expectCollection: &testCollection,
 			expectFound:      true,
 			expectError:      false,
 		},
@@ -279,7 +279,7 @@ func Test_getContainer(t *testing.T) {
 		body            interface{}
 		reqCallback     func(*http.Request, *testing.T)
 		containerRef    string
-		expectContainer Container
+		expectContainer *Container
 		expectFound     bool
 		expectError     bool
 	}{
@@ -289,7 +289,7 @@ func Test_getContainer(t *testing.T) {
 			body:            jsonresp.Response{Error: &jsonresp.Error{Code: http.StatusNotFound}},
 			reqCallback:     nil,
 			containerRef:    "notthere",
-			expectContainer: Container{},
+			expectContainer: nil,
 			expectFound:     false,
 			expectError:     false,
 		},
@@ -299,7 +299,7 @@ func Test_getContainer(t *testing.T) {
 			body:            jsonresp.Response{Error: &jsonresp.Error{Code: http.StatusUnauthorized}},
 			reqCallback:     nil,
 			containerRef:    "notmine",
-			expectContainer: Container{},
+			expectContainer: nil,
 			expectFound:     false,
 			expectError:     true,
 		},
@@ -309,7 +309,7 @@ func Test_getContainer(t *testing.T) {
 			body:            ContainerResponse{Data: testContainer},
 			reqCallback:     nil,
 			containerRef:    "test-entity/test-collection/test-container",
-			expectContainer: testContainer,
+			expectContainer: &testContainer,
 			expectFound:     true,
 			expectError:     false,
 		},
@@ -365,7 +365,7 @@ func Test_getImage(t *testing.T) {
 		body        interface{}
 		reqCallback func(*http.Request, *testing.T)
 		imageRef    string
-		expectImage Image
+		expectImage *Image
 		expectFound bool
 		expectError bool
 	}{
@@ -375,7 +375,7 @@ func Test_getImage(t *testing.T) {
 			body:        jsonresp.Response{Error: &jsonresp.Error{Code: http.StatusNotFound}},
 			reqCallback: nil,
 			imageRef:    "notthere",
-			expectImage: Image{},
+			expectImage: nil,
 			expectFound: false,
 			expectError: false,
 		},
@@ -385,7 +385,7 @@ func Test_getImage(t *testing.T) {
 			body:        jsonresp.Response{Error: &jsonresp.Error{Code: http.StatusUnauthorized}},
 			reqCallback: nil,
 			imageRef:    "notmine",
-			expectImage: Image{},
+			expectImage: nil,
 			expectFound: false,
 			expectError: true,
 		},
@@ -395,7 +395,7 @@ func Test_getImage(t *testing.T) {
 			body:        ImageResponse{Data: testImage},
 			reqCallback: nil,
 			imageRef:    "test",
-			expectImage: testImage,
+			expectImage: &testImage,
 			expectFound: true,
 			expectError: false,
 		},
@@ -451,7 +451,7 @@ func Test_createEntity(t *testing.T) {
 		body         interface{}
 		reqCallback  func(*http.Request, *testing.T)
 		entityRef    string
-		expectEntity Entity
+		expectEntity *Entity
 		expectError  bool
 	}{
 		{
@@ -459,7 +459,7 @@ func Test_createEntity(t *testing.T) {
 			code:         http.StatusOK,
 			body:         EntityResponse{Data: testEntity},
 			entityRef:    "test",
-			expectEntity: testEntity,
+			expectEntity: &testEntity,
 			expectError:  false,
 		},
 		{
@@ -467,7 +467,7 @@ func Test_createEntity(t *testing.T) {
 			code:         http.StatusInternalServerError,
 			body:         Entity{},
 			entityRef:    "test",
-			expectEntity: Entity{},
+			expectEntity: nil,
 			expectError:  true,
 		},
 	}
@@ -519,7 +519,7 @@ func Test_createCollection(t *testing.T) {
 		body             interface{}
 		reqCallback      func(*http.Request, *testing.T)
 		collectionRef    string
-		expectCollection Collection
+		expectCollection *Collection
 		expectError      bool
 	}{
 		{
@@ -527,7 +527,7 @@ func Test_createCollection(t *testing.T) {
 			code:             http.StatusOK,
 			body:             CollectionResponse{Data: Collection{Name: "test"}},
 			collectionRef:    "test",
-			expectCollection: Collection{Name: "test"},
+			expectCollection: &Collection{Name: "test"},
 			expectError:      false,
 		},
 	}
@@ -578,7 +578,7 @@ func Test_createContainer(t *testing.T) {
 		body            interface{}
 		reqCallback     func(*http.Request, *testing.T)
 		containerRef    string
-		expectContainer Container
+		expectContainer *Container
 		expectError     bool
 	}{
 		{
@@ -586,7 +586,7 @@ func Test_createContainer(t *testing.T) {
 			code:            http.StatusOK,
 			body:            ContainerResponse{Data: Container{Name: "test"}},
 			containerRef:    "test",
-			expectContainer: Container{Name: "test"},
+			expectContainer: &Container{Name: "test"},
 			expectError:     false,
 		},
 	}
@@ -638,7 +638,7 @@ func Test_createImage(t *testing.T) {
 		body        interface{}
 		reqCallback func(*http.Request, *testing.T)
 		imageRef    string
-		expectImage Image
+		expectImage *Image
 		expectError bool
 	}{
 		{
@@ -646,7 +646,7 @@ func Test_createImage(t *testing.T) {
 			code:        http.StatusOK,
 			body:        ImageResponse{Data: Image{Hash: "sha256.e50a30881ace3d5944f5661d222db7bee5296be9e4dc7c1fcb7604bcae926e88"}},
 			imageRef:    "test",
-			expectImage: Image{Hash: "sha256.e50a30881ace3d5944f5661d222db7bee5296be9e4dc7c1fcb7604bcae926e88"},
+			expectImage: &Image{Hash: "sha256.e50a30881ace3d5944f5661d222db7bee5296be9e4dc7c1fcb7604bcae926e88"},
 			expectError: false,
 		},
 		{
@@ -654,7 +654,7 @@ func Test_createImage(t *testing.T) {
 			code:        http.StatusInternalServerError,
 			body:        Image{},
 			imageRef:    "test",
-			expectImage: Image{},
+			expectImage: nil,
 			expectError: true,
 		},
 	}
@@ -769,7 +769,7 @@ func Test_search(t *testing.T) {
 		body          interface{}
 		reqCallback   func(*http.Request, *testing.T)
 		value         string
-		expectResults SearchResults
+		expectResults *SearchResults
 		expectError   bool
 	}{
 		{
@@ -777,7 +777,7 @@ func Test_search(t *testing.T) {
 			value:         "test",
 			code:          http.StatusOK,
 			body:          jsonresp.Response{Data: testSearch},
-			expectResults: testSearch,
+			expectResults: &testSearch,
 			expectError:   false,
 		},
 		{
