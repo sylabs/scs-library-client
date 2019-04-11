@@ -13,6 +13,7 @@ import (
 	"testing"
 
 	"github.com/globalsign/mgo/bson"
+	jsonresp "github.com/sylabs/json-resp"
 )
 
 const testToken = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWUsImlhdCI6MTUxNjIzOTAyMn0.TCYt5XsITJX1CxPCT8yAV-TVkIEq_PbChOMqsLfRoPsnsgw5WEuts01mq-pQy7UJiN5mgRxD-WUcX16dUEMGlv50aqzpqh4Qktb3rk-BuQy72IFLOqV0G_zS245-kronKb78cPN25DGlcTwLtjPAYuNzVBAh4vGHSrQyHUdBBPM"
@@ -106,37 +107,37 @@ func Test_getEntity(t *testing.T) {
 		body         interface{}
 		reqCallback  func(*http.Request, *testing.T)
 		entityRef    string
-		expectEntity Entity
+		expectEntity *Entity
 		expectFound  bool
 		expectError  bool
 	}{
 		{
 			description:  "NotFound",
 			code:         http.StatusNotFound,
-			body:         JSONResponse{Error: JSONError{Code: http.StatusNotFound, Status: http.StatusText(http.StatusNotFound)}},
+			body:         jsonresp.Response{Error: &jsonresp.Error{Code: http.StatusNotFound}},
 			reqCallback:  nil,
 			entityRef:    "notthere",
-			expectEntity: Entity{},
+			expectEntity: nil,
 			expectFound:  false,
 			expectError:  false,
 		},
 		{
 			description:  "Unauthorized",
 			code:         http.StatusUnauthorized,
-			body:         JSONResponse{Error: JSONError{Code: http.StatusUnauthorized, Status: http.StatusText(http.StatusUnauthorized)}},
+			body:         jsonresp.Response{Error: &jsonresp.Error{Code: http.StatusUnauthorized}},
 			reqCallback:  nil,
 			entityRef:    "notmine",
-			expectEntity: Entity{},
+			expectEntity: nil,
 			expectFound:  false,
 			expectError:  true,
 		},
 		{
 			description:  "ValidResponse",
 			code:         http.StatusOK,
-			body:         EntityResponse{Data: testEntity, Error: JSONError{}},
+			body:         EntityResponse{Data: testEntity},
 			reqCallback:  nil,
 			entityRef:    "test-user",
-			expectEntity: testEntity,
+			expectEntity: &testEntity,
 			expectFound:  true,
 			expectError:  false,
 		},
@@ -192,37 +193,37 @@ func Test_getCollection(t *testing.T) {
 		body             interface{}
 		reqCallback      func(*http.Request, *testing.T)
 		collectionRef    string
-		expectCollection Collection
+		expectCollection *Collection
 		expectFound      bool
 		expectError      bool
 	}{
 		{
 			description:      "NotFound",
 			code:             http.StatusNotFound,
-			body:             JSONResponse{Error: JSONError{Code: http.StatusNotFound, Status: http.StatusText(http.StatusNotFound)}},
+			body:             jsonresp.Response{Error: &jsonresp.Error{Code: http.StatusNotFound}},
 			reqCallback:      nil,
 			collectionRef:    "notthere",
-			expectCollection: Collection{},
+			expectCollection: nil,
 			expectFound:      false,
 			expectError:      false,
 		},
 		{
 			description:      "Unauthorized",
 			code:             http.StatusUnauthorized,
-			body:             JSONResponse{Error: JSONError{Code: http.StatusUnauthorized, Status: http.StatusText(http.StatusUnauthorized)}},
+			body:             jsonresp.Response{Error: &jsonresp.Error{Code: http.StatusUnauthorized}},
 			reqCallback:      nil,
 			collectionRef:    "notmine",
-			expectCollection: Collection{},
+			expectCollection: nil,
 			expectFound:      false,
 			expectError:      true,
 		},
 		{
 			description:      "ValidResponse",
 			code:             http.StatusOK,
-			body:             CollectionResponse{Data: testCollection, Error: JSONError{}},
+			body:             CollectionResponse{Data: testCollection},
 			reqCallback:      nil,
 			collectionRef:    "test-entity/test-collection",
-			expectCollection: testCollection,
+			expectCollection: &testCollection,
 			expectFound:      true,
 			expectError:      false,
 		},
@@ -278,37 +279,37 @@ func Test_getContainer(t *testing.T) {
 		body            interface{}
 		reqCallback     func(*http.Request, *testing.T)
 		containerRef    string
-		expectContainer Container
+		expectContainer *Container
 		expectFound     bool
 		expectError     bool
 	}{
 		{
 			description:     "NotFound",
 			code:            http.StatusNotFound,
-			body:            JSONResponse{Error: JSONError{Code: http.StatusNotFound, Status: http.StatusText(http.StatusNotFound)}},
+			body:            jsonresp.Response{Error: &jsonresp.Error{Code: http.StatusNotFound}},
 			reqCallback:     nil,
 			containerRef:    "notthere",
-			expectContainer: Container{},
+			expectContainer: nil,
 			expectFound:     false,
 			expectError:     false,
 		},
 		{
 			description:     "Unauthorized",
 			code:            http.StatusUnauthorized,
-			body:            JSONResponse{Error: JSONError{Code: http.StatusUnauthorized, Status: http.StatusText(http.StatusUnauthorized)}},
+			body:            jsonresp.Response{Error: &jsonresp.Error{Code: http.StatusUnauthorized}},
 			reqCallback:     nil,
 			containerRef:    "notmine",
-			expectContainer: Container{},
+			expectContainer: nil,
 			expectFound:     false,
 			expectError:     true,
 		},
 		{
 			description:     "ValidResponse",
 			code:            http.StatusOK,
-			body:            ContainerResponse{Data: testContainer, Error: JSONError{}},
+			body:            ContainerResponse{Data: testContainer},
 			reqCallback:     nil,
 			containerRef:    "test-entity/test-collection/test-container",
-			expectContainer: testContainer,
+			expectContainer: &testContainer,
 			expectFound:     true,
 			expectError:     false,
 		},
@@ -364,37 +365,37 @@ func Test_getImage(t *testing.T) {
 		body        interface{}
 		reqCallback func(*http.Request, *testing.T)
 		imageRef    string
-		expectImage Image
+		expectImage *Image
 		expectFound bool
 		expectError bool
 	}{
 		{
 			description: "NotFound",
 			code:        http.StatusNotFound,
-			body:        JSONResponse{Error: JSONError{Code: http.StatusNotFound, Status: http.StatusText(http.StatusNotFound)}},
+			body:        jsonresp.Response{Error: &jsonresp.Error{Code: http.StatusNotFound}},
 			reqCallback: nil,
 			imageRef:    "notthere",
-			expectImage: Image{},
+			expectImage: nil,
 			expectFound: false,
 			expectError: false,
 		},
 		{
 			description: "Unauthorized",
 			code:        http.StatusUnauthorized,
-			body:        JSONResponse{Error: JSONError{Code: http.StatusUnauthorized, Status: http.StatusText(http.StatusUnauthorized)}},
+			body:        jsonresp.Response{Error: &jsonresp.Error{Code: http.StatusUnauthorized}},
 			reqCallback: nil,
 			imageRef:    "notmine",
-			expectImage: Image{},
+			expectImage: nil,
 			expectFound: false,
 			expectError: true,
 		},
 		{
 			description: "ValidResponse",
 			code:        http.StatusOK,
-			body:        ImageResponse{Data: testImage, Error: JSONError{}},
+			body:        ImageResponse{Data: testImage},
 			reqCallback: nil,
 			imageRef:    "test",
-			expectImage: testImage,
+			expectImage: &testImage,
 			expectFound: true,
 			expectError: false,
 		},
@@ -450,15 +451,15 @@ func Test_createEntity(t *testing.T) {
 		body         interface{}
 		reqCallback  func(*http.Request, *testing.T)
 		entityRef    string
-		expectEntity Entity
+		expectEntity *Entity
 		expectError  bool
 	}{
 		{
 			description:  "Valid Request",
 			code:         http.StatusOK,
-			body:         EntityResponse{Data: testEntity, Error: JSONError{}},
+			body:         EntityResponse{Data: testEntity},
 			entityRef:    "test",
-			expectEntity: testEntity,
+			expectEntity: &testEntity,
 			expectError:  false,
 		},
 		{
@@ -466,7 +467,7 @@ func Test_createEntity(t *testing.T) {
 			code:         http.StatusInternalServerError,
 			body:         Entity{},
 			entityRef:    "test",
-			expectEntity: Entity{},
+			expectEntity: nil,
 			expectError:  true,
 		},
 	}
@@ -518,15 +519,15 @@ func Test_createCollection(t *testing.T) {
 		body             interface{}
 		reqCallback      func(*http.Request, *testing.T)
 		collectionRef    string
-		expectCollection Collection
+		expectCollection *Collection
 		expectError      bool
 	}{
 		{
 			description:      "Valid Request",
 			code:             http.StatusOK,
-			body:             CollectionResponse{Data: Collection{Name: "test"}, Error: JSONError{}},
+			body:             CollectionResponse{Data: Collection{Name: "test"}},
 			collectionRef:    "test",
-			expectCollection: Collection{Name: "test"},
+			expectCollection: &Collection{Name: "test"},
 			expectError:      false,
 		},
 	}
@@ -577,15 +578,15 @@ func Test_createContainer(t *testing.T) {
 		body            interface{}
 		reqCallback     func(*http.Request, *testing.T)
 		containerRef    string
-		expectContainer Container
+		expectContainer *Container
 		expectError     bool
 	}{
 		{
 			description:     "Valid Request",
 			code:            http.StatusOK,
-			body:            ContainerResponse{Data: Container{Name: "test"}, Error: JSONError{}},
+			body:            ContainerResponse{Data: Container{Name: "test"}},
 			containerRef:    "test",
-			expectContainer: Container{Name: "test"},
+			expectContainer: &Container{Name: "test"},
 			expectError:     false,
 		},
 	}
@@ -637,15 +638,15 @@ func Test_createImage(t *testing.T) {
 		body        interface{}
 		reqCallback func(*http.Request, *testing.T)
 		imageRef    string
-		expectImage Image
+		expectImage *Image
 		expectError bool
 	}{
 		{
 			description: "Valid Request",
 			code:        http.StatusOK,
-			body:        ImageResponse{Data: Image{Hash: "sha256.e50a30881ace3d5944f5661d222db7bee5296be9e4dc7c1fcb7604bcae926e88"}, Error: JSONError{}},
+			body:        ImageResponse{Data: Image{Hash: "sha256.e50a30881ace3d5944f5661d222db7bee5296be9e4dc7c1fcb7604bcae926e88"}},
 			imageRef:    "test",
-			expectImage: Image{Hash: "sha256.e50a30881ace3d5944f5661d222db7bee5296be9e4dc7c1fcb7604bcae926e88"},
+			expectImage: &Image{Hash: "sha256.e50a30881ace3d5944f5661d222db7bee5296be9e4dc7c1fcb7604bcae926e88"},
 			expectError: false,
 		},
 		{
@@ -653,7 +654,7 @@ func Test_createImage(t *testing.T) {
 			code:        http.StatusInternalServerError,
 			body:        Image{},
 			imageRef:    "test",
-			expectImage: Image{},
+			expectImage: nil,
 			expectError: true,
 		},
 	}
@@ -768,15 +769,15 @@ func Test_search(t *testing.T) {
 		body          interface{}
 		reqCallback   func(*http.Request, *testing.T)
 		value         string
-		expectResults SearchResults
+		expectResults *SearchResults
 		expectError   bool
 	}{
 		{
 			description:   "ValidRequest",
 			value:         "test",
 			code:          http.StatusOK,
-			body:          JSONResponse{Data: testSearch, Error: JSONError{}},
-			expectResults: testSearch,
+			body:          jsonresp.Response{Data: testSearch},
+			expectResults: &testSearch,
 			expectError:   false,
 		},
 		{

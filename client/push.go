@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/golang/glog"
+	jsonresp "github.com/sylabs/json-resp"
 )
 
 // Timeout for the main upload (not api calls)
@@ -161,14 +162,12 @@ func postFile(c *Client, filePath, imageID string, callback UploadCallback) erro
 		return fmt.Errorf("Error uploading file to server: %s", err.Error())
 	}
 	if res.StatusCode != http.StatusOK {
-		jRes, err := ParseErrorBody(res.Body)
+		err := jsonresp.ReadError(res.Body)
 		if err != nil {
-			jRes = ParseErrorResponse(res)
+			return fmt.Errorf("Sending file did not succeed: %v", err)
 		}
-		return fmt.Errorf("Sending file did not succeed: %d %s\n\t%v",
-			jRes.Error.Code, jRes.Error.Status, jRes.Error.Message)
+		return fmt.Errorf("Sending file did not succeed: http status code %d", res.StatusCode)
 	}
 
 	return nil
-
 }

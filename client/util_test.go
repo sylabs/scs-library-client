@@ -7,7 +7,6 @@ package client
 
 import (
 	"reflect"
-	"strings"
 	"testing"
 
 	"github.com/globalsign/mgo/bson"
@@ -158,35 +157,6 @@ func Test_parseLibraryRef(t *testing.T) {
 			}
 		})
 	}
-}
-
-func Test_ParseErrorBody(t *testing.T) {
-
-	eb := JSONError{
-		Code:    500,
-		Status:  "Internal Server Error",
-		Message: "The server had a problem",
-	}
-	ebJSON := "{ \"error\": {\"code\": 500, \"status\": \"Internal Server Error\", \"message\": \"The server had a problem\"}}"
-	r := strings.NewReader(ebJSON)
-
-	jRes, err := ParseErrorBody(r)
-
-	if err != nil {
-		t.Errorf("Decoding good error response did not succeed: %v", err)
-	}
-
-	if !reflect.DeepEqual(jRes.Error, eb) {
-		t.Errorf("Decoding error body expected %v, got %v", eb, jRes)
-	}
-
-	ebJSON = "{ \"error {\"code\": 500, \"status\": \"Internal Server Error\", \"message\": \"The server had a problem\"}}"
-	jRes, err = ParseErrorBody(r)
-
-	if err == nil {
-		t.Errorf("Decoding bad error response succeeded, but should return an error: %v", ebJSON)
-	}
-
 }
 
 func TestIdInSlice(t *testing.T) {

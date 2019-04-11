@@ -12,6 +12,8 @@ import (
 	"net/http"
 	"os"
 	"testing"
+
+	jsonresp "github.com/sylabs/json-resp"
 )
 
 const (
@@ -40,7 +42,7 @@ func Test_SearchLibrary(t *testing.T) {
 	m := mockService{
 		t:        t,
 		code:     http.StatusOK,
-		body:     JSONResponse{Data: testSearch, Error: JSONError{}},
+		body:     jsonresp.Response{Data: testSearch},
 		httpPath: "/v1/search",
 	}
 
@@ -99,7 +101,7 @@ func Test_SearchLibraryEmpty(t *testing.T) {
 	m := mockService{
 		t:        t,
 		code:     http.StatusOK,
-		body:     JSONResponse{Data: SearchResults{}, Error: JSONError{}},
+		body:     jsonresp.Response{Data: SearchResults{}},
 		httpPath: "/v1/search",
 	}
 
