@@ -49,6 +49,23 @@ func getCollection(c *Client, collectionRef string) (collection Collection, foun
 	return res.Data, found, nil
 }
 
+// GetCollections returns list of all collections. It currently does not
+// support pagination
+func GetCollections(c *Client) ([]Collection, error) {
+	url := "/v1/collections"
+	colJSON, _, err := c.apiGet(url)
+	if err != nil {
+		return nil, err
+	}
+	var u struct {
+		Collections []Collection `json:"collections"`
+	}
+	if err := json.Unmarshal(colJSON, &u); err != nil {
+		return nil, fmt.Errorf("error decoding collections: %v", err)
+	}
+	return u.Collections, nil
+}
+
 func getContainer(c *Client, containerRef string) (container Container, found bool, err error) {
 	url := "/v1/containers/" + containerRef
 	conJSON, found, err := c.apiGet(url)
