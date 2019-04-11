@@ -6,13 +6,10 @@
 package client
 
 import (
-	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
-	"fmt"
 	"io"
-	"net/http"
 	"os"
 	"regexp"
 	"strings"
@@ -96,26 +93,6 @@ func parseLibraryRef(libraryRef string) (entity string, collection string, conta
 	}
 
 	return
-}
-
-// ParseErrorBody - Parse an API format error out of the body
-func ParseErrorBody(r io.Reader) (jRes JSONResponse, err error) {
-	err = json.NewDecoder(r).Decode(&jRes)
-	if err != nil {
-		return jRes, fmt.Errorf("The server returned a response that could not be decoded: %v", err)
-	}
-	return jRes, nil
-}
-
-// ParseErrorResponse - Create a JSONResponse out of a raw HTTP response
-func ParseErrorResponse(res *http.Response) (jRes JSONResponse) {
-	buf := new(bytes.Buffer)
-	_, _ = buf.ReadFrom(res.Body)
-	s := buf.String()
-	jRes.Error.Code = res.StatusCode
-	jRes.Error.Status = http.StatusText(res.StatusCode)
-	jRes.Error.Message = s
-	return jRes
 }
 
 // IDInSlice returns true if ID is present in the slice
