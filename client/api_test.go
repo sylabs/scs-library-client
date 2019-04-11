@@ -99,7 +99,7 @@ func (m *mockService) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func Test_getEntity(t *testing.T) {
+func Test_GetEntity(t *testing.T) {
 
 	tests := []struct {
 		description  string
@@ -163,7 +163,7 @@ func Test_getEntity(t *testing.T) {
 				t.Errorf("Error initializing client: %v", err)
 			}
 
-			entity, found, err := getEntity(c, tt.entityRef)
+			entity, found, err := GetEntity(c, tt.entityRef)
 
 			if err != nil && !tt.expectError {
 				t.Errorf("Unexpected error: %v", err)
@@ -443,7 +443,7 @@ func Test_getImage(t *testing.T) {
 	}
 }
 
-func Test_createEntity(t *testing.T) {
+func Test_CreateEntity(t *testing.T) {
 
 	tests := []struct {
 		description  string
@@ -492,7 +492,7 @@ func Test_createEntity(t *testing.T) {
 				t.Errorf("Error initializing client: %v", err)
 			}
 
-			entity, err := createEntity(c, tt.entityRef)
+			entity, err := CreateEntity(c, tt.entityRef)
 
 			if err != nil && !tt.expectError {
 				t.Errorf("Unexpected error: %v", err)

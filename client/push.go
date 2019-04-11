@@ -48,13 +48,13 @@ func UploadImage(c *Client, filePath, libraryRef, description string, callback U
 	entityName, collectionName, containerName, tags := parseLibraryRef(libraryRef)
 
 	// Find or create entity
-	entity, found, err := getEntity(c, entityName)
+	entity, found, err := GetEntity(c, entityName)
 	if err != nil {
 		return err
 	}
 	if !found {
 		glog.V(1).Infof("Entity %s does not exist in library - creating it.", entityName)
-		entity, err = createEntity(c, entityName)
+		entity, err = CreateEntity(c, entityName)
 		if err != nil {
 			return err
 		}

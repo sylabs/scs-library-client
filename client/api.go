@@ -18,7 +18,8 @@ import (
 	jsonresp "github.com/sylabs/json-resp"
 )
 
-func getEntity(c *Client, entityRef string) (*Entity, bool, error) {
+// GetEntity returns the specified entity
+func GetEntity(c *Client, entityRef string) (*Entity, bool, error) {
 	url := "/v1/entities/" + entityRef
 	entJSON, found, err := c.apiGet(url)
 	if err != nil {
@@ -99,7 +100,8 @@ func getImage(c *Client, imageRef string) (*Image, bool, error) {
 	return &res.Data, found, nil
 }
 
-func createEntity(c *Client, name string) (*Entity, error) {
+// CreateEntity creates an entity (must be authorized)
+func CreateEntity(c *Client, name string) (*Entity, error) {
 	e := Entity{
 		Name:        name,
 		Description: "No description",
