@@ -1,8 +1,8 @@
 # SCS Cloud-Library Client
 
-[![GoDoc](https://godoc.org/github.com/sylabs/scs-cloud-library-client?status.svg)](https://godoc.org/github.com/sylabs/scs-cloud-library-client)
-[![Build Status](https://circleci.com/gh/sylabs/scs-cloud-library-client.svg?style=shield)](https://circleci.com/gh/sylabs/workflows/scs-cloud-library-client)
-[![Go Report Card](https://goreportcard.com/badge/github.com/sylabs/scs-cloud-library-client)](https://goreportcard.com/report/github.com/sylabs/scs-cloud-library-client)
+[![GoDoc](https://godoc.org/github.com/sylabs/scs-library-client?status.svg)](https://godoc.org/github.com/sylabs/scs-library-client)
+[![Build Status](https://circleci.com/gh/sylabs/scs-library-client.svg?style=shield)](https://circleci.com/gh/sylabs/workflows/scs-library-client)
+[![Go Report Card](https://goreportcard.com/badge/github.com/sylabs/scs-library-client)](https://goreportcard.com/report/github.com/sylabs/scs-library-client)
 
 This project provides a Go client for the Singularity Container Services (SCS) cloud-library Service.
 
