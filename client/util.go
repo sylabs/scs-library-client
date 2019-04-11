@@ -113,7 +113,6 @@ func ParseErrorResponse(res *http.Response) (jRes JSONResponse) {
 	_, _ = buf.ReadFrom(res.Body)
 	s := buf.String()
 	jRes.Error.Code = res.StatusCode
-	jRes.Error.Status = http.StatusText(res.StatusCode)
 	jRes.Error.Message = s
 	return jRes
 }

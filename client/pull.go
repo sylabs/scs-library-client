@@ -74,7 +74,7 @@ func DownloadImage(c *Client, filePath, libraryRef string, force bool, callback 
 			jRes = ParseErrorResponse(res)
 		}
 		return fmt.Errorf("Download did not succeed: %d %s\n\t%v",
-			jRes.Error.Code, jRes.Error.Status, jRes.Error.Message)
+			jRes.Error.Code, http.StatusText(jRes.Error.Code), jRes.Error.Message)
 	}
 
 	glog.V(2).Infof("OK response received, beginning body download")

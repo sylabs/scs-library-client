@@ -211,7 +211,7 @@ func apiCreate(c *Client, url string, o interface{}) (objJSON []byte, err error)
 			jRes = ParseErrorResponse(res)
 		}
 		return []byte{}, fmt.Errorf("creation did not succeed: %d %s\n\t%v",
-			jRes.Error.Code, jRes.Error.Status, jRes.Error.Message)
+			jRes.Error.Code, http.StatusText(jRes.Error.Code), jRes.Error.Message)
 	}
 	objJSON, err = ioutil.ReadAll(res.Body)
 	if err != nil {
@@ -254,7 +254,7 @@ func (c *Client) apiGet(path string) (objJSON []byte, found bool, err error) {
 		jRes = ParseErrorResponse(res)
 	}
 	return []byte{}, false, fmt.Errorf("get did not succeed: %d %s\n\t%v",
-		jRes.Error.Code, jRes.Error.Status, jRes.Error.Message)
+		jRes.Error.Code, http.StatusText(jRes.Error.Code), jRes.Error.Message)
 }
 
 func apiGetTags(c *Client, url string) (tags TagMap, err error) {
@@ -273,7 +273,7 @@ func apiGetTags(c *Client, url string) (tags TagMap, err error) {
 			jRes = ParseErrorResponse(res)
 		}
 		return nil, fmt.Errorf("creation did not succeed: %d %s\n\t%v",
-			jRes.Error.Code, jRes.Error.Status, jRes.Error.Message)
+			jRes.Error.Code, http.StatusText(jRes.Error.Code), jRes.Error.Message)
 	}
 	var tagRes TagsResponse
 	err = json.NewDecoder(res.Body).Decode(&tagRes)
@@ -304,7 +304,7 @@ func apiSetTag(c *Client, url string, t ImageTag) (err error) {
 			jRes = ParseErrorResponse(res)
 		}
 		return fmt.Errorf("creation did not succeed: %d %s\n\t%v",
-			jRes.Error.Code, jRes.Error.Status, jRes.Error.Message)
+			jRes.Error.Code, http.StatusText(jRes.Error.Code), jRes.Error.Message)
 	}
 	return nil
 }

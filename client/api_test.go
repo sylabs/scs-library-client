@@ -113,7 +113,7 @@ func Test_getEntity(t *testing.T) {
 		{
 			description:  "NotFound",
 			code:         http.StatusNotFound,
-			body:         JSONResponse{Error: JSONError{Code: http.StatusNotFound, Status: http.StatusText(http.StatusNotFound)}},
+			body:         JSONResponse{Error: JSONError{Code: http.StatusNotFound}},
 			reqCallback:  nil,
 			entityRef:    "notthere",
 			expectEntity: Entity{},
@@ -123,7 +123,7 @@ func Test_getEntity(t *testing.T) {
 		{
 			description:  "Unauthorized",
 			code:         http.StatusUnauthorized,
-			body:         JSONResponse{Error: JSONError{Code: http.StatusUnauthorized, Status: http.StatusText(http.StatusUnauthorized)}},
+			body:         JSONResponse{Error: JSONError{Code: http.StatusUnauthorized}},
 			reqCallback:  nil,
 			entityRef:    "notmine",
 			expectEntity: Entity{},
@@ -199,7 +199,7 @@ func Test_getCollection(t *testing.T) {
 		{
 			description:      "NotFound",
 			code:             http.StatusNotFound,
-			body:             JSONResponse{Error: JSONError{Code: http.StatusNotFound, Status: http.StatusText(http.StatusNotFound)}},
+			body:             JSONResponse{Error: JSONError{Code: http.StatusNotFound}},
 			reqCallback:      nil,
 			collectionRef:    "notthere",
 			expectCollection: Collection{},
@@ -209,7 +209,7 @@ func Test_getCollection(t *testing.T) {
 		{
 			description:      "Unauthorized",
 			code:             http.StatusUnauthorized,
-			body:             JSONResponse{Error: JSONError{Code: http.StatusUnauthorized, Status: http.StatusText(http.StatusUnauthorized)}},
+			body:             JSONResponse{Error: JSONError{Code: http.StatusUnauthorized}},
 			reqCallback:      nil,
 			collectionRef:    "notmine",
 			expectCollection: Collection{},
@@ -285,7 +285,7 @@ func Test_getContainer(t *testing.T) {
 		{
 			description:     "NotFound",
 			code:            http.StatusNotFound,
-			body:            JSONResponse{Error: JSONError{Code: http.StatusNotFound, Status: http.StatusText(http.StatusNotFound)}},
+			body:            JSONResponse{Error: JSONError{Code: http.StatusNotFound}},
 			reqCallback:     nil,
 			containerRef:    "notthere",
 			expectContainer: Container{},
@@ -295,7 +295,7 @@ func Test_getContainer(t *testing.T) {
 		{
 			description:     "Unauthorized",
 			code:            http.StatusUnauthorized,
-			body:            JSONResponse{Error: JSONError{Code: http.StatusUnauthorized, Status: http.StatusText(http.StatusUnauthorized)}},
+			body:            JSONResponse{Error: JSONError{Code: http.StatusUnauthorized}},
 			reqCallback:     nil,
 			containerRef:    "notmine",
 			expectContainer: Container{},
@@ -371,7 +371,7 @@ func Test_getImage(t *testing.T) {
 		{
 			description: "NotFound",
 			code:        http.StatusNotFound,
-			body:        JSONResponse{Error: JSONError{Code: http.StatusNotFound, Status: http.StatusText(http.StatusNotFound)}},
+			body:        JSONResponse{Error: JSONError{Code: http.StatusNotFound}},
 			reqCallback: nil,
 			imageRef:    "notthere",
 			expectImage: Image{},
@@ -381,7 +381,7 @@ func Test_getImage(t *testing.T) {
 		{
 			description: "Unauthorized",
 			code:        http.StatusUnauthorized,
-			body:        JSONResponse{Error: JSONError{Code: http.StatusUnauthorized, Status: http.StatusText(http.StatusUnauthorized)}},
+			body:        JSONResponse{Error: JSONError{Code: http.StatusUnauthorized}},
 			reqCallback: nil,
 			imageRef:    "notmine",
 			expectImage: Image{},

@@ -166,7 +166,7 @@ func postFile(c *Client, filePath, imageID string, callback UploadCallback) erro
 			jRes = ParseErrorResponse(res)
 		}
 		return fmt.Errorf("Sending file did not succeed: %d %s\n\t%v",
-			jRes.Error.Code, jRes.Error.Status, jRes.Error.Message)
+			jRes.Error.Code, http.StatusText(jRes.Error.Code), jRes.Error.Message)
 	}
 
 	return nil

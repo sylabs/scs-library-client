@@ -8,7 +8,6 @@ package client
 // JSONError - Struct for standard error returns over REST API
 type JSONError struct {
 	Code    int    `json:"code,omitempty"`
-	Status  string `json:"status,omitempty"`
 	Message string `json:"message,omitempty"`
 }
 

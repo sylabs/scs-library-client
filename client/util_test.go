@@ -164,7 +164,6 @@ func Test_ParseErrorBody(t *testing.T) {
 
 	eb := JSONError{
 		Code:    500,
-		Status:  "Internal Server Error",
 		Message: "The server had a problem",
 	}
 	ebJSON := "{ \"error\": {\"code\": 500, \"status\": \"Internal Server Error\", \"message\": \"The server had a problem\"}}"
