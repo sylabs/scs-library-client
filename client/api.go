@@ -35,7 +35,8 @@ func GetEntity(c *Client, entityRef string) (*Entity, bool, error) {
 	return &res.Data, found, nil
 }
 
-func getCollection(c *Client, collectionRef string) (*Collection, bool, error) {
+// GetCollection returns the specified collection
+func GetCollection(c *Client, collectionRef string) (*Collection, bool, error) {
 	url := "/v1/collections/" + collectionRef
 	colJSON, found, err := c.apiGet(url)
 	if err != nil {
@@ -117,7 +118,8 @@ func CreateEntity(c *Client, name string) (*Entity, error) {
 	return &res.Data, nil
 }
 
-func createCollection(c *Client, name string, entityID string) (*Collection, error) {
+// CreateCollection creates a new collection
+func CreateCollection(c *Client, name string, entityID string) (*Collection, error) {
 	newCollection := Collection{
 		Name:        name,
 		Description: "No description",

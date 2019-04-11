@@ -61,13 +61,13 @@ func UploadImage(c *Client, filePath, libraryRef, description string, callback U
 	}
 
 	// Find or create collection
-	collection, found, err := getCollection(c, entityName+"/"+collectionName)
+	collection, found, err := GetCollection(c, entityName+"/"+collectionName)
 	if err != nil {
 		return err
 	}
 	if !found {
 		glog.V(1).Infof("Collection %s does not exist in library - creating it.", collectionName)
-		collection, err = createCollection(c, collectionName, entity.GetID().Hex())
+		collection, err = CreateCollection(c, collectionName, entity.GetID().Hex())
 		if err != nil {
 			return err
 		}

@@ -185,7 +185,7 @@ func Test_GetEntity(t *testing.T) {
 	}
 }
 
-func Test_getCollection(t *testing.T) {
+func Test_GetCollection(t *testing.T) {
 
 	tests := []struct {
 		description      string
@@ -249,7 +249,7 @@ func Test_getCollection(t *testing.T) {
 				t.Errorf("Error initializing client: %v", err)
 			}
 
-			collection, found, err := getCollection(c, tt.collectionRef)
+			collection, found, err := GetCollection(c, tt.collectionRef)
 
 			if err != nil && !tt.expectError {
 				t.Errorf("Unexpected error: %v", err)
@@ -511,7 +511,7 @@ func Test_CreateEntity(t *testing.T) {
 	}
 }
 
-func Test_createCollection(t *testing.T) {
+func Test_CreateCollection(t *testing.T) {
 
 	tests := []struct {
 		description      string
@@ -551,7 +551,7 @@ func Test_createCollection(t *testing.T) {
 				t.Errorf("Error initializing client: %v", err)
 			}
 
-			collection, err := createCollection(c, tt.collectionRef, bson.NewObjectId().Hex())
+			collection, err := CreateCollection(c, tt.collectionRef, bson.NewObjectId().Hex())
 
 			if err != nil && !tt.expectError {
 				t.Errorf("Unexpected error: %v", err)
