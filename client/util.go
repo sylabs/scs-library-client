@@ -20,6 +20,7 @@ import (
 
 	"github.com/globalsign/mgo/bson"
 	"github.com/golang/glog"
+	jsonresp "github.com/sylabs/json-resp"
 )
 
 // IsLibraryPullRef returns true if the provided string is a valid library
@@ -99,7 +100,7 @@ func parseLibraryRef(libraryRef string) (entity string, collection string, conta
 }
 
 // ParseErrorBody - Parse an API format error out of the body
-func ParseErrorBody(r io.Reader) (jRes JSONResponse, err error) {
+func ParseErrorBody(r io.Reader) (jRes jsonresp.Response, err error) {
 	err = json.NewDecoder(r).Decode(&jRes)
 	if err != nil {
 		return jRes, fmt.Errorf("The server returned a response that could not be decoded: %v", err)
@@ -107,14 +108,17 @@ func ParseErrorBody(r io.Reader) (jRes JSONResponse, err error) {
 	return jRes, nil
 }
 
-// ParseErrorResponse - Create a JSONResponse out of a raw HTTP response
-func ParseErrorResponse(res *http.Response) (jRes JSONResponse) {
+// ParseErrorResponse - Create a jsonresp.Response out of a raw HTTP response
+func ParseErrorResponse(res *http.Response) jsonresp.Response {
 	buf := new(bytes.Buffer)
 	_, _ = buf.ReadFrom(res.Body)
 	s := buf.String()
-	jRes.Error.Code = res.StatusCode
-	jRes.Error.Message = s
-	return jRes
+	return jsonresp.Response{
+		Error: &jsonresp.Error{
+			Code:    res.StatusCode,
+			Message: s,
+		},
+	}
 }
 
 // IDInSlice returns true if ID is present in the slice

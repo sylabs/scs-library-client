@@ -13,6 +13,7 @@ import (
 	"testing"
 
 	"github.com/globalsign/mgo/bson"
+	jsonresp "github.com/sylabs/json-resp"
 )
 
 const testToken = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWUsImlhdCI6MTUxNjIzOTAyMn0.TCYt5XsITJX1CxPCT8yAV-TVkIEq_PbChOMqsLfRoPsnsgw5WEuts01mq-pQy7UJiN5mgRxD-WUcX16dUEMGlv50aqzpqh4Qktb3rk-BuQy72IFLOqV0G_zS245-kronKb78cPN25DGlcTwLtjPAYuNzVBAh4vGHSrQyHUdBBPM"
@@ -113,7 +114,7 @@ func Test_getEntity(t *testing.T) {
 		{
 			description:  "NotFound",
 			code:         http.StatusNotFound,
-			body:         JSONResponse{Error: JSONError{Code: http.StatusNotFound}},
+			body:         jsonresp.Response{Error: &jsonresp.Error{Code: http.StatusNotFound}},
 			reqCallback:  nil,
 			entityRef:    "notthere",
 			expectEntity: Entity{},
@@ -123,7 +124,7 @@ func Test_getEntity(t *testing.T) {
 		{
 			description:  "Unauthorized",
 			code:         http.StatusUnauthorized,
-			body:         JSONResponse{Error: JSONError{Code: http.StatusUnauthorized}},
+			body:         jsonresp.Response{Error: &jsonresp.Error{Code: http.StatusUnauthorized}},
 			reqCallback:  nil,
 			entityRef:    "notmine",
 			expectEntity: Entity{},
@@ -133,7 +134,7 @@ func Test_getEntity(t *testing.T) {
 		{
 			description:  "ValidResponse",
 			code:         http.StatusOK,
-			body:         EntityResponse{Data: testEntity, Error: JSONError{}},
+			body:         EntityResponse{Data: testEntity},
 			reqCallback:  nil,
 			entityRef:    "test-user",
 			expectEntity: testEntity,
@@ -199,7 +200,7 @@ func Test_getCollection(t *testing.T) {
 		{
 			description:      "NotFound",
 			code:             http.StatusNotFound,
-			body:             JSONResponse{Error: JSONError{Code: http.StatusNotFound}},
+			body:             jsonresp.Response{Error: &jsonresp.Error{Code: http.StatusNotFound}},
 			reqCallback:      nil,
 			collectionRef:    "notthere",
 			expectCollection: Collection{},
@@ -209,7 +210,7 @@ func Test_getCollection(t *testing.T) {
 		{
 			description:      "Unauthorized",
 			code:             http.StatusUnauthorized,
-			body:             JSONResponse{Error: JSONError{Code: http.StatusUnauthorized}},
+			body:             jsonresp.Response{Error: &jsonresp.Error{Code: http.StatusUnauthorized}},
 			reqCallback:      nil,
 			collectionRef:    "notmine",
 			expectCollection: Collection{},
@@ -219,7 +220,7 @@ func Test_getCollection(t *testing.T) {
 		{
 			description:      "ValidResponse",
 			code:             http.StatusOK,
-			body:             CollectionResponse{Data: testCollection, Error: JSONError{}},
+			body:             CollectionResponse{Data: testCollection},
 			reqCallback:      nil,
 			collectionRef:    "test-entity/test-collection",
 			expectCollection: testCollection,
@@ -285,7 +286,7 @@ func Test_getContainer(t *testing.T) {
 		{
 			description:     "NotFound",
 			code:            http.StatusNotFound,
-			body:            JSONResponse{Error: JSONError{Code: http.StatusNotFound}},
+			body:            jsonresp.Response{Error: &jsonresp.Error{Code: http.StatusNotFound}},
 			reqCallback:     nil,
 			containerRef:    "notthere",
 			expectContainer: Container{},
@@ -295,7 +296,7 @@ func Test_getContainer(t *testing.T) {
 		{
 			description:     "Unauthorized",
 			code:            http.StatusUnauthorized,
-			body:            JSONResponse{Error: JSONError{Code: http.StatusUnauthorized}},
+			body:            jsonresp.Response{Error: &jsonresp.Error{Code: http.StatusUnauthorized}},
 			reqCallback:     nil,
 			containerRef:    "notmine",
 			expectContainer: Container{},
@@ -305,7 +306,7 @@ func Test_getContainer(t *testing.T) {
 		{
 			description:     "ValidResponse",
 			code:            http.StatusOK,
-			body:            ContainerResponse{Data: testContainer, Error: JSONError{}},
+			body:            ContainerResponse{Data: testContainer},
 			reqCallback:     nil,
 			containerRef:    "test-entity/test-collection/test-container",
 			expectContainer: testContainer,
@@ -371,7 +372,7 @@ func Test_getImage(t *testing.T) {
 		{
 			description: "NotFound",
 			code:        http.StatusNotFound,
-			body:        JSONResponse{Error: JSONError{Code: http.StatusNotFound}},
+			body:        jsonresp.Response{Error: &jsonresp.Error{Code: http.StatusNotFound}},
 			reqCallback: nil,
 			imageRef:    "notthere",
 			expectImage: Image{},
@@ -381,7 +382,7 @@ func Test_getImage(t *testing.T) {
 		{
 			description: "Unauthorized",
 			code:        http.StatusUnauthorized,
-			body:        JSONResponse{Error: JSONError{Code: http.StatusUnauthorized}},
+			body:        jsonresp.Response{Error: &jsonresp.Error{Code: http.StatusUnauthorized}},
 			reqCallback: nil,
 			imageRef:    "notmine",
 			expectImage: Image{},
@@ -391,7 +392,7 @@ func Test_getImage(t *testing.T) {
 		{
 			description: "ValidResponse",
 			code:        http.StatusOK,
-			body:        ImageResponse{Data: testImage, Error: JSONError{}},
+			body:        ImageResponse{Data: testImage},
 			reqCallback: nil,
 			imageRef:    "test",
 			expectImage: testImage,
@@ -456,7 +457,7 @@ func Test_createEntity(t *testing.T) {
 		{
 			description:  "Valid Request",
 			code:         http.StatusOK,
-			body:         EntityResponse{Data: testEntity, Error: JSONError{}},
+			body:         EntityResponse{Data: testEntity},
 			entityRef:    "test",
 			expectEntity: testEntity,
 			expectError:  false,
@@ -524,7 +525,7 @@ func Test_createCollection(t *testing.T) {
 		{
 			description:      "Valid Request",
 			code:             http.StatusOK,
-			body:             CollectionResponse{Data: Collection{Name: "test"}, Error: JSONError{}},
+			body:             CollectionResponse{Data: Collection{Name: "test"}},
 			collectionRef:    "test",
 			expectCollection: Collection{Name: "test"},
 			expectError:      false,
@@ -583,7 +584,7 @@ func Test_createContainer(t *testing.T) {
 		{
 			description:     "Valid Request",
 			code:            http.StatusOK,
-			body:            ContainerResponse{Data: Container{Name: "test"}, Error: JSONError{}},
+			body:            ContainerResponse{Data: Container{Name: "test"}},
 			containerRef:    "test",
 			expectContainer: Container{Name: "test"},
 			expectError:     false,
@@ -643,7 +644,7 @@ func Test_createImage(t *testing.T) {
 		{
 			description: "Valid Request",
 			code:        http.StatusOK,
-			body:        ImageResponse{Data: Image{Hash: "sha256.e50a30881ace3d5944f5661d222db7bee5296be9e4dc7c1fcb7604bcae926e88"}, Error: JSONError{}},
+			body:        ImageResponse{Data: Image{Hash: "sha256.e50a30881ace3d5944f5661d222db7bee5296be9e4dc7c1fcb7604bcae926e88"}},
 			imageRef:    "test",
 			expectImage: Image{Hash: "sha256.e50a30881ace3d5944f5661d222db7bee5296be9e4dc7c1fcb7604bcae926e88"},
 			expectError: false,
@@ -775,7 +776,7 @@ func Test_search(t *testing.T) {
 			description:   "ValidRequest",
 			value:         "test",
 			code:          http.StatusOK,
-			body:          JSONResponse{Data: testSearch, Error: JSONError{}},
+			body:          jsonresp.Response{Data: testSearch},
 			expectResults: testSearch,
 			expectError:   false,
 		},

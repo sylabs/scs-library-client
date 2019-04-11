@@ -210,8 +210,11 @@ func apiCreate(c *Client, url string, o interface{}) (objJSON []byte, err error)
 		if err != nil {
 			jRes = ParseErrorResponse(res)
 		}
-		return []byte{}, fmt.Errorf("creation did not succeed: %d %s\n\t%v",
-			jRes.Error.Code, http.StatusText(jRes.Error.Code), jRes.Error.Message)
+		if jRes.Error != nil {
+			return []byte{}, fmt.Errorf("creation did not succeed: %d %s\n\t%v",
+				jRes.Error.Code, http.StatusText(jRes.Error.Code), jRes.Error.Message)
+		}
+		return []byte{}, fmt.Errorf("creation did not succeed: http status code: %d", res.StatusCode)
 	}
 	objJSON, err = ioutil.ReadAll(res.Body)
 	if err != nil {
@@ -253,8 +256,11 @@ func (c *Client) apiGet(path string) (objJSON []byte, found bool, err error) {
 	if err != nil {
 		jRes = ParseErrorResponse(res)
 	}
-	return []byte{}, false, fmt.Errorf("get did not succeed: %d %s\n\t%v",
-		jRes.Error.Code, http.StatusText(jRes.Error.Code), jRes.Error.Message)
+	if jRes.Error != nil {
+		return []byte{}, false, fmt.Errorf("get did not succeed: %d %s\n\t%v",
+			jRes.Error.Code, http.StatusText(jRes.Error.Code), jRes.Error.Message)
+	}
+	return []byte{}, false, fmt.Errorf("error reading response from server")
 }
 
 func apiGetTags(c *Client, url string) (tags TagMap, err error) {
@@ -272,8 +278,12 @@ func apiGetTags(c *Client, url string) (tags TagMap, err error) {
 		if err != nil {
 			jRes = ParseErrorResponse(res)
 		}
-		return nil, fmt.Errorf("creation did not succeed: %d %s\n\t%v",
-			jRes.Error.Code, http.StatusText(jRes.Error.Code), jRes.Error.Message)
+		if jRes.Error != nil {
+			return nil, fmt.Errorf("creation did not succeed: %d %s\n\t%v",
+				jRes.Error.Code, http.StatusText(jRes.Error.Code), jRes.Error.Message)
+
+		}
+		return nil, fmt.Errorf("unexpected http status code: %d", res.StatusCode)
 	}
 	var tagRes TagsResponse
 	err = json.NewDecoder(res.Body).Decode(&tagRes)
@@ -303,8 +313,11 @@ func apiSetTag(c *Client, url string, t ImageTag) (err error) {
 		if err != nil {
 			jRes = ParseErrorResponse(res)
 		}
-		return fmt.Errorf("creation did not succeed: %d %s\n\t%v",
-			jRes.Error.Code, http.StatusText(jRes.Error.Code), jRes.Error.Message)
+		if jRes.Error != nil {
+			return fmt.Errorf("creation did not succeed: %d %s\n\t%v",
+				jRes.Error.Code, http.StatusText(jRes.Error.Code), jRes.Error.Message)
+		}
+		return fmt.Errorf("creation did not succeed: http status code: %d", res.StatusCode)
 	}
 	return nil
 }

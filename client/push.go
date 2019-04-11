@@ -165,8 +165,11 @@ func postFile(c *Client, filePath, imageID string, callback UploadCallback) erro
 		if err != nil {
 			jRes = ParseErrorResponse(res)
 		}
-		return fmt.Errorf("Sending file did not succeed: %d %s\n\t%v",
-			jRes.Error.Code, http.StatusText(jRes.Error.Code), jRes.Error.Message)
+		if jRes.Error != nil {
+			return fmt.Errorf("Sending file did not succeed: %d %s\n\t%v",
+				jRes.Error.Code, http.StatusText(jRes.Error.Code), jRes.Error.Message)
+		}
+		return fmt.Errorf("Sending file did not succeed: http status code %d", res.StatusCode)
 	}
 
 	return nil

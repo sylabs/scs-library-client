@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/globalsign/mgo/bson"
+	jsonresp "github.com/sylabs/json-resp"
 )
 
 func Test_isLibraryPullRef(t *testing.T) {
@@ -162,11 +163,11 @@ func Test_parseLibraryRef(t *testing.T) {
 
 func Test_ParseErrorBody(t *testing.T) {
 
-	eb := JSONError{
+	eb := jsonresp.Error{
 		Code:    500,
 		Message: "The server had a problem",
 	}
-	ebJSON := "{ \"error\": {\"code\": 500, \"status\": \"Internal Server Error\", \"message\": \"The server had a problem\"}}"
+	ebJSON := "{ \"error\": {\"code\": 500, \"message\": \"The server had a problem\"}}"
 	r := strings.NewReader(ebJSON)
 
 	jRes, err := ParseErrorBody(r)
@@ -175,11 +176,11 @@ func Test_ParseErrorBody(t *testing.T) {
 		t.Errorf("Decoding good error response did not succeed: %v", err)
 	}
 
-	if !reflect.DeepEqual(jRes.Error, eb) {
-		t.Errorf("Decoding error body expected %v, got %v", eb, jRes)
+	if !reflect.DeepEqual(*jRes.Error, eb) {
+		t.Errorf("Decoding error body expected %v, got %v", eb, jRes.Error)
 	}
 
-	ebJSON = "{ \"error {\"code\": 500, \"status\": \"Internal Server Error\", \"message\": \"The server had a problem\"}}"
+	ebJSON = "{ \"error {\"code\": 500, \"message\": \"The server had a problem\"}}"
 	jRes, err = ParseErrorBody(r)
 
 	if err == nil {
