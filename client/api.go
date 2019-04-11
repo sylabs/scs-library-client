@@ -323,15 +323,16 @@ func apiSetTag(c *Client, url string, t ImageTag) (err error) {
 }
 
 // GetImage returns the Image object if exists, otherwise returns error
-func GetImage(c *Client, imageRef string) (image Image, err error) {
+func GetImage(c *Client, imageRef string) (*Image, error) {
 	entityName, collectionName, containerName, tags := parseLibraryRef(imageRef)
 
 	i, f, err := getImage(c, entityName+"/"+collectionName+"/"+containerName+":"+tags[0])
 	if err != nil {
-		return Image{}, err
-	} else if !f {
-		return Image{}, fmt.Errorf("the requested image was not found in the library")
+		return nil, err
+	}
+	if !f {
+		return nil, fmt.Errorf("the requested image was not found in the library")
 	}
 
-	return i, nil
+	return &i, nil
 }
