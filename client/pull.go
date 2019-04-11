@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/golang/glog"
+	jsonresp "github.com/sylabs/json-resp"
 )
 
 // Timeout for an image pull - could be a large download...
@@ -69,13 +70,9 @@ func DownloadImage(c *Client, filePath, libraryRef string, force bool, callback 
 	}
 
 	if res.StatusCode != http.StatusOK {
-		jRes, err := ParseErrorBody(res.Body)
+		err := jsonresp.ReadError(res.Body)
 		if err != nil {
-			jRes = ParseErrorResponse(res)
-		}
-		if jRes.Error != nil {
-			return fmt.Errorf("Download did not succeed: %d %s\n\t%v",
-				jRes.Error.Code, http.StatusText(jRes.Error.Code), jRes.Error.Message)
+			return fmt.Errorf("Download did not succeed: %v", err)
 		}
 		return fmt.Errorf("unexpected http status code: %d", res.StatusCode)
 	}

@@ -15,6 +15,7 @@ import (
 
 	"github.com/globalsign/mgo/bson"
 	"github.com/golang/glog"
+	jsonresp "github.com/sylabs/json-resp"
 )
 
 func getEntity(c *Client, entityRef string) (*Entity, bool, error) {
@@ -206,13 +207,9 @@ func apiCreate(c *Client, url string, o interface{}) (objJSON []byte, err error)
 		return []byte{}, fmt.Errorf("error making request to server:\n\t%v", err)
 	}
 	if res.StatusCode != http.StatusOK && res.StatusCode != http.StatusCreated {
-		jRes, err := ParseErrorBody(res.Body)
+		err := jsonresp.ReadError(res.Body)
 		if err != nil {
-			jRes = ParseErrorResponse(res)
-		}
-		if jRes.Error != nil {
-			return []byte{}, fmt.Errorf("creation did not succeed: %d %s\n\t%v",
-				jRes.Error.Code, http.StatusText(jRes.Error.Code), jRes.Error.Message)
+			return []byte{}, fmt.Errorf("creation did not succeed: %v", err)
 		}
 		return []byte{}, fmt.Errorf("creation did not succeed: http status code: %d", res.StatusCode)
 	}
@@ -252,13 +249,9 @@ func (c *Client) apiGet(path string) (objJSON []byte, found bool, err error) {
 		return objJSON, true, nil
 	}
 	// Not OK, not 404.... error
-	jRes, err := ParseErrorBody(res.Body)
+	err = jsonresp.ReadError(res.Body)
 	if err != nil {
-		jRes = ParseErrorResponse(res)
-	}
-	if jRes.Error != nil {
-		return []byte{}, false, fmt.Errorf("get did not succeed: %d %s\n\t%v",
-			jRes.Error.Code, http.StatusText(jRes.Error.Code), jRes.Error.Message)
+		return []byte{}, false, fmt.Errorf("get did not succeed: %v", err)
 	}
 	return []byte{}, false, fmt.Errorf("error reading response from server")
 }
@@ -274,14 +267,9 @@ func apiGetTags(c *Client, url string) (TagMap, error) {
 		return nil, fmt.Errorf("error making request to server:\n\t%v", err)
 	}
 	if res.StatusCode != http.StatusOK {
-		jRes, err := ParseErrorBody(res.Body)
+		err := jsonresp.ReadError(res.Body)
 		if err != nil {
-			jRes = ParseErrorResponse(res)
-		}
-		if jRes.Error != nil {
-			return nil, fmt.Errorf("creation did not succeed: %d %s\n\t%v",
-				jRes.Error.Code, http.StatusText(jRes.Error.Code), jRes.Error.Message)
-
+			return nil, fmt.Errorf("creation did not succeed: %v", err)
 		}
 		return nil, fmt.Errorf("unexpected http status code: %d", res.StatusCode)
 	}
@@ -309,13 +297,9 @@ func apiSetTag(c *Client, url string, t ImageTag) error {
 		return fmt.Errorf("error making request to server:\n\t%v", err)
 	}
 	if res.StatusCode != http.StatusOK {
-		jRes, err := ParseErrorBody(res.Body)
+		err := jsonresp.ReadError(res.Body)
 		if err != nil {
-			jRes = ParseErrorResponse(res)
-		}
-		if jRes.Error != nil {
-			return fmt.Errorf("creation did not succeed: %d %s\n\t%v",
-				jRes.Error.Code, http.StatusText(jRes.Error.Code), jRes.Error.Message)
+			return fmt.Errorf("creation did not succeed: %v", err)
 		}
 		return fmt.Errorf("creation did not succeed: http status code: %d", res.StatusCode)
 	}
