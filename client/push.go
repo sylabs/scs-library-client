@@ -111,7 +111,7 @@ func UploadImage(c *Client, filePath, libraryRef, description string, callback U
 	}
 
 	glog.V(2).Infof("Setting tags against uploaded image")
-	err = setTags(c, container.GetID().Hex(), image.GetID().Hex(), tags)
+	err = SetTags(c, container.GetID().Hex(), image.GetID().Hex(), tags)
 	if err != nil {
 		return err
 	}

@@ -698,7 +698,7 @@ func Test_createImage(t *testing.T) {
 	}
 }
 
-func Test_setTags(t *testing.T) {
+func Test_SetTags(t *testing.T) {
 
 	tests := []struct {
 		description  string
@@ -739,14 +739,14 @@ func Test_setTags(t *testing.T) {
 			}
 
 			m.Run()
-			defer m.httpServer.Close()
+			defer m.Stop()
 
 			c, err := NewClient(&Config{AuthToken: testToken, BaseURL: m.baseURI})
 			if err != nil {
 				t.Errorf("Error initializing client: %v", err)
 			}
 
-			err = setTags(c, tt.containerRef, tt.imageRef, tt.tags)
+			err = SetTags(c, tt.containerRef, tt.imageRef, tt.tags)
 
 			if err != nil && !tt.expectError {
 				t.Errorf("Unexpected error: %v", err)
@@ -754,11 +754,7 @@ func Test_setTags(t *testing.T) {
 			if err == nil && tt.expectError {
 				t.Errorf("Unexpected success. Expected error.")
 			}
-
-			m.Stop()
-
 		})
-
 	}
 }
 

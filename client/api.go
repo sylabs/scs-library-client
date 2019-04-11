@@ -166,9 +166,10 @@ func createImage(c *Client, hash string, containerID string, description string)
 	return &res.Data, nil
 }
 
-func setTags(c *Client, containerID, imageID string, tags []string) error {
+// SetTags applies tags to the specified container
+func SetTags(c *Client, containerID, imageID string, tags []string) error {
 	// Get existing tags, so we know which will be replaced
-	existingTags, err := apiGetTags(c, "/v1/tags/"+containerID)
+	existingTags, err := GetTags(c, containerID)
 	if err != nil {
 		return err
 	}
@@ -184,7 +185,7 @@ func setTags(c *Client, containerID, imageID string, tags []string) error {
 			tag,
 			bson.ObjectIdHex(imageID),
 		}
-		err := apiSetTag(c, "/v1/tags/"+containerID, imgTag)
+		err := SetTag(c, containerID, imgTag)
 		if err != nil {
 			return err
 		}
@@ -273,8 +274,10 @@ func (c *Client) apiGet(path string) (objJSON []byte, found bool, err error) {
 	return []byte{}, false, fmt.Errorf("error reading response from server")
 }
 
-func apiGetTags(c *Client, url string) (TagMap, error) {
-	glog.V(2).Infof("apiGetTags calling %s", url)
+// GetTags returns a tag map for the specified containerID
+func GetTags(c *Client, containerID string) (TagMap, error) {
+	url := fmt.Sprintf("/v1/tags/%s", containerID)
+	glog.V(2).Infof("GetTags calling %s", url)
 	req, err := c.NewRequest(http.MethodGet, url, "", nil)
 	if err != nil {
 		return nil, fmt.Errorf("error creating request to server:\n\t%v", err)
@@ -296,11 +299,12 @@ func apiGetTags(c *Client, url string) (TagMap, error) {
 		return nil, fmt.Errorf("error decoding tags: %v", err)
 	}
 	return tagRes.Data, nil
-
 }
 
-func apiSetTag(c *Client, url string, t ImageTag) error {
-	glog.V(2).Infof("apiSetTag calling %s", url)
+// SetTag sets tag on specified containerID
+func SetTag(c *Client, containerID string, t ImageTag) error {
+	url := "/v1/tags/" + containerID
+	glog.V(2).Infof("SetTag calling %s", url)
 	s, err := json.Marshal(t)
 	if err != nil {
 		return fmt.Errorf("error encoding object to JSON:\n\t%v", err)
