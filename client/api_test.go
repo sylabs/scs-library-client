@@ -357,7 +357,7 @@ func Test_getContainer(t *testing.T) {
 	}
 }
 
-func Test_getImage(t *testing.T) {
+func Test_GetImage(t *testing.T) {
 
 	tests := []struct {
 		description string
@@ -414,14 +414,14 @@ func Test_getImage(t *testing.T) {
 			}
 
 			m.Run()
-			defer m.httpServer.Close()
+			defer m.Stop()
 
 			c, err := NewClient(&Config{AuthToken: testToken, BaseURL: m.baseURI})
 			if err != nil {
 				t.Errorf("Error initializing client: %v", err)
 			}
 
-			image, found, err := getImage(c, tt.imageRef)
+			image, found, err := GetImage(c, tt.imageRef)
 
 			if err != nil && !tt.expectError {
 				t.Errorf("Unexpected error: %v", err)
@@ -435,11 +435,7 @@ func Test_getImage(t *testing.T) {
 			if !reflect.DeepEqual(image, tt.expectImage) {
 				t.Errorf("Got image %v - expected %v", image, tt.expectImage)
 			}
-
-			m.Stop()
-
 		})
-
 	}
 }
 
@@ -630,7 +626,7 @@ func Test_createContainer(t *testing.T) {
 	}
 }
 
-func Test_createImage(t *testing.T) {
+func Test_CreateImage(t *testing.T) {
 
 	tests := []struct {
 		description string
@@ -679,7 +675,7 @@ func Test_createImage(t *testing.T) {
 				t.Errorf("Error initializing client: %v", err)
 			}
 
-			image, err := createImage(c, tt.imageRef, bson.NewObjectId().Hex(), "No Description")
+			image, err := CreateImage(c, tt.imageRef, bson.NewObjectId().Hex(), "No Description")
 
 			if err != nil && !tt.expectError {
 				t.Errorf("Unexpected error: %v", err)

@@ -85,22 +85,6 @@ func getContainer(c *Client, containerRef string) (*Container, bool, error) {
 	return &res.Data, found, nil
 }
 
-func getImage(c *Client, imageRef string) (*Image, bool, error) {
-	url := "/v1/images/" + imageRef
-	imgJSON, found, err := c.apiGet(url)
-	if err != nil {
-		return nil, false, err
-	}
-	if !found {
-		return nil, false, nil
-	}
-	var res ImageResponse
-	if err := json.Unmarshal(imgJSON, &res); err != nil {
-		return nil, false, fmt.Errorf("error decoding image: %v", err)
-	}
-	return &res.Data, found, nil
-}
-
 // CreateEntity creates an entity (must be authorized)
 func CreateEntity(c *Client, name string) (*Entity, error) {
 	e := Entity{
@@ -153,7 +137,8 @@ func createContainer(c *Client, name string, collectionID string) (*Container, e
 	return &res.Data, nil
 }
 
-func createImage(c *Client, hash string, containerID string, description string) (*Image, error) {
+// CreateImage creates a new image
+func CreateImage(c *Client, hash string, containerID string, description string) (*Image, error) {
 	i := Image{
 		Hash:        hash,
 		Description: description,
@@ -332,16 +317,18 @@ func SetTag(c *Client, containerID string, t ImageTag) error {
 }
 
 // GetImage returns the Image object if exists, otherwise returns error
-func GetImage(c *Client, imageRef string) (*Image, error) {
-	entityName, collectionName, containerName, tags := parseLibraryRef(imageRef)
-
-	i, f, err := getImage(c, entityName+"/"+collectionName+"/"+containerName+":"+tags[0])
+func GetImage(c *Client, imageRef string) (*Image, bool, error) {
+	url := "/v1/images/" + imageRef
+	imgJSON, found, err := c.apiGet(url)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
-	if !f {
-		return nil, fmt.Errorf("the requested image was not found in the library")
+	if !found {
+		return nil, false, nil
 	}
-
-	return i, nil
+	var res ImageResponse
+	if err := json.Unmarshal(imgJSON, &res); err != nil {
+		return nil, false, fmt.Errorf("error decoding image: %v", err)
+	}
+	return &res.Data, found, nil
 }

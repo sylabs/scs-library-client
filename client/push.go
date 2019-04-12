@@ -87,13 +87,13 @@ func UploadImage(c *Client, filePath, libraryRef, description string, callback U
 	}
 
 	// Find or create image
-	image, found, err := getImage(c, entityName+"/"+collectionName+"/"+containerName+":"+imageHash)
+	image, found, err := GetImage(c, entityName+"/"+collectionName+"/"+containerName+":"+imageHash)
 	if err != nil {
 		return err
 	}
 	if !found {
 		glog.V(1).Infof("Image %s does not exist in library - creating it.", imageHash)
-		image, err = createImage(c, imageHash, container.GetID().Hex(), description)
+		image, err = CreateImage(c, imageHash, container.GetID().Hex(), description)
 		if err != nil {
 			return err
 		}
