@@ -59,7 +59,7 @@ func IsImageHash(refPart string) bool {
 	return match
 }
 
-func parseLibraryRef(libraryRef string) (entity string, collection string, container string, tags []string) {
+func ParseLibraryRef(libraryRef string) (entity string, collection string, container string, tags []string) {
 
 	libraryRef = strings.TrimPrefix(libraryRef, "library://")
 

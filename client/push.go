@@ -6,12 +6,10 @@
 package client
 
 import (
-	"bufio"
 	"context"
 	"fmt"
 	"io"
 	"net/http"
-	"os"
 	"time"
 
 	"github.com/golang/glog"
@@ -32,76 +30,79 @@ type UploadCallback interface {
 	Finish()
 }
 
+// UploadImageConfig defines the parameters of the image being uploaded.
+// Size and Hash are image size and the calculated hash (using ImageHash),
+// respectively.
+type UploadImageConfig struct {
+	SrcReader io.Reader
+	Size      int64
+	Hash      string
+}
+
 // UploadImage will push a specified image up to the Container Library,
-func UploadImage(c *Client, filePath, libraryRef, description string, callback UploadCallback) error {
+func (c *Client) UploadImage(uploadCfg UploadImageConfig, libraryRef, description string, callback UploadCallback) error {
 
 	if !IsLibraryPushRef(libraryRef) {
 		return fmt.Errorf("Not a valid library reference: %s", libraryRef)
 	}
 
-	imageHash, err := ImageHash(filePath)
-	if err != nil {
-		return err
-	}
-	glog.V(2).Infof("Image hash computed as %s", imageHash)
-
-	entityName, collectionName, containerName, tags := parseLibraryRef(libraryRef)
+	entityName, collectionName, containerName, tags := ParseLibraryRef(libraryRef)
 
 	// Find or create entity
-	entity, found, err := GetEntity(c, entityName)
+	entity, found, err := c.getEntity(entityName)
 	if err != nil {
 		return err
 	}
 	if !found {
 		glog.V(1).Infof("Entity %s does not exist in library - creating it.", entityName)
-		entity, err = CreateEntity(c, entityName)
+		entity, err = c.createEntity(entityName)
 		if err != nil {
 			return err
 		}
 	}
 
 	// Find or create collection
-	collection, found, err := GetCollection(c, entityName+"/"+collectionName)
+	collection, found, err := c.getCollection(entityName + "/" + collectionName)
 	if err != nil {
 		return err
 	}
 	if !found {
 		glog.V(1).Infof("Collection %s does not exist in library - creating it.", collectionName)
-		collection, err = CreateCollection(c, collectionName, entity.ID)
+		collection, err = c.createCollection(collectionName, entity.ID)
 		if err != nil {
 			return err
 		}
 	}
 
 	// Find or create container
-	container, found, err := GetContainer(c, entityName+"/"+collectionName+"/"+containerName)
+	container, found, err := c.getContainer(entityName + "/" + collectionName + "/" + containerName)
 	if err != nil {
 		return err
 	}
 	if !found {
 		glog.V(1).Infof("Container %s does not exist in library - creating it.", containerName)
-		container, err = CreateContainer(c, containerName, collection.ID)
+		container, err = c.createContainer(containerName, collection.ID)
 		if err != nil {
 			return err
 		}
 	}
 
 	// Find or create image
-	image, found, err := GetImage(c, entityName+"/"+collectionName+"/"+containerName+":"+imageHash)
+	image, found, err := c.GetImage(entityName + "/" + collectionName + "/" + containerName + ":" + uploadCfg.Hash)
 	if err != nil {
 		return err
 	}
 	if !found {
-		glog.V(1).Infof("Image %s does not exist in library - creating it.", imageHash)
-		image, err = CreateImage(c, imageHash, container.ID, description)
+		glog.V(1).Infof("Image %s does not exist in library - creating it.", uploadCfg.Hash)
+		image, err = c.createImage(uploadCfg.Hash, container.ID, description)
 		if err != nil {
 			return err
 		}
 	}
 
 	if !image.Uploaded {
-		glog.Infof("Now uploading %s to the library", filePath)
-		err = postFile(c, filePath, image.ID, callback)
+		// glog.Infof("Now uploading %s to the library", filePath)
+		err = c.postFile(uploadCfg, image.ID, callback)
 		if err != nil {
 			return err
 		}
@@ -111,7 +112,7 @@ func UploadImage(c *Client, filePath, libraryRef, description string, callback U
 	}
 
 	glog.V(2).Infof("Setting tags against uploaded image")
-	err = SetTags(c, container.ID, image.ID, tags)
+	err = c.setTags(container.ID, image.ID, tags)
 	if err != nil {
 		return err
 	}
@@ -119,43 +120,30 @@ func UploadImage(c *Client, filePath, libraryRef, description string, callback U
 	return nil
 }
 
-func postFile(c *Client, filePath, imageID string, callback UploadCallback) error {
-
-	f, err := os.Open(filePath)
-	if err != nil {
-		return fmt.Errorf("Could not open the image file to upload: %v", err)
-	}
-	defer f.Close()
-	fi, err := f.Stat()
-	if err != nil {
-		return fmt.Errorf("Could not find size of the image file to upload: %v", err)
-	}
-	fileSize := fi.Size()
+func (c *Client) postFile(uploadCfg UploadImageConfig, imageID string, callback UploadCallback) error {
 
 	postURL := "/v1/imagefile/" + imageID
 	glog.V(2).Infof("postFile calling %s", postURL)
-
-	b := bufio.NewReader(f)
 
 	var bodyProgress io.Reader
 
 	if callback != nil {
 		// use callback to set up source file reader
-		callback.InitUpload(fileSize, b)
+		callback.InitUpload(uploadCfg.Size, uploadCfg.SrcReader)
 		defer callback.Finish()
 
 		bodyProgress = callback.GetReader()
 	} else {
-		bodyProgress = b
+		bodyProgress = uploadCfg.SrcReader
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), pushTimeout)
 	defer cancel()
 
 	// Make an upload request
-	req, _ := c.NewRequest("POST", postURL, "", bodyProgress)
+	req, _ := c.newRequest("POST", postURL, "", bodyProgress)
 	// Content length is required by the API
-	req.ContentLength = fileSize
+	req.ContentLength = uploadCfg.Size
 	res, err := c.HTTPClient.Do(req.WithContext(ctx))
 
 	if err != nil {

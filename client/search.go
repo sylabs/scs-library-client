@@ -9,13 +9,13 @@ import (
 	"fmt"
 )
 
-// SearchLibrary will search the library for a given query and display results
-func SearchLibrary(c *Client, value string) error {
+// searchLibrary will search the library for a given query and display results
+func (c *Client) searchLibrary(value string) error {
 	if len(value) < 3 {
 		return fmt.Errorf("Bad query '%s'. You must search for at least 3 characters", value)
 	}
 
-	results, err := Search(c, value)
+	results, err := c.Search(value)
 	if err != nil {
 		return err
 	}

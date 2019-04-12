@@ -120,7 +120,7 @@ func Test_IsImageHash(t *testing.T) {
 	}
 }
 
-func Test_parseLibraryRef(t *testing.T) {
+func Test_ParseLibraryRef(t *testing.T) {
 	tests := []struct {
 		name       string
 		libraryRef string
@@ -142,18 +142,18 @@ func Test_parseLibraryRef(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ent, col, con, tags := parseLibraryRef(tt.libraryRef)
+			ent, col, con, tags := ParseLibraryRef(tt.libraryRef)
 			if ent != tt.wantEnt {
-				t.Errorf("parseLibraryRef() = entity %v, want %v", ent, tt.wantEnt)
+				t.Errorf("ParseLibraryRef() = entity %v, want %v", ent, tt.wantEnt)
 			}
 			if col != tt.wantCol {
-				t.Errorf("parseLibraryRef() = collection %v, want %v", col, tt.wantCol)
+				t.Errorf("ParseLibraryRef() = collection %v, want %v", col, tt.wantCol)
 			}
 			if con != tt.wantCon {
-				t.Errorf("parseLibraryRef() = container %v, want %v", con, tt.wantCon)
+				t.Errorf("ParseLibraryRef() = container %v, want %v", con, tt.wantCon)
 			}
 			if !reflect.DeepEqual(tags, tt.wantTags) {
-				t.Errorf("parseLibraryRef() = entity %v, want %v", tags, tt.wantTags)
+				t.Errorf("ParseLibraryRef() = entity %v, want %v", tags, tt.wantTags)
 			}
 		})
 	}

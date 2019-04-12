@@ -54,11 +54,11 @@ func Test_SearchLibrary(t *testing.T) {
 		t.Errorf("Error initializing client: %v", err)
 	}
 
-	err = SearchLibrary(c, "a")
+	err = c.searchLibrary("a")
 	if err == nil {
 		t.Errorf("Search of 1 character shouldn't be submitted")
 	}
-	err = SearchLibrary(c, "ab")
+	err = c.searchLibrary("ab")
 	if err == nil {
 		t.Errorf("Search of 2 characters shouldn't be submitted")
 	}
@@ -67,7 +67,7 @@ func Test_SearchLibrary(t *testing.T) {
 	r, w, _ := os.Pipe()
 	os.Stdout = w
 
-	err = SearchLibrary(c, "test")
+	err = c.searchLibrary("test")
 	if err != nil {
 		t.Errorf("Search failed: %v", err)
 	}
@@ -117,7 +117,7 @@ func Test_SearchLibraryEmpty(t *testing.T) {
 		t.Errorf("Error initializing client: %v", err)
 	}
 
-	err = SearchLibrary(c, "test")
+	err = c.searchLibrary("test")
 
 	outC := make(chan string)
 	go func() {
