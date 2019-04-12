@@ -22,13 +22,13 @@ type ModelManager interface {
 // BaseModel - has an ID, soft deletion marker, and Audit struct
 type BaseModel struct {
 	ModelManager `bson:",omitempty" json:",omitempty"`
-	Deleted      bool      ` json:"deleted"`
-	CreatedBy    string    ` json:"createdBy"`
-	CreatedAt    time.Time ` json:"createdAt"`
-	UpdatedBy    string    ` json:"updatedBy,omitempty"`
-	UpdatedAt    time.Time ` json:"updatedAt,omitempty"`
-	DeletedBy    string    ` json:"deletedBy,omitempty"`
-	DeletedAt    time.Time ` json:"deletedAt,omitempty"`
+	Deleted      bool      `json:"deleted"`
+	CreatedBy    string    `json:"createdBy"`
+	CreatedAt    time.Time `json:"createdAt"`
+	UpdatedBy    string    `json:"updatedBy,omitempty"`
+	UpdatedAt    time.Time `json:"updatedAt,omitempty"`
+	DeletedBy    string    `json:"deletedBy,omitempty"`
+	DeletedAt    time.Time `json:"deletedAt,omitempty"`
 }
 
 // IsDeleted - Convenience method to check soft deletion state if working with
@@ -63,11 +63,11 @@ var _ ModelManager = (*BaseModel)(nil)
 type Entity struct {
 	BaseModel
 	ID          string   `json:"id"`
-	Name        string   ` json:"name"`
-	Description string   ` json:"description"`
-	Collections []string ` json:"collections"`
-	Size        int64    ` json:"size"`
-	Quota       int64    ` json:"quota"`
+	Name        string   `json:"name"`
+	Description string   `json:"description"`
+	Collections []string `json:"collections"`
+	Size        int64    `json:"size"`
+	Quota       int64    `json:"quota"`
 	// DefaultPrivate set true will make any new Collections in ths entity
 	// private at the time of creation.
 	DefaultPrivate bool `bson:"defaultPrivate" json:"defaultPrivate"`
@@ -131,7 +131,7 @@ type Container struct {
 	ReadOnly        bool              `json:"readOnly"`
 	// CustomData can hold a user-provided string for integration purposes
 	// not used by the library itself.
-	CustomData string ` json:"customData"`
+	CustomData string `json:"customData"`
 	// Computed fields that will not be stored - JSON response use only
 	Entity         string `json:"entity,omitempty"`
 	EntityName     string `json:"entityName,omitempty"`
@@ -174,7 +174,7 @@ type Image struct {
 	Fingerprints []string `json:"fingerprints,omitempty"`
 	// CustomData can hold a user-provided string for integration purposes
 	// not used by the library itself.
-	CustomData string ` json:"customData"`
+	CustomData string `json:"customData"`
 	// Computed fields that will not be stored - JSON response use only
 	Entity               string   `json:"entity,omitempty"`
 	EntityName           string   `json:"entityName,omitempty"`
