@@ -96,7 +96,7 @@ func parseLibraryRef(libraryRef string) (entity string, collection string, conta
 }
 
 // IDInSlice returns true if ID is present in the slice
-func IDInSlice(a bson.ObjectId, list []bson.ObjectId) bool {
+func IDInSlice(a string, list []string) bool {
 	for _, b := range list {
 		if b == a {
 			return true
@@ -106,9 +106,9 @@ func IDInSlice(a bson.ObjectId, list []bson.ObjectId) bool {
 }
 
 // SliceWithoutID returns slice with specified ID removed
-func SliceWithoutID(list []bson.ObjectId, a bson.ObjectId) []bson.ObjectId {
+func SliceWithoutID(list []string, a string) []string {
 
-	var newList []bson.ObjectId
+	var newList []string
 
 	for _, b := range list {
 		if b != a {

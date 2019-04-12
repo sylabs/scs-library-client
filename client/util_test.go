@@ -161,24 +161,24 @@ func Test_parseLibraryRef(t *testing.T) {
 
 func TestIdInSlice(t *testing.T) {
 
-	trueID := bson.NewObjectId()
+	trueID := bson.NewObjectId().Hex()
 
-	slice := []bson.ObjectId{trueID, bson.NewObjectId(), bson.NewObjectId(), bson.NewObjectId()}
+	slice := []string{trueID, bson.NewObjectId().Hex(), bson.NewObjectId().Hex(), bson.NewObjectId().Hex()}
 	if !IDInSlice(trueID, slice) {
 		t.Errorf("should find %v in %v", trueID, slice)
 	}
 
-	slice = []bson.ObjectId{bson.NewObjectId(), bson.NewObjectId(), trueID, bson.NewObjectId()}
+	slice = []string{bson.NewObjectId().Hex(), bson.NewObjectId().Hex(), trueID, bson.NewObjectId().Hex()}
 	if !IDInSlice(trueID, slice) {
 		t.Errorf("should find %v in %v", trueID, slice)
 	}
 
-	slice = []bson.ObjectId{bson.NewObjectId(), bson.NewObjectId(), bson.NewObjectId(), trueID}
+	slice = []string{bson.NewObjectId().Hex(), bson.NewObjectId().Hex(), bson.NewObjectId().Hex(), trueID}
 	if !IDInSlice(trueID, slice) {
 		t.Errorf("should find %v in %v", trueID, slice)
 	}
 
-	falseID := bson.NewObjectId()
+	falseID := bson.NewObjectId().Hex()
 	if IDInSlice(falseID, slice) {
 		t.Errorf("should not find %v in %v", trueID, slice)
 	}
@@ -187,27 +187,27 @@ func TestIdInSlice(t *testing.T) {
 
 func TestSliceWithoutID(t *testing.T) {
 
-	a := bson.NewObjectId()
-	b := bson.NewObjectId()
-	c := bson.NewObjectId()
-	d := bson.NewObjectId()
-	z := bson.NewObjectId()
-	slice := []bson.ObjectId{a, b, c, d}
+	a := bson.NewObjectId().Hex()
+	b := bson.NewObjectId().Hex()
+	c := bson.NewObjectId().Hex()
+	d := bson.NewObjectId().Hex()
+	z := bson.NewObjectId().Hex()
+	slice := []string{a, b, c, d}
 
 	result := SliceWithoutID(slice, a)
-	if !reflect.DeepEqual([]bson.ObjectId{b, c, d}, result) {
+	if !reflect.DeepEqual([]string{b, c, d}, result) {
 		t.Errorf("error removing a from {a, b, c, d}, got: %v", result)
 	}
 	result = SliceWithoutID(slice, b)
-	if !reflect.DeepEqual([]bson.ObjectId{a, c, d}, result) {
+	if !reflect.DeepEqual([]string{a, c, d}, result) {
 		t.Errorf("error removing b from {a, b, c, d}, got: %v", result)
 	}
 	result = SliceWithoutID(slice, d)
-	if !reflect.DeepEqual([]bson.ObjectId{a, b, c}, result) {
+	if !reflect.DeepEqual([]string{a, b, c}, result) {
 		t.Errorf("error removing c from {a, b, c, d}, got: %v", result)
 	}
 	result = SliceWithoutID(slice, z)
-	if !reflect.DeepEqual([]bson.ObjectId{a, b, c, d}, result) {
+	if !reflect.DeepEqual([]string{a, b, c, d}, result) {
 		t.Errorf("error removing non-existent z from {a, b, c, d}, got: %v", result)
 	}
 }
