@@ -167,24 +167,6 @@ func (c *Client) setTags(containerID, imageID string, tags []string) error {
 	return nil
 }
 
-// Search searches library by name, returns any matching collections,
-// containers, entities, or images.
-func (c *Client) Search(value string) (*SearchResults, error) {
-	url := fmt.Sprintf("/v1/search?value=%s", url.QueryEscape(value))
-
-	resJSON, _, err := c.apiGet(url)
-	if err != nil {
-		return nil, err
-	}
-
-	var res SearchResponse
-	if err := json.Unmarshal(resJSON, &res); err != nil {
-		return nil, fmt.Errorf("error decoding results: %v", err)
-	}
-
-	return &res.Data, nil
-}
-
 func (c *Client) apiCreate(url string, o interface{}) (objJSON []byte, err error) {
 	glog.V(2).Infof("apiCreate calling %s", url)
 	s, err := json.Marshal(o)
