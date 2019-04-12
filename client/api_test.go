@@ -99,7 +99,7 @@ func (m *mockService) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func Test_getEntity(t *testing.T) {
+func Test_GetEntity(t *testing.T) {
 
 	tests := []struct {
 		description  string
@@ -163,7 +163,7 @@ func Test_getEntity(t *testing.T) {
 				t.Errorf("Error initializing client: %v", err)
 			}
 
-			entity, found, err := getEntity(c, tt.entityRef)
+			entity, found, err := GetEntity(c, tt.entityRef)
 
 			if err != nil && !tt.expectError {
 				t.Errorf("Unexpected error: %v", err)
@@ -185,7 +185,7 @@ func Test_getEntity(t *testing.T) {
 	}
 }
 
-func Test_getCollection(t *testing.T) {
+func Test_GetCollection(t *testing.T) {
 
 	tests := []struct {
 		description      string
@@ -249,7 +249,7 @@ func Test_getCollection(t *testing.T) {
 				t.Errorf("Error initializing client: %v", err)
 			}
 
-			collection, found, err := getCollection(c, tt.collectionRef)
+			collection, found, err := GetCollection(c, tt.collectionRef)
 
 			if err != nil && !tt.expectError {
 				t.Errorf("Unexpected error: %v", err)
@@ -271,7 +271,7 @@ func Test_getCollection(t *testing.T) {
 	}
 }
 
-func Test_getContainer(t *testing.T) {
+func Test_GetContainer(t *testing.T) {
 
 	tests := []struct {
 		description     string
@@ -335,7 +335,7 @@ func Test_getContainer(t *testing.T) {
 				t.Errorf("Error initializing client: %v", err)
 			}
 
-			container, found, err := getContainer(c, tt.containerRef)
+			container, found, err := GetContainer(c, tt.containerRef)
 
 			if err != nil && !tt.expectError {
 				t.Errorf("Unexpected error: %v", err)
@@ -357,7 +357,7 @@ func Test_getContainer(t *testing.T) {
 	}
 }
 
-func Test_getImage(t *testing.T) {
+func Test_GetImage(t *testing.T) {
 
 	tests := []struct {
 		description string
@@ -414,14 +414,14 @@ func Test_getImage(t *testing.T) {
 			}
 
 			m.Run()
-			defer m.httpServer.Close()
+			defer m.Stop()
 
 			c, err := NewClient(&Config{AuthToken: testToken, BaseURL: m.baseURI})
 			if err != nil {
 				t.Errorf("Error initializing client: %v", err)
 			}
 
-			image, found, err := getImage(c, tt.imageRef)
+			image, found, err := GetImage(c, tt.imageRef)
 
 			if err != nil && !tt.expectError {
 				t.Errorf("Unexpected error: %v", err)
@@ -435,15 +435,11 @@ func Test_getImage(t *testing.T) {
 			if !reflect.DeepEqual(image, tt.expectImage) {
 				t.Errorf("Got image %v - expected %v", image, tt.expectImage)
 			}
-
-			m.Stop()
-
 		})
-
 	}
 }
 
-func Test_createEntity(t *testing.T) {
+func Test_CreateEntity(t *testing.T) {
 
 	tests := []struct {
 		description  string
@@ -492,7 +488,7 @@ func Test_createEntity(t *testing.T) {
 				t.Errorf("Error initializing client: %v", err)
 			}
 
-			entity, err := createEntity(c, tt.entityRef)
+			entity, err := CreateEntity(c, tt.entityRef)
 
 			if err != nil && !tt.expectError {
 				t.Errorf("Unexpected error: %v", err)
@@ -511,7 +507,7 @@ func Test_createEntity(t *testing.T) {
 	}
 }
 
-func Test_createCollection(t *testing.T) {
+func Test_CreateCollection(t *testing.T) {
 
 	tests := []struct {
 		description      string
@@ -551,7 +547,7 @@ func Test_createCollection(t *testing.T) {
 				t.Errorf("Error initializing client: %v", err)
 			}
 
-			collection, err := createCollection(c, tt.collectionRef, bson.NewObjectId().Hex())
+			collection, err := CreateCollection(c, tt.collectionRef, bson.NewObjectId().Hex())
 
 			if err != nil && !tt.expectError {
 				t.Errorf("Unexpected error: %v", err)
@@ -570,7 +566,7 @@ func Test_createCollection(t *testing.T) {
 	}
 }
 
-func Test_createContainer(t *testing.T) {
+func Test_CreateContainer(t *testing.T) {
 
 	tests := []struct {
 		description     string
@@ -611,7 +607,7 @@ func Test_createContainer(t *testing.T) {
 				t.Errorf("Error initializing client: %v", err)
 			}
 
-			container, err := createContainer(c, tt.containerRef, bson.NewObjectId().Hex())
+			container, err := CreateContainer(c, tt.containerRef, bson.NewObjectId().Hex())
 
 			if err != nil && !tt.expectError {
 				t.Errorf("Unexpected error: %v", err)
@@ -630,7 +626,7 @@ func Test_createContainer(t *testing.T) {
 	}
 }
 
-func Test_createImage(t *testing.T) {
+func Test_CreateImage(t *testing.T) {
 
 	tests := []struct {
 		description string
@@ -679,7 +675,7 @@ func Test_createImage(t *testing.T) {
 				t.Errorf("Error initializing client: %v", err)
 			}
 
-			image, err := createImage(c, tt.imageRef, bson.NewObjectId().Hex(), "No Description")
+			image, err := CreateImage(c, tt.imageRef, bson.NewObjectId().Hex(), "No Description")
 
 			if err != nil && !tt.expectError {
 				t.Errorf("Unexpected error: %v", err)
@@ -698,7 +694,7 @@ func Test_createImage(t *testing.T) {
 	}
 }
 
-func Test_setTags(t *testing.T) {
+func Test_SetTags(t *testing.T) {
 
 	tests := []struct {
 		description  string
@@ -739,14 +735,14 @@ func Test_setTags(t *testing.T) {
 			}
 
 			m.Run()
-			defer m.httpServer.Close()
+			defer m.Stop()
 
 			c, err := NewClient(&Config{AuthToken: testToken, BaseURL: m.baseURI})
 			if err != nil {
 				t.Errorf("Error initializing client: %v", err)
 			}
 
-			err = setTags(c, tt.containerRef, tt.imageRef, tt.tags)
+			err = SetTags(c, tt.containerRef, tt.imageRef, tt.tags)
 
 			if err != nil && !tt.expectError {
 				t.Errorf("Unexpected error: %v", err)
@@ -754,15 +750,11 @@ func Test_setTags(t *testing.T) {
 			if err == nil && tt.expectError {
 				t.Errorf("Unexpected success. Expected error.")
 			}
-
-			m.Stop()
-
 		})
-
 	}
 }
 
-func Test_search(t *testing.T) {
+func Test_Search(t *testing.T) {
 	tests := []struct {
 		description   string
 		code          int
@@ -814,7 +806,7 @@ func Test_search(t *testing.T) {
 				t.Errorf("Error initializing client: %v", err)
 			}
 
-			results, err := search(c, tt.value)
+			results, err := Search(c, tt.value)
 
 			if err != nil && !tt.expectError {
 				t.Errorf("Unexpected error: %v", err)
