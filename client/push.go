@@ -101,7 +101,7 @@ func (c *Client) UploadImage(uploadSpec UpdateImageSpec, libraryRef, description
 	}
 
 	if !image.Uploaded {
-		// glog.Infof("Now uploading %s to the library", filePath)
+		glog.Info("Now uploading to the library")
 		err = c.postFile(uploadSpec, image.ID, callback)
 		if err != nil {
 			return err
