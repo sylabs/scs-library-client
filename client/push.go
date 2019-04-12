@@ -30,17 +30,17 @@ type UploadCallback interface {
 	Finish()
 }
 
-// UploadImageConfig defines the parameters of the image being uploaded.
+// UpdateImageSpec defines the parameters of the image being uploaded.
 // Size and Hash are image size and the calculated hash (using ImageHash),
 // respectively.
-type UploadImageConfig struct {
+type UpdateImageSpec struct {
 	SrcReader io.Reader
 	Size      int64
 	Hash      string
 }
 
 // UploadImage will push a specified image up to the Container Library,
-func (c *Client) UploadImage(uploadCfg UploadImageConfig, libraryRef, description string, callback UploadCallback) error {
+func (c *Client) UploadImage(uploadSpec UpdateImageSpec, libraryRef, description string, callback UploadCallback) error {
 
 	if !IsLibraryPushRef(libraryRef) {
 		return fmt.Errorf("Not a valid library reference: %s", libraryRef)
@@ -88,13 +88,13 @@ func (c *Client) UploadImage(uploadCfg UploadImageConfig, libraryRef, descriptio
 	}
 
 	// Find or create image
-	image, found, err := c.GetImage(entityName + "/" + collectionName + "/" + containerName + ":" + uploadCfg.Hash)
+	image, found, err := c.GetImage(entityName + "/" + collectionName + "/" + containerName + ":" + uploadSpec.Hash)
 	if err != nil {
 		return err
 	}
 	if !found {
-		glog.V(1).Infof("Image %s does not exist in library - creating it.", uploadCfg.Hash)
-		image, err = c.createImage(uploadCfg.Hash, container.ID, description)
+		glog.V(1).Infof("Image %s does not exist in library - creating it.", uploadSpec.Hash)
+		image, err = c.createImage(uploadSpec.Hash, container.ID, description)
 		if err != nil {
 			return err
 		}
@@ -102,7 +102,7 @@ func (c *Client) UploadImage(uploadCfg UploadImageConfig, libraryRef, descriptio
 
 	if !image.Uploaded {
 		// glog.Infof("Now uploading %s to the library", filePath)
-		err = c.postFile(uploadCfg, image.ID, callback)
+		err = c.postFile(uploadSpec, image.ID, callback)
 		if err != nil {
 			return err
 		}
@@ -120,7 +120,7 @@ func (c *Client) UploadImage(uploadCfg UploadImageConfig, libraryRef, descriptio
 	return nil
 }
 
-func (c *Client) postFile(uploadCfg UploadImageConfig, imageID string, callback UploadCallback) error {
+func (c *Client) postFile(uploadSpec UpdateImageSpec, imageID string, callback UploadCallback) error {
 
 	postURL := "/v1/imagefile/" + imageID
 	glog.V(2).Infof("postFile calling %s", postURL)
@@ -129,12 +129,12 @@ func (c *Client) postFile(uploadCfg UploadImageConfig, imageID string, callback 
 
 	if callback != nil {
 		// use callback to set up source file reader
-		callback.InitUpload(uploadCfg.Size, uploadCfg.SrcReader)
+		callback.InitUpload(uploadSpec.Size, uploadSpec.SrcReader)
 		defer callback.Finish()
 
 		bodyProgress = callback.GetReader()
 	} else {
-		bodyProgress = uploadCfg.SrcReader
+		bodyProgress = uploadSpec.SrcReader
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), pushTimeout)
@@ -143,7 +143,7 @@ func (c *Client) postFile(uploadCfg UploadImageConfig, imageID string, callback 
 	// Make an upload request
 	req, _ := c.newRequest("POST", postURL, "", bodyProgress)
 	// Content length is required by the API
-	req.ContentLength = uploadCfg.Size
+	req.ContentLength = uploadSpec.Size
 	res, err := c.HTTPClient.Do(req.WithContext(ctx))
 
 	if err != nil {
