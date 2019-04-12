@@ -21,7 +21,7 @@ type ModelManager interface {
 
 // BaseModel - has an ID, soft deletion marker, and Audit struct
 type BaseModel struct {
-	ModelManager `bson:",omitempty" json:",omitempty"`
+	ModelManager `json:",omitempty"`
 	Deleted      bool      `json:"deleted"`
 	CreatedBy    string    `json:"createdBy"`
 	CreatedAt    time.Time `json:"createdAt"`
@@ -29,6 +29,7 @@ type BaseModel struct {
 	UpdatedAt    time.Time `json:"updatedAt,omitempty"`
 	DeletedBy    string    `json:"deletedBy,omitempty"`
 	DeletedAt    time.Time `json:"deletedAt,omitempty"`
+	Owner        string    `json:"owner,omitempty"`
 }
 
 // IsDeleted - Convenience method to check soft deletion state if working with
@@ -70,10 +71,10 @@ type Entity struct {
 	Quota       int64    `json:"quota"`
 	// DefaultPrivate set true will make any new Collections in ths entity
 	// private at the time of creation.
-	DefaultPrivate bool `bson:"defaultPrivate" json:"defaultPrivate"`
+	DefaultPrivate bool `json:"defaultPrivate"`
 	// CustomData can hold a user-provided string for integration purposes
 	// not used by the library itself.
-	CustomData string `bson:"customData" json:"customData"`
+	CustomData string `json:"customData"`
 }
 
 // GetID - Convenience method to get model ID if working with an interface
@@ -98,9 +99,9 @@ type Collection struct {
 	Private     bool     `json:"private"`
 	// CustomData can hold a user-provided string for integration purposes
 	// not used by the library itself.
-	CustomData string `bson:"customData" json:"customData"`
+	CustomData string `json:"customData"`
 	// Computed fields that will not be stored - JSON response use only
-	EntityName string `bson:"-" json:"entityName,omitempty"`
+	EntityName string `json:"entityName,omitempty"`
 }
 
 // GetID - Convenience method to get model ID if working with an interface
