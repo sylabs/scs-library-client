@@ -127,6 +127,9 @@ type Container struct {
 	ImageTags     map[string]bson.ObjectId `bson:"imageTags" json:"imageTags"`
 	Size          int64                    `bson:"size" json:"size"`
 	DownloadCount int64                    `bson:"downloadCount" json:"downloadCount"`
+	Stars         int                      `bson:"stars" json:"stars"`
+	Private       bool                     `bson:"private" json:"private"`
+	ReadOnly      bool                     `bson:"readOnly" json:"readOnly"`
 	// CustomData can hold a user-provided string for integration purposes
 	// not used by the library itself.
 	CustomData string `bson:"customData" json:"customData"`
