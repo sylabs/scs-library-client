@@ -86,7 +86,7 @@ func Test_postFile(t *testing.T) {
 			}
 			fileSize := fi.Size()
 
-			err = c.postFile(UpdateImageSpec{
+			err = c.postFile(UploadImageSpec{
 				SrcReader: bufio.NewReader(f),
 				Size:      fileSize,
 				Hash:      imageHash,

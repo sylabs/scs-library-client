@@ -30,17 +30,17 @@ type UploadCallback interface {
 	Finish()
 }
 
-// UpdateImageSpec defines the parameters of the image being uploaded.
+// UploadImageSpec defines the parameters of the image being uploaded.
 // Size and Hash are image size and the calculated hash (using ImageHash),
 // respectively.
-type UpdateImageSpec struct {
+type UploadImageSpec struct {
 	SrcReader io.Reader
 	Size      int64
 	Hash      string
 }
 
 // UploadImage will push a specified image up to the Container Library,
-func (c *Client) UploadImage(uploadSpec UpdateImageSpec, libraryRef, description string, callback UploadCallback) error {
+func (c *Client) UploadImage(uploadSpec UploadImageSpec, libraryRef, description string, callback UploadCallback) error {
 
 	if !IsLibraryPushRef(libraryRef) {
 		return fmt.Errorf("Not a valid library reference: %s", libraryRef)
@@ -120,7 +120,7 @@ func (c *Client) UploadImage(uploadSpec UpdateImageSpec, libraryRef, description
 	return nil
 }
 
-func (c *Client) postFile(uploadSpec UpdateImageSpec, imageID string, callback UploadCallback) error {
+func (c *Client) postFile(uploadSpec UploadImageSpec, imageID string, callback UploadCallback) error {
 
 	postURL := "/v1/imagefile/" + imageID
 	glog.V(2).Infof("postFile calling %s", postURL)
