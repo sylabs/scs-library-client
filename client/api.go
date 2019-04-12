@@ -184,7 +184,9 @@ func SetTags(c *Client, containerID, imageID string, tags []string) error {
 	return nil
 }
 
-func search(c *Client, value string) (*SearchResults, error) {
+// Search searches library by name, returns any matching collections,
+// containers, entities, or images.
+func Search(c *Client, value string) (*SearchResults, error) {
 	url := fmt.Sprintf("/v1/search?value=%s", url.QueryEscape(value))
 
 	resJSON, _, err := c.apiGet(url)

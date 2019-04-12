@@ -754,7 +754,7 @@ func Test_SetTags(t *testing.T) {
 	}
 }
 
-func Test_search(t *testing.T) {
+func Test_Search(t *testing.T) {
 	tests := []struct {
 		description   string
 		code          int
@@ -806,7 +806,7 @@ func Test_search(t *testing.T) {
 				t.Errorf("Error initializing client: %v", err)
 			}
 
-			results, err := search(c, tt.value)
+			results, err := Search(c, tt.value)
 
 			if err != nil && !tt.expectError {
 				t.Errorf("Unexpected error: %v", err)
