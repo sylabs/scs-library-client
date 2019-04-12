@@ -29,6 +29,7 @@ type BaseModel struct {
 	UpdatedAt    time.Time `json:"updatedAt,omitempty"`
 	DeletedBy    string    `json:"deletedBy,omitempty"`
 	DeletedAt    time.Time `json:"deletedAt,omitempty"`
+	Owner        string    `json:"owner,omitempty"`
 }
 
 // IsDeleted - Convenience method to check soft deletion state if working with
