@@ -48,52 +48,52 @@ func UploadImage(c *Client, filePath, libraryRef, description string, callback U
 	entityName, collectionName, containerName, tags := parseLibraryRef(libraryRef)
 
 	// Find or create entity
-	entity, found, err := getEntity(c, entityName)
+	entity, found, err := GetEntity(c, entityName)
 	if err != nil {
 		return err
 	}
 	if !found {
 		glog.V(1).Infof("Entity %s does not exist in library - creating it.", entityName)
-		entity, err = createEntity(c, entityName)
+		entity, err = CreateEntity(c, entityName)
 		if err != nil {
 			return err
 		}
 	}
 
 	// Find or create collection
-	collection, found, err := getCollection(c, entityName+"/"+collectionName)
+	collection, found, err := GetCollection(c, entityName+"/"+collectionName)
 	if err != nil {
 		return err
 	}
 	if !found {
 		glog.V(1).Infof("Collection %s does not exist in library - creating it.", collectionName)
-		collection, err = createCollection(c, collectionName, entity.GetID().Hex())
+		collection, err = CreateCollection(c, collectionName, entity.GetID().Hex())
 		if err != nil {
 			return err
 		}
 	}
 
 	// Find or create container
-	container, found, err := getContainer(c, entityName+"/"+collectionName+"/"+containerName)
+	container, found, err := GetContainer(c, entityName+"/"+collectionName+"/"+containerName)
 	if err != nil {
 		return err
 	}
 	if !found {
 		glog.V(1).Infof("Container %s does not exist in library - creating it.", containerName)
-		container, err = createContainer(c, containerName, collection.GetID().Hex())
+		container, err = CreateContainer(c, containerName, collection.GetID().Hex())
 		if err != nil {
 			return err
 		}
 	}
 
 	// Find or create image
-	image, found, err := getImage(c, entityName+"/"+collectionName+"/"+containerName+":"+imageHash)
+	image, found, err := GetImage(c, entityName+"/"+collectionName+"/"+containerName+":"+imageHash)
 	if err != nil {
 		return err
 	}
 	if !found {
 		glog.V(1).Infof("Image %s does not exist in library - creating it.", imageHash)
-		image, err = createImage(c, imageHash, container.GetID().Hex(), description)
+		image, err = CreateImage(c, imageHash, container.GetID().Hex(), description)
 		if err != nil {
 			return err
 		}
@@ -111,7 +111,7 @@ func UploadImage(c *Client, filePath, libraryRef, description string, callback U
 	}
 
 	glog.V(2).Infof("Setting tags against uploaded image")
-	err = setTags(c, container.GetID().Hex(), image.GetID().Hex(), tags)
+	err = SetTags(c, container.GetID().Hex(), image.GetID().Hex(), tags)
 	if err != nil {
 		return err
 	}

@@ -15,7 +15,7 @@ func SearchLibrary(c *Client, value string) error {
 		return fmt.Errorf("Bad query '%s'. You must search for at least 3 characters", value)
 	}
 
-	results, err := search(c, value)
+	results, err := Search(c, value)
 	if err != nil {
 		return err
 	}
