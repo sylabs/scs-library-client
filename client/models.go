@@ -119,17 +119,18 @@ func (c Collection) LibraryURI() string {
 // a particular container
 type Container struct {
 	BaseModel
-	ID            bson.ObjectId            `bson:"_id" json:"id"`
-	Name          string                   `bson:"name" json:"name"`
-	Description   string                   `bson:"description" json:"description"`
-	Collection    bson.ObjectId            `bson:"collection" json:"collection"`
-	Images        []bson.ObjectId          `bson:"images" json:"images"`
-	ImageTags     map[string]bson.ObjectId `bson:"imageTags" json:"imageTags"`
-	Size          int64                    `bson:"size" json:"size"`
-	DownloadCount int64                    `bson:"downloadCount" json:"downloadCount"`
-	Stars         int                      `bson:"stars" json:"stars"`
-	Private       bool                     `bson:"private" json:"private"`
-	ReadOnly      bool                     `bson:"readOnly" json:"readOnly"`
+	ID              bson.ObjectId            `bson:"_id" json:"id"`
+	Name            string                   `bson:"name" json:"name"`
+	Description     string                   `bson:"description" json:"description"`
+	FullDescription string                   `bson:"fullDescription" json:"fullDescription"`
+	Collection      bson.ObjectId            `bson:"collection" json:"collection"`
+	Images          []bson.ObjectId          `bson:"images" json:"images"`
+	ImageTags       map[string]bson.ObjectId `bson:"imageTags" json:"imageTags"`
+	Size            int64                    `bson:"size" json:"size"`
+	DownloadCount   int64                    `bson:"downloadCount" json:"downloadCount"`
+	Stars           int                      `bson:"stars" json:"stars"`
+	Private         bool                     `bson:"private" json:"private"`
+	ReadOnly        bool                     `bson:"readOnly" json:"readOnly"`
 	// CustomData can hold a user-provided string for integration purposes
 	// not used by the library itself.
 	CustomData string `bson:"customData" json:"customData"`
@@ -163,22 +164,29 @@ func (c Container) TagList() string {
 // Container
 type Image struct {
 	BaseModel
-	ID          bson.ObjectId `bson:"_id" json:"id"`
-	Hash        string        `bson:"hash" json:"hash"`
-	Description string        `bson:"description" json:"description"`
-	Container   bson.ObjectId `bson:"container" json:"container"`
-	Blob        bson.ObjectId `bson:"blob,omitempty" json:"blob,omitempty"`
-	Size        int64         `bson:"size" json:"size"`
-	Uploaded    bool          `bson:"uploaded" json:"uploaded"`
+	ID           bson.ObjectId `bson:"_id" json:"id"`
+	Hash         string        `bson:"hash" json:"hash"`
+	Description  string        `bson:"description" json:"description"`
+	Container    bson.ObjectId `bson:"container" json:"container"`
+	Blob         bson.ObjectId `bson:"blob,omitempty" json:"blob,omitempty"`
+	Size         int64         `bson:"size" json:"size"`
+	Uploaded     bool          `bson:"uploaded" json:"uploaded"`
+	Signed       *bool         `bson:"signed,omitempty" json:"signed,omitempty"`
+	Architecture *string       `bson:"arch,omitempty" json:"arch,omitempty"`
+	Fingerprints []string      `bson:"fingerprints,omitempty" json:"fingerprints,omitempty"`
 	// CustomData can hold a user-provided string for integration purposes
 	// not used by the library itself.
 	CustomData string `bson:"customData" json:"customData"`
 	// Computed fields that will not be stored - JSON response use only
-	Entity         bson.ObjectId `bson:"-" json:"entity,omitempty"`
-	EntityName     string        `bson:"-" json:"entityName,omitempty"`
-	Collection     bson.ObjectId `bson:"-" json:"collection,omitempty"`
-	CollectionName string        `bson:"-" json:"collectionName,omitempty"`
-	ContainerName  string        `bson:"-" json:"containerName,omitempty"`
+	Entity               bson.ObjectId `bson:"-" json:"entity,omitempty"`
+	EntityName           string        `bson:"-" json:"entityName,omitempty"`
+	Collection           bson.ObjectId `bson:"-" json:"collection,omitempty"`
+	CollectionName       string        `bson:"-" json:"collectionName,omitempty"`
+	ContainerName        string        `bson:"-" json:"containerName,omitempty"`
+	Tags                 []string      `bson:"-" json:"tags,omitempty"`
+	ContainerDescription string        `bson:"-" json:"containerDescription,omitempty"`
+	ContainerStars       int           `bson:"-" json:"containerStars"`
+	ContainerDownloads   int64         `bson:"-" json:"containerDownloads"`
 }
 
 // GetID - Convenience method to get model ID if working with an interface
