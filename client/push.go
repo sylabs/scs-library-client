@@ -40,7 +40,7 @@ type UploadImageSpec struct {
 }
 
 // UploadImage will push a specified image up to the Container Library,
-func (c *Client) UploadImage(uploadSpec UploadImageSpec, libraryRef, description string, callback UploadCallback) error {
+func (c *Client) UploadImage(u UploadImageSpec, libraryRef, description string, callback UploadCallback) error {
 
 	if !IsLibraryPushRef(libraryRef) {
 		return fmt.Errorf("Not a valid library reference: %s", libraryRef)
@@ -88,13 +88,13 @@ func (c *Client) UploadImage(uploadSpec UploadImageSpec, libraryRef, description
 	}
 
 	// Find or create image
-	image, found, err := c.GetImage(entityName + "/" + collectionName + "/" + containerName + ":" + uploadSpec.Hash)
+	image, found, err := c.GetImage(entityName + "/" + collectionName + "/" + containerName + ":" + u.Hash)
 	if err != nil {
 		return err
 	}
 	if !found {
-		glog.V(1).Infof("Image %s does not exist in library - creating it.", uploadSpec.Hash)
-		image, err = c.createImage(uploadSpec.Hash, container.ID, description)
+		glog.V(1).Infof("Image %s does not exist in library - creating it.", u.Hash)
+		image, err = c.createImage(u.Hash, container.ID, description)
 		if err != nil {
 			return err
 		}
@@ -102,7 +102,7 @@ func (c *Client) UploadImage(uploadSpec UploadImageSpec, libraryRef, description
 
 	if !image.Uploaded {
 		glog.Info("Now uploading to the library")
-		err = c.postFile(uploadSpec, image.ID, callback)
+		err = c.postFile(u, image.ID, callback)
 		if err != nil {
 			return err
 		}
@@ -120,7 +120,7 @@ func (c *Client) UploadImage(uploadSpec UploadImageSpec, libraryRef, description
 	return nil
 }
 
-func (c *Client) postFile(uploadSpec UploadImageSpec, imageID string, callback UploadCallback) error {
+func (c *Client) postFile(u UploadImageSpec, imageID string, callback UploadCallback) error {
 
 	postURL := "/v1/imagefile/" + imageID
 	glog.V(2).Infof("postFile calling %s", postURL)
@@ -129,12 +129,12 @@ func (c *Client) postFile(uploadSpec UploadImageSpec, imageID string, callback U
 
 	if callback != nil {
 		// use callback to set up source file reader
-		callback.InitUpload(uploadSpec.Size, uploadSpec.SrcReader)
+		callback.InitUpload(u.Size, u.SrcReader)
 		defer callback.Finish()
 
 		bodyProgress = callback.GetReader()
 	} else {
-		bodyProgress = uploadSpec.SrcReader
+		bodyProgress = u.SrcReader
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), pushTimeout)
@@ -143,7 +143,7 @@ func (c *Client) postFile(uploadSpec UploadImageSpec, imageID string, callback U
 	// Make an upload request
 	req, _ := c.newRequest("POST", postURL, "", bodyProgress)
 	// Content length is required by the API
-	req.ContentLength = uploadSpec.Size
+	req.ContentLength = u.Size
 	res, err := c.HTTPClient.Do(req.WithContext(ctx))
 
 	if err != nil {
