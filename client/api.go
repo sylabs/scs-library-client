@@ -108,7 +108,7 @@ func CreateCollection(c *Client, name string, entityID string) (*Collection, err
 	newCollection := Collection{
 		Name:        name,
 		Description: "No description",
-		Entity:      bson.ObjectIdHex(entityID),
+		Entity:      bson.ObjectIdHex(entityID).Hex(),
 	}
 	colJSON, err := apiCreate(c, "/v1/collections", newCollection)
 	if err != nil {
@@ -126,7 +126,7 @@ func CreateContainer(c *Client, name string, collectionID string) (*Container, e
 	newContainer := Container{
 		Name:        name,
 		Description: "No description",
-		Collection:  bson.ObjectIdHex(collectionID),
+		Collection:  bson.ObjectIdHex(collectionID).Hex(),
 	}
 	conJSON, err := apiCreate(c, "/v1/containers", newContainer)
 	if err != nil {
@@ -144,7 +144,7 @@ func CreateImage(c *Client, hash string, containerID string, description string)
 	i := Image{
 		Hash:        hash,
 		Description: description,
-		Container:   bson.ObjectIdHex(containerID),
+		Container:   bson.ObjectIdHex(containerID).Hex(),
 	}
 	imgJSON, err := apiCreate(c, "/v1/images", i)
 	if err != nil {
@@ -174,7 +174,7 @@ func SetTags(c *Client, containerID, imageID string, tags []string) error {
 
 		imgTag := ImageTag{
 			tag,
-			bson.ObjectIdHex(imageID),
+			bson.ObjectIdHex(imageID).Hex(),
 		}
 		err := SetTag(c, containerID, imgTag)
 		if err != nil {

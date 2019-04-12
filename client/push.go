@@ -67,7 +67,7 @@ func UploadImage(c *Client, filePath, libraryRef, description string, callback U
 	}
 	if !found {
 		glog.V(1).Infof("Collection %s does not exist in library - creating it.", collectionName)
-		collection, err = CreateCollection(c, collectionName, entity.GetID().Hex())
+		collection, err = CreateCollection(c, collectionName, entity.ID)
 		if err != nil {
 			return err
 		}
@@ -80,7 +80,7 @@ func UploadImage(c *Client, filePath, libraryRef, description string, callback U
 	}
 	if !found {
 		glog.V(1).Infof("Container %s does not exist in library - creating it.", containerName)
-		container, err = CreateContainer(c, containerName, collection.GetID().Hex())
+		container, err = CreateContainer(c, containerName, collection.ID)
 		if err != nil {
 			return err
 		}
@@ -93,7 +93,7 @@ func UploadImage(c *Client, filePath, libraryRef, description string, callback U
 	}
 	if !found {
 		glog.V(1).Infof("Image %s does not exist in library - creating it.", imageHash)
-		image, err = CreateImage(c, imageHash, container.GetID().Hex(), description)
+		image, err = CreateImage(c, imageHash, container.ID, description)
 		if err != nil {
 			return err
 		}
@@ -101,7 +101,7 @@ func UploadImage(c *Client, filePath, libraryRef, description string, callback U
 
 	if !image.Uploaded {
 		glog.Infof("Now uploading %s to the library", filePath)
-		err = postFile(c, filePath, image.GetID().Hex(), callback)
+		err = postFile(c, filePath, image.ID, callback)
 		if err != nil {
 			return err
 		}
@@ -111,7 +111,7 @@ func UploadImage(c *Client, filePath, libraryRef, description string, callback U
 	}
 
 	glog.V(2).Infof("Setting tags against uploaded image")
-	err = SetTags(c, container.GetID().Hex(), image.GetID().Hex(), tags)
+	err = SetTags(c, container.ID, image.ID, tags)
 	if err != nil {
 		return err
 	}

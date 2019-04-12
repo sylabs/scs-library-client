@@ -20,13 +20,13 @@ const testToken = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkw
 
 var (
 	testEntity = Entity{
-		ID:          bson.NewObjectId(),
+		ID:          bson.NewObjectId().Hex(),
 		Name:        "test-user",
 		Description: "A test user",
 	}
 
 	testCollection = Collection{
-		ID:          bson.NewObjectId(),
+		ID:          bson.NewObjectId().Hex(),
 		Name:        "test-collection",
 		Description: "A test collection",
 		Entity:      testEntity.ID,
@@ -34,20 +34,20 @@ var (
 	}
 
 	testContainer = Container{
-		ID:             bson.NewObjectId(),
+		ID:             bson.NewObjectId().Hex(),
 		Name:           "test-container",
 		Description:    "A test container",
 		Entity:         testEntity.ID,
 		EntityName:     testEntity.Name,
 		Collection:     testEntity.ID,
 		CollectionName: testCollection.Name,
-		ImageTags: map[string]bson.ObjectId{
-			"test-tag": bson.NewObjectId(),
-			"latest":   bson.NewObjectId()},
+		ImageTags: map[string]string{
+			"test-tag": bson.NewObjectId().Hex(),
+			"latest":   bson.NewObjectId().Hex()},
 	}
 
 	testImage = Image{
-		ID:             bson.NewObjectId(),
+		ID:             bson.NewObjectId().Hex(),
 		Hash:           "sha256.e50a30881ace3d5944f5661d222db7bee5296be9e4dc7c1fcb7604bcae926e88",
 		Entity:         testEntity.ID,
 		EntityName:     testEntity.Name,
