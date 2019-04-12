@@ -74,13 +74,13 @@ func UploadImage(c *Client, filePath, libraryRef, description string, callback U
 	}
 
 	// Find or create container
-	container, found, err := getContainer(c, entityName+"/"+collectionName+"/"+containerName)
+	container, found, err := GetContainer(c, entityName+"/"+collectionName+"/"+containerName)
 	if err != nil {
 		return err
 	}
 	if !found {
 		glog.V(1).Infof("Container %s does not exist in library - creating it.", containerName)
-		container, err = createContainer(c, containerName, collection.GetID().Hex())
+		container, err = CreateContainer(c, containerName, collection.GetID().Hex())
 		if err != nil {
 			return err
 		}

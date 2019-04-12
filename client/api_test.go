@@ -271,7 +271,7 @@ func Test_GetCollection(t *testing.T) {
 	}
 }
 
-func Test_getContainer(t *testing.T) {
+func Test_GetContainer(t *testing.T) {
 
 	tests := []struct {
 		description     string
@@ -335,7 +335,7 @@ func Test_getContainer(t *testing.T) {
 				t.Errorf("Error initializing client: %v", err)
 			}
 
-			container, found, err := getContainer(c, tt.containerRef)
+			container, found, err := GetContainer(c, tt.containerRef)
 
 			if err != nil && !tt.expectError {
 				t.Errorf("Unexpected error: %v", err)
@@ -566,7 +566,7 @@ func Test_CreateCollection(t *testing.T) {
 	}
 }
 
-func Test_createContainer(t *testing.T) {
+func Test_CreateContainer(t *testing.T) {
 
 	tests := []struct {
 		description     string
@@ -607,7 +607,7 @@ func Test_createContainer(t *testing.T) {
 				t.Errorf("Error initializing client: %v", err)
 			}
 
-			container, err := createContainer(c, tt.containerRef, bson.NewObjectId().Hex())
+			container, err := CreateContainer(c, tt.containerRef, bson.NewObjectId().Hex())
 
 			if err != nil && !tt.expectError {
 				t.Errorf("Unexpected error: %v", err)

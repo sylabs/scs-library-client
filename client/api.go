@@ -69,7 +69,8 @@ func GetCollections(c *Client) ([]Collection, error) {
 	return u.Collections, nil
 }
 
-func getContainer(c *Client, containerRef string) (*Container, bool, error) {
+// GetContainer returns container by ref id
+func GetContainer(c *Client, containerRef string) (*Container, bool, error) {
 	url := "/v1/containers/" + containerRef
 	conJSON, found, err := c.apiGet(url)
 	if err != nil {
@@ -120,7 +121,8 @@ func CreateCollection(c *Client, name string, entityID string) (*Collection, err
 	return &res.Data, nil
 }
 
-func createContainer(c *Client, name string, collectionID string) (*Container, error) {
+// CreateContainer creates a container in the specified collection
+func CreateContainer(c *Client, name string, collectionID string) (*Container, error) {
 	newContainer := Container{
 		Name:        name,
 		Description: "No description",
