@@ -40,13 +40,12 @@ type UploadImageSpec struct {
 }
 
 // UploadImage will push a specified image up to the Container Library,
-func (c *Client) UploadImage(u UploadImageSpec, libraryRef, description string, callback UploadCallback) error {
+func (c *Client) UploadImage(u UploadImageSpec, path string, tags []string, description string, callback UploadCallback) error {
 
-	if !IsLibraryPushRef(libraryRef) {
-		return fmt.Errorf("Not a valid library reference: %s", libraryRef)
+	entityName, collectionName, containerName, parsedTags := ParseLibraryPath(path)
+	if len(parsedTags) != 0 {
+		return fmt.Errorf("Malformed image path: %s", path)
 	}
-
-	entityName, collectionName, containerName, tags := ParseLibraryRef(libraryRef)
 
 	// Find or create entity
 	entity, found, err := c.getEntity(entityName)
@@ -112,7 +111,7 @@ func (c *Client) UploadImage(u UploadImageSpec, libraryRef, description string, 
 	}
 
 	glog.V(2).Infof("Setting tags against uploaded image")
-	err = c.setTags(container.ID, image.ID, tags)
+	err = c.setTags(container.ID, image.ID, append(tags, parsedTags...))
 	if err != nil {
 		return err
 	}

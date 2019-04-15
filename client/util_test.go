@@ -120,7 +120,7 @@ func Test_IsImageHash(t *testing.T) {
 	}
 }
 
-func Test_ParseLibraryRef(t *testing.T) {
+func Test_ParseLibraryPath(t *testing.T) {
 	tests := []struct {
 		name       string
 		libraryRef string
@@ -131,18 +131,16 @@ func Test_ParseLibraryRef(t *testing.T) {
 	}{
 		{"Good long ref 1", "library://entity/collection/image:tag", "entity", "collection", "image", []string{"tag"}},
 		{"Good long ref 2", "entity/collection/image:tag", "entity", "collection", "image", []string{"tag"}},
-		{"Good long ref latest", "library://entity/collection/image", "entity", "collection", "image", []string{"latest"}},
 		{"Good long ref multi tag", "library://entity/collection/image:tag1,tag2,tag3", "entity", "collection", "image", []string{"tag1", "tag2", "tag3"}},
 		{"Good short ref 1", "library://image:tag", "", "", "image", []string{"tag"}},
 		{"Good short ref 2", "image:tag", "", "", "image", []string{"tag"}},
 		{"Good short ref 3", "library://collection/image:tag", "", "collection", "image", []string{"tag"}},
 		{"Good short ref 4", "collection/image:tag", "", "collection", "image", []string{"tag"}},
-		{"Good short ref latest", "library://image", "", "", "image", []string{"latest"}},
 		{"Good short ref multi tag", "library://image:tag1,tag2,tag3", "", "", "image", []string{"tag1", "tag2", "tag3"}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ent, col, con, tags := ParseLibraryRef(tt.libraryRef)
+			ent, col, con, tags := ParseLibraryPath(tt.libraryRef)
 			if ent != tt.wantEnt {
 				t.Errorf("ParseLibraryRef() = entity %v, want %v", ent, tt.wantEnt)
 			}

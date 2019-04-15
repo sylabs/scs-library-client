@@ -8,6 +8,7 @@ package client
 import (
 	"bufio"
 	"bytes"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -72,7 +73,8 @@ func Test_DownloadImage(t *testing.T) {
 
 	tests := []struct {
 		name         string
-		libraryRef   string
+		path         string
+		tag          string
 		outFile      string
 		code         int
 		testFile     string
@@ -80,9 +82,10 @@ func Test_DownloadImage(t *testing.T) {
 		checkContent bool
 		expectError  bool
 	}{
-		{"Bad library ref", "entity/collection/im,age:tag", tempFile, http.StatusBadRequest, "test_data/test_sha256", "test_data/test_token", false, true},
-		{"Server error", "entity/collection/image:tag", tempFile, http.StatusInternalServerError, "test_data/test_sha256", "test_data/test_token", false, true},
-		{"Good Download", "entity/collection/image:tag", tempFile, http.StatusOK, "test_data/test_sha256", "test_data/test_token", true, false},
+		{"Bad library ref", "entity/collection/im,age", "tag", tempFile, http.StatusBadRequest, "test_data/test_sha256", "test_data/test_token", false, true},
+		{"Server error", "entity/collection/image", "tag", tempFile, http.StatusInternalServerError, "test_data/test_sha256", "test_data/test_token", false, true},
+		{"Tags in path", "entity/collection/image:tag", "anothertag", tempFile, http.StatusOK, "test_data/test_sha256", "test_data/test_token", false, true},
+		{"Good Download", "entity/collection/image", "tag", tempFile, http.StatusOK, "test_data/test_sha256", "test_data/test_token", true, false},
 	}
 
 	for _, tt := range tests {
@@ -92,7 +95,7 @@ func Test_DownloadImage(t *testing.T) {
 				t:        t,
 				code:     tt.code,
 				testFile: tt.testFile,
-				httpPath: "/v1/imagefile/" + tt.libraryRef,
+				httpPath: fmt.Sprintf("/v1/imagefile/%s:%s", tt.path, tt.tag),
 			}
 
 			m.Run()
@@ -107,9 +110,10 @@ func Test_DownloadImage(t *testing.T) {
 			if err != nil {
 				t.Errorf("Error opening file %s for writing: %v", tt.outFile, err)
 			}
-			defer out.Close()
 
-			err = c.DownloadImage(out, tt.libraryRef, nil)
+			err = c.DownloadImage(out, tt.path, tt.tag, nil)
+
+			out.Close()
 
 			if err != nil && !tt.expectError {
 				t.Errorf("Unexpected error: %v", err)

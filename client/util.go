@@ -59,7 +59,7 @@ func IsImageHash(refPart string) bool {
 	return match
 }
 
-func ParseLibraryRef(libraryRef string) (entity string, collection string, container string, tags []string) {
+func ParseLibraryPath(libraryRef string) (entity string, collection string, container string, tags []string) {
 
 	libraryRef = strings.TrimPrefix(libraryRef, "library://")
 
@@ -79,9 +79,6 @@ func ParseLibraryRef(libraryRef string) (entity string, collection string, conta
 		collection = ""
 		container = refParts[0]
 	}
-
-	// Default tag is latest
-	tags = []string{"latest"}
 
 	if strings.Contains(container, ":") {
 		imageParts := strings.Split(container, ":")

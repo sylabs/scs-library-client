@@ -22,19 +22,17 @@ const pullTimeout = time.Duration(1800 * time.Second)
 
 // DownloadImage will retrieve an image from the Container Library,
 // saving it into the specified file
-func (c *Client) DownloadImage(w io.Writer, libraryRef string, callback func(int64, io.Reader, io.Writer) error) error {
+func (c *Client) DownloadImage(w io.Writer, path, tag string, callback func(int64, io.Reader, io.Writer) error) error {
 
-	if !IsLibraryPullRef(libraryRef) {
-		return fmt.Errorf("Not a valid library reference: %s", libraryRef)
+	if strings.Contains(path, ":") {
+		return fmt.Errorf("Malformed image path: %s", path)
 	}
 
-	libraryRef = strings.TrimPrefix(libraryRef, "library://")
-
-	if !strings.Contains(libraryRef, ":") {
-		libraryRef += ":latest"
+	if tag == "" {
+		tag = "latest"
 	}
 
-	url := "/v1/imagefile/" + libraryRef
+	url := fmt.Sprintf("/v1/imagefile/%s:%s", path, tag)
 
 	glog.V(2).Infof("Pulling from URL: %s", url)
 
