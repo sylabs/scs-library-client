@@ -141,22 +141,25 @@ func BsonUTCNow() time.Time {
 func ImageHash(filePath string) (result string, err error) {
 	// Currently using sha256 always
 	// TODO - use sif uuid for sif files!
-	return sha256sum(filePath)
-}
-
-// SHA256Sum computes the sha256sum of a file
-func sha256sum(filePath string) (result string, err error) {
 	file, err := os.Open(filePath)
 	if err != nil {
 		return "", err
 	}
 	defer file.Close()
 
+	result, _, err = sha256sum(file)
+
+	return result, err
+}
+
+// sha256sum computes the sha256sum of the specified reader; caller is
+// responsible for resetting file pointer
+func sha256sum(r io.ReadSeeker) (result string, s int64, err error) {
 	hash := sha256.New()
-	_, err = io.Copy(hash, file)
+	s, err = io.Copy(hash, r)
 	if err != nil {
-		return "", err
+		return "", 0, err
 	}
 
-	return "sha256." + hex.EncodeToString(hash.Sum(nil)), nil
+	return "sha256." + hex.EncodeToString(hash.Sum(nil)), s, nil
 }

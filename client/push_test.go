@@ -6,7 +6,7 @@
 package client
 
 import (
-	"bufio"
+	"io"
 	"net/http"
 	"os"
 	"testing"
@@ -69,11 +69,6 @@ func Test_postFile(t *testing.T) {
 				t.Errorf("Error initializing client: %v", err)
 			}
 
-			imageHash, err := ImageHash(tt.testFile)
-			if err != nil {
-				t.Errorf("Error calculating hash for file %s: %v", tt.testFile, err)
-			}
-
 			f, err := os.Open(tt.testFile)
 			if err != nil {
 				t.Errorf("Error opening file %s for reading: %v", tt.testFile, err)
@@ -86,11 +81,12 @@ func Test_postFile(t *testing.T) {
 			}
 			fileSize := fi.Size()
 
-			err = c.postFile(UploadImageSpec{
-				SrcReader: bufio.NewReader(f),
-				Size:      fileSize,
-				Hash:      imageHash,
-			}, tt.imageRef, nil)
+			_, err = f.Seek(0, io.SeekStart)
+			if err != nil {
+				t.Errorf("Error seeking in stream: %v", err)
+			}
+
+			err = c.postFile(f, fileSize, tt.imageRef, nil)
 
 			if err != nil && !tt.expectError {
 				t.Errorf("Unexpected error: %v", err)

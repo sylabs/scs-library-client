@@ -6,6 +6,7 @@
 package client
 
 import (
+	"os"
 	"reflect"
 	"testing"
 
@@ -258,12 +259,15 @@ func Test_sha256sum(t *testing.T) {
 
 	expectedSha256 := "sha256.d7d356079af905c04e5ae10711ecf3f5b34385e9b143c5d9ddbf740665ce2fb7"
 
-	_, err := sha256sum("no_such_file.txt")
-	if err == nil {
-		t.Error("Invalid file must return an error")
-	}
+	const filename = "test_data/test_sha256"
 
-	shasum, err := sha256sum("test_data/test_sha256")
+	f, err := os.Open(filename)
+	if err != nil {
+		t.Errorf("Unable to open file %s: %v", filename, err)
+	}
+	defer f.Close()
+
+	shasum, _, err := sha256sum(f)
 	if err != nil {
 		t.Errorf("sha256sum on valid file should not raise error: %v", err)
 	}
