@@ -92,10 +92,7 @@ func Test_Search(t *testing.T) {
 				t.Errorf("Error initializing client: %v", err)
 			}
 
-			ctx, cancel := context.WithTimeout(context.Background(), unitTestTimeout)
-			defer cancel()
-
-			results, err := c.Search(ctx, tt.value)
+			results, err := c.Search(context.Background(), tt.value)
 
 			if err != nil && !tt.expectError {
 				t.Errorf("Unexpected error: %v", err)
@@ -126,14 +123,11 @@ func Test_SearchLibrary(t *testing.T) {
 		t.Errorf("Error initializing client: %v", err)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), unitTestTimeout)
-	defer cancel()
-
-	err = c.searchLibrary(ctx, "a")
+	err = c.searchLibrary(context.Background(), "a")
 	if err == nil {
 		t.Errorf("Search of 1 character shouldn't be submitted")
 	}
-	err = c.searchLibrary(ctx, "ab")
+	err = c.searchLibrary(context.Background(), "ab")
 	if err == nil {
 		t.Errorf("Search of 2 characters shouldn't be submitted")
 	}
@@ -142,7 +136,7 @@ func Test_SearchLibrary(t *testing.T) {
 	r, w, _ := os.Pipe()
 	os.Stdout = w
 
-	err = c.searchLibrary(ctx, "test")
+	err = c.searchLibrary(context.Background(), "test")
 	if err != nil {
 		t.Errorf("Search failed: %v", err)
 	}
@@ -192,10 +186,7 @@ func Test_SearchLibraryEmpty(t *testing.T) {
 		t.Errorf("Error initializing client: %v", err)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), unitTestTimeout)
-	defer cancel()
-
-	err = c.searchLibrary(ctx, "test")
+	err = c.searchLibrary(context.Background(), "test")
 
 	outC := make(chan string)
 	go func() {

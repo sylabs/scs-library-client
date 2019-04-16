@@ -16,13 +16,9 @@ import (
 	"net/http/httptest"
 	"os"
 	"testing"
-	"time"
 
 	"github.com/golang/glog"
 )
-
-// Timeout for the upload unit test
-const pullTimeout = time.Duration(1800 * time.Second)
 
 type mockRawService struct {
 	t           *testing.T
@@ -116,10 +112,7 @@ func Test_DownloadImage(t *testing.T) {
 				t.Errorf("Error opening file %s for writing: %v", tt.outFile, err)
 			}
 
-			ctx, cancel := context.WithTimeout(context.Background(), pullTimeout)
-			defer cancel()
-
-			err = c.DownloadImage(ctx, out, tt.path, tt.tag, nil)
+			err = c.DownloadImage(context.Background(), out, tt.path, tt.tag, nil)
 
 			out.Close()
 

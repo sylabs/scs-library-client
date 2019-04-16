@@ -11,13 +11,9 @@ import (
 	"net/http"
 	"os"
 	"testing"
-	"time"
 
 	"github.com/globalsign/mgo/bson"
 )
-
-// Timeout for the main upload unit test
-const pushTimeout = time.Duration(1800 * time.Second)
 
 //func postFile(baseURL string, filePath string, imageID string) error {
 func Test_postFile(t *testing.T) {
@@ -91,10 +87,7 @@ func Test_postFile(t *testing.T) {
 				t.Errorf("Error seeking in stream: %v", err)
 			}
 
-			ctx, cancel := context.WithTimeout(context.Background(), pushTimeout)
-			defer cancel()
-
-			err = c.postFile(ctx, f, fileSize, tt.imageRef, nil)
+			err = c.postFile(context.Background(), f, fileSize, tt.imageRef, nil)
 
 			if err != nil && !tt.expectError {
 				t.Errorf("Unexpected error: %v", err)

@@ -12,7 +12,6 @@ import (
 	"net/http/httptest"
 	"reflect"
 	"testing"
-	"time"
 
 	"github.com/globalsign/mgo/bson"
 	jsonresp "github.com/sylabs/json-resp"
@@ -20,9 +19,6 @@ import (
 
 const (
 	testToken = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWUsImlhdCI6MTUxNjIzOTAyMn0.TCYt5XsITJX1CxPCT8yAV-TVkIEq_PbChOMqsLfRoPsnsgw5WEuts01mq-pQy7UJiN5mgRxD-WUcX16dUEMGlv50aqzpqh4Qktb3rk-BuQy72IFLOqV0G_zS245-kronKb78cPN25DGlcTwLtjPAYuNzVBAh4vGHSrQyHUdBBPM"
-
-	// timeout used with context for API calls
-	unitTestTimeout = time.Duration(60 * time.Second)
 )
 
 var (
@@ -170,10 +166,7 @@ func Test_getEntity(t *testing.T) {
 				t.Errorf("Error initializing client: %v", err)
 			}
 
-			ctx, cancel := context.WithTimeout(context.Background(), unitTestTimeout)
-			defer cancel()
-
-			entity, found, err := c.getEntity(ctx, tt.entityRef)
+			entity, found, err := c.getEntity(context.Background(), tt.entityRef)
 
 			if err != nil && !tt.expectError {
 				t.Errorf("Unexpected error: %v", err)
@@ -255,10 +248,7 @@ func Test_getCollection(t *testing.T) {
 				t.Errorf("Error initializing client: %v", err)
 			}
 
-			ctx, cancel := context.WithTimeout(context.Background(), unitTestTimeout)
-			defer cancel()
-
-			collection, found, err := c.getCollection(ctx, tt.collectionRef)
+			collection, found, err := c.getCollection(context.Background(), tt.collectionRef)
 
 			if err != nil && !tt.expectError {
 				t.Errorf("Unexpected error: %v", err)
@@ -340,10 +330,7 @@ func Test_getContainer(t *testing.T) {
 				t.Errorf("Error initializing client: %v", err)
 			}
 
-			ctx, cancel := context.WithTimeout(context.Background(), unitTestTimeout)
-			defer cancel()
-
-			container, found, err := c.getContainer(ctx, tt.containerRef)
+			container, found, err := c.getContainer(context.Background(), tt.containerRef)
 
 			if err != nil && !tt.expectError {
 				t.Errorf("Unexpected error: %v", err)
@@ -425,10 +412,7 @@ func Test_getImage(t *testing.T) {
 				t.Errorf("Error initializing client: %v", err)
 			}
 
-			ctx, cancel := context.WithTimeout(context.Background(), unitTestTimeout)
-			defer cancel()
-
-			image, found, err := c.GetImage(ctx, tt.imageRef)
+			image, found, err := c.GetImage(context.Background(), tt.imageRef)
 
 			if err != nil && !tt.expectError {
 				t.Errorf("Unexpected error: %v", err)
@@ -495,10 +479,7 @@ func Test_createEntity(t *testing.T) {
 				t.Errorf("Error initializing client: %v", err)
 			}
 
-			ctx, cancel := context.WithTimeout(context.Background(), unitTestTimeout)
-			defer cancel()
-
-			entity, err := c.createEntity(ctx, tt.entityRef)
+			entity, err := c.createEntity(context.Background(), tt.entityRef)
 
 			if err != nil && !tt.expectError {
 				t.Errorf("Unexpected error: %v", err)
@@ -554,10 +535,7 @@ func Test_createCollection(t *testing.T) {
 				t.Errorf("Error initializing client: %v", err)
 			}
 
-			ctx, cancel := context.WithTimeout(context.Background(), unitTestTimeout)
-			defer cancel()
-
-			collection, err := c.createCollection(ctx, tt.collectionRef, bson.NewObjectId().Hex())
+			collection, err := c.createCollection(context.Background(), tt.collectionRef, bson.NewObjectId().Hex())
 
 			if err != nil && !tt.expectError {
 				t.Errorf("Unexpected error: %v", err)
@@ -613,10 +591,7 @@ func Test_createContainer(t *testing.T) {
 				t.Errorf("Error initializing client: %v", err)
 			}
 
-			ctx, cancel := context.WithTimeout(context.Background(), unitTestTimeout)
-			defer cancel()
-
-			container, err := c.createContainer(ctx, tt.containerRef, bson.NewObjectId().Hex())
+			container, err := c.createContainer(context.Background(), tt.containerRef, bson.NewObjectId().Hex())
 
 			if err != nil && !tt.expectError {
 				t.Errorf("Unexpected error: %v", err)
@@ -680,10 +655,7 @@ func Test_createImage(t *testing.T) {
 				t.Errorf("Error initializing client: %v", err)
 			}
 
-			ctx, cancel := context.WithTimeout(context.Background(), unitTestTimeout)
-			defer cancel()
-
-			image, err := c.createImage(ctx, tt.imageRef, bson.NewObjectId().Hex(), "No Description")
+			image, err := c.createImage(context.Background(), tt.imageRef, bson.NewObjectId().Hex(), "No Description")
 
 			if err != nil && !tt.expectError {
 				t.Errorf("Unexpected error: %v", err)
@@ -746,10 +718,7 @@ func Test_setTags(t *testing.T) {
 				t.Errorf("Error initializing client: %v", err)
 			}
 
-			ctx, cancel := context.WithTimeout(context.Background(), unitTestTimeout)
-			defer cancel()
-
-			err = c.setTags(ctx, tt.containerRef, tt.imageRef, tt.tags)
+			err = c.setTags(context.Background(), tt.containerRef, tt.imageRef, tt.tags)
 
 			if err != nil && !tt.expectError {
 				t.Errorf("Unexpected error: %v", err)
