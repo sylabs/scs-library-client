@@ -124,7 +124,7 @@ func (c *Client) UploadImage(ctx context.Context, r io.ReadSeeker, path string, 
 	return nil
 }
 
-func (c *Client) postFile(ctx context.Context, r io.ReadSeeker, fileSize int64, imageID string, callback UploadCallback) error {
+func (c *Client) postFile(ctx context.Context, r io.Reader, fileSize int64, imageID string, callback UploadCallback) error {
 
 	postURL := "/v1/imagefile/" + imageID
 	glog.V(2).Infof("postFile calling %s", postURL)

@@ -4,7 +4,6 @@ linters:
     - dupl
     - gochecknoglobals
     - gosec
-    - interfacer
     - lll
     - nakedret
     - scopelint
