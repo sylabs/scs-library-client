@@ -6,7 +6,9 @@
 package client
 
 import (
+	"io"
 	"net/http"
+	"os"
 	"testing"
 
 	"github.com/globalsign/mgo/bson"
@@ -60,14 +62,31 @@ func Test_postFile(t *testing.T) {
 			}
 
 			m.Run()
-			defer m.httpServer.Close()
+			defer m.Stop()
 
 			c, err := NewClient(&Config{AuthToken: testToken, BaseURL: m.baseURI})
 			if err != nil {
 				t.Errorf("Error initializing client: %v", err)
 			}
 
-			err = postFile(c, tt.testFile, tt.imageRef, nil)
+			f, err := os.Open(tt.testFile)
+			if err != nil {
+				t.Errorf("Error opening file %s for reading: %v", tt.testFile, err)
+			}
+			defer f.Close()
+
+			fi, err := f.Stat()
+			if err != nil {
+				t.Errorf("Error stats for file %s: %v", tt.testFile, err)
+			}
+			fileSize := fi.Size()
+
+			_, err = f.Seek(0, io.SeekStart)
+			if err != nil {
+				t.Errorf("Error seeking in stream: %v", err)
+			}
+
+			err = c.postFile(f, fileSize, tt.imageRef, nil)
 
 			if err != nil && !tt.expectError {
 				t.Errorf("Unexpected error: %v", err)
@@ -75,10 +94,6 @@ func Test_postFile(t *testing.T) {
 			if err == nil && tt.expectError {
 				t.Errorf("Unexpected success. Expected error.")
 			}
-
-			m.Stop()
-
 		})
-
 	}
 }

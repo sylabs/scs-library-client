@@ -6,6 +6,7 @@
 package client
 
 import (
+	"os"
 	"reflect"
 	"testing"
 
@@ -120,7 +121,7 @@ func Test_IsImageHash(t *testing.T) {
 	}
 }
 
-func Test_parseLibraryRef(t *testing.T) {
+func Test_ParseLibraryPath(t *testing.T) {
 	tests := []struct {
 		name       string
 		libraryRef string
@@ -131,29 +132,27 @@ func Test_parseLibraryRef(t *testing.T) {
 	}{
 		{"Good long ref 1", "library://entity/collection/image:tag", "entity", "collection", "image", []string{"tag"}},
 		{"Good long ref 2", "entity/collection/image:tag", "entity", "collection", "image", []string{"tag"}},
-		{"Good long ref latest", "library://entity/collection/image", "entity", "collection", "image", []string{"latest"}},
 		{"Good long ref multi tag", "library://entity/collection/image:tag1,tag2,tag3", "entity", "collection", "image", []string{"tag1", "tag2", "tag3"}},
 		{"Good short ref 1", "library://image:tag", "", "", "image", []string{"tag"}},
 		{"Good short ref 2", "image:tag", "", "", "image", []string{"tag"}},
 		{"Good short ref 3", "library://collection/image:tag", "", "collection", "image", []string{"tag"}},
 		{"Good short ref 4", "collection/image:tag", "", "collection", "image", []string{"tag"}},
-		{"Good short ref latest", "library://image", "", "", "image", []string{"latest"}},
 		{"Good short ref multi tag", "library://image:tag1,tag2,tag3", "", "", "image", []string{"tag1", "tag2", "tag3"}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ent, col, con, tags := parseLibraryRef(tt.libraryRef)
+			ent, col, con, tags := ParseLibraryPath(tt.libraryRef)
 			if ent != tt.wantEnt {
-				t.Errorf("parseLibraryRef() = entity %v, want %v", ent, tt.wantEnt)
+				t.Errorf("ParseLibraryRef() = entity %v, want %v", ent, tt.wantEnt)
 			}
 			if col != tt.wantCol {
-				t.Errorf("parseLibraryRef() = collection %v, want %v", col, tt.wantCol)
+				t.Errorf("ParseLibraryRef() = collection %v, want %v", col, tt.wantCol)
 			}
 			if con != tt.wantCon {
-				t.Errorf("parseLibraryRef() = container %v, want %v", con, tt.wantCon)
+				t.Errorf("ParseLibraryRef() = container %v, want %v", con, tt.wantCon)
 			}
 			if !reflect.DeepEqual(tags, tt.wantTags) {
-				t.Errorf("parseLibraryRef() = entity %v, want %v", tags, tt.wantTags)
+				t.Errorf("ParseLibraryRef() = entity %v, want %v", tags, tt.wantTags)
 			}
 		})
 	}
@@ -260,12 +259,15 @@ func Test_sha256sum(t *testing.T) {
 
 	expectedSha256 := "sha256.d7d356079af905c04e5ae10711ecf3f5b34385e9b143c5d9ddbf740665ce2fb7"
 
-	_, err := sha256sum("no_such_file.txt")
-	if err == nil {
-		t.Error("Invalid file must return an error")
-	}
+	const filename = "test_data/test_sha256"
 
-	shasum, err := sha256sum("test_data/test_sha256")
+	f, err := os.Open(filename)
+	if err != nil {
+		t.Errorf("Unable to open file %s: %v", filename, err)
+	}
+	defer f.Close()
+
+	shasum, _, err := sha256sum(f)
 	if err != nil {
 		t.Errorf("sha256sum on valid file should not raise error: %v", err)
 	}

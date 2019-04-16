@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
 	"strings"
 	"time"
 
@@ -23,35 +22,21 @@ const pullTimeout = time.Duration(1800 * time.Second)
 
 // DownloadImage will retrieve an image from the Container Library,
 // saving it into the specified file
-func DownloadImage(c *Client, filePath, libraryRef string, force bool, callback func(int64, io.Reader, io.Writer) error) error {
+func (c *Client) DownloadImage(w io.Writer, path, tag string, callback func(int64, io.Reader, io.Writer) error) error {
 
-	if !IsLibraryPullRef(libraryRef) {
-		return fmt.Errorf("Not a valid library reference: %s", libraryRef)
+	if strings.Contains(path, ":") {
+		return fmt.Errorf("Malformed image path: %s", path)
 	}
 
-	if filePath == "" {
-		_, _, container, tags := parseLibraryRef(libraryRef)
-		filePath = fmt.Sprintf("%s_%s.sif", container, tags[0])
-		glog.Infof("Download filename not provided. Downloading to: %s", filePath)
+	if tag == "" {
+		tag = "latest"
 	}
 
-	libraryRef = strings.TrimPrefix(libraryRef, "library://")
-
-	if !strings.Contains(libraryRef, ":") {
-		libraryRef += ":latest"
-	}
-
-	url := "/v1/imagefile/" + libraryRef
+	url := fmt.Sprintf("/v1/imagefile/%s:%s", path, tag)
 
 	glog.V(2).Infof("Pulling from URL: %s", url)
 
-	if !force {
-		if _, err := os.Stat(filePath); err == nil {
-			return fmt.Errorf("image file already exists - will not overwrite")
-		}
-	}
-
-	req, err := c.NewRequest(http.MethodGet, url, "", nil)
+	req, err := c.newRequest(http.MethodGet, url, "", nil)
 	if err != nil {
 		return err
 	}
@@ -79,19 +64,10 @@ func DownloadImage(c *Client, filePath, libraryRef string, force bool, callback 
 
 	glog.V(2).Infof("OK response received, beginning body download")
 
-	// Perms are 777 *prior* to umask
-	out, err := os.OpenFile(filePath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0777)
-	if err != nil {
-		return err
-	}
-	defer out.Close()
-
-	glog.V(2).Infof("Created output file: %s", filePath)
-
 	if callback != nil {
-		err = callback(res.ContentLength, res.Body, out)
+		err = callback(res.ContentLength, res.Body, w)
 	} else {
-		_, err = io.Copy(out, res.Body)
+		_, err = io.Copy(w, res.Body)
 	}
 	if err != nil {
 		return err

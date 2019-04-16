@@ -71,8 +71,8 @@ func NewClient(cfg *Config) (*Client, error) {
 	return c, nil
 }
 
-// NewRequest initializes HTTP request and sets up headers based on configuration
-func (c *Client) NewRequest(method, path, rawQuery string, body io.Reader) (*http.Request, error) {
+// newRequest initializes HTTP request and sets up headers based on configuration
+func (c *Client) newRequest(method, path, rawQuery string, body io.Reader) (*http.Request, error) {
 	u := c.BaseURL.ResolveReference(&url.URL{
 		Path:     path,
 		RawQuery: rawQuery,
