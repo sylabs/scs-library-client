@@ -6,6 +6,7 @@
 package client
 
 import (
+	"context"
 	"io"
 	"net/http"
 	"os"
@@ -86,7 +87,7 @@ func Test_postFile(t *testing.T) {
 				t.Errorf("Error seeking in stream: %v", err)
 			}
 
-			err = c.postFile(f, fileSize, tt.imageRef, nil)
+			err = c.postFile(context.Background(), f, fileSize, tt.imageRef, nil)
 
 			if err != nil && !tt.expectError {
 				t.Errorf("Unexpected error: %v", err)

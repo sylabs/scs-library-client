@@ -8,6 +8,7 @@ package client
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -111,7 +112,7 @@ func Test_DownloadImage(t *testing.T) {
 				t.Errorf("Error opening file %s for writing: %v", tt.outFile, err)
 			}
 
-			err = c.DownloadImage(out, tt.path, tt.tag, nil)
+			err = c.DownloadImage(context.Background(), out, tt.path, tt.tag, nil)
 
 			out.Close()
 

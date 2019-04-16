@@ -7,6 +7,7 @@ package client
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -19,9 +20,9 @@ import (
 )
 
 // getEntity returns the specified entity
-func (c *Client) getEntity(entityRef string) (*Entity, bool, error) {
+func (c *Client) getEntity(ctx context.Context, entityRef string) (*Entity, bool, error) {
 	url := "/v1/entities/" + entityRef
-	entJSON, found, err := c.apiGet(url)
+	entJSON, found, err := c.apiGet(ctx, url)
 	if err != nil {
 		return nil, false, err
 	}
@@ -36,9 +37,9 @@ func (c *Client) getEntity(entityRef string) (*Entity, bool, error) {
 }
 
 // getCollection returns the specified collection
-func (c *Client) getCollection(collectionRef string) (*Collection, bool, error) {
+func (c *Client) getCollection(ctx context.Context, collectionRef string) (*Collection, bool, error) {
 	url := "/v1/collections/" + collectionRef
-	colJSON, found, err := c.apiGet(url)
+	colJSON, found, err := c.apiGet(ctx, url)
 	if err != nil {
 		return nil, false, err
 	}
@@ -53,9 +54,9 @@ func (c *Client) getCollection(collectionRef string) (*Collection, bool, error) 
 }
 
 // getContainer returns container by ref id
-func (c *Client) getContainer(containerRef string) (*Container, bool, error) {
+func (c *Client) getContainer(ctx context.Context, containerRef string) (*Container, bool, error) {
 	url := "/v1/containers/" + containerRef
-	conJSON, found, err := c.apiGet(url)
+	conJSON, found, err := c.apiGet(ctx, url)
 	if err != nil {
 		return nil, false, err
 	}
@@ -70,12 +71,12 @@ func (c *Client) getContainer(containerRef string) (*Container, bool, error) {
 }
 
 // createEntity creates an entity (must be authorized)
-func (c *Client) createEntity(name string) (*Entity, error) {
+func (c *Client) createEntity(ctx context.Context, name string) (*Entity, error) {
 	e := Entity{
 		Name:        name,
 		Description: "No description",
 	}
-	entJSON, err := c.apiCreate("/v1/entities", e)
+	entJSON, err := c.apiCreate(ctx, "/v1/entities", e)
 	if err != nil {
 		return nil, err
 	}
@@ -87,13 +88,13 @@ func (c *Client) createEntity(name string) (*Entity, error) {
 }
 
 // createCollection creates a new collection
-func (c *Client) createCollection(name string, entityID string) (*Collection, error) {
+func (c *Client) createCollection(ctx context.Context, name string, entityID string) (*Collection, error) {
 	newCollection := Collection{
 		Name:        name,
 		Description: "No description",
 		Entity:      bson.ObjectIdHex(entityID).Hex(),
 	}
-	colJSON, err := c.apiCreate("/v1/collections", newCollection)
+	colJSON, err := c.apiCreate(ctx, "/v1/collections", newCollection)
 	if err != nil {
 		return nil, err
 	}
@@ -105,13 +106,13 @@ func (c *Client) createCollection(name string, entityID string) (*Collection, er
 }
 
 // createContainer creates a container in the specified collection
-func (c *Client) createContainer(name string, collectionID string) (*Container, error) {
+func (c *Client) createContainer(ctx context.Context, name string, collectionID string) (*Container, error) {
 	newContainer := Container{
 		Name:        name,
 		Description: "No description",
 		Collection:  bson.ObjectIdHex(collectionID).Hex(),
 	}
-	conJSON, err := c.apiCreate("/v1/containers", newContainer)
+	conJSON, err := c.apiCreate(ctx, "/v1/containers", newContainer)
 	if err != nil {
 		return nil, err
 	}
@@ -123,13 +124,13 @@ func (c *Client) createContainer(name string, collectionID string) (*Container, 
 }
 
 // createImage creates a new image
-func (c *Client) createImage(hash string, containerID string, description string) (*Image, error) {
+func (c *Client) createImage(ctx context.Context, hash string, containerID string, description string) (*Image, error) {
 	i := Image{
 		Hash:        hash,
 		Description: description,
 		Container:   bson.ObjectIdHex(containerID).Hex(),
 	}
-	imgJSON, err := c.apiCreate("/v1/images", i)
+	imgJSON, err := c.apiCreate(ctx, "/v1/images", i)
 	if err != nil {
 		return nil, err
 	}
@@ -141,9 +142,9 @@ func (c *Client) createImage(hash string, containerID string, description string
 }
 
 // setTags applies tags to the specified container
-func (c *Client) setTags(containerID, imageID string, tags []string) error {
+func (c *Client) setTags(ctx context.Context, containerID, imageID string, tags []string) error {
 	// Get existing tags, so we know which will be replaced
-	existingTags, err := c.getTags(containerID)
+	existingTags, err := c.getTags(ctx, containerID)
 	if err != nil {
 		return err
 	}
@@ -159,7 +160,7 @@ func (c *Client) setTags(containerID, imageID string, tags []string) error {
 			tag,
 			bson.ObjectIdHex(imageID).Hex(),
 		}
-		err := c.setTag(containerID, imgTag)
+		err := c.setTag(ctx, containerID, imgTag)
 		if err != nil {
 			return err
 		}
@@ -167,7 +168,7 @@ func (c *Client) setTags(containerID, imageID string, tags []string) error {
 	return nil
 }
 
-func (c *Client) apiCreate(url string, o interface{}) (objJSON []byte, err error) {
+func (c *Client) apiCreate(ctx context.Context, url string, o interface{}) (objJSON []byte, err error) {
 	glog.V(2).Infof("apiCreate calling %s", url)
 	s, err := json.Marshal(o)
 	if err != nil {
@@ -178,7 +179,7 @@ func (c *Client) apiCreate(url string, o interface{}) (objJSON []byte, err error
 		return []byte{}, fmt.Errorf("error creating POST request:\n\t%v", err)
 	}
 
-	res, err := c.HTTPClient.Do(req)
+	res, err := c.HTTPClient.Do(req.WithContext(ctx))
 	if err != nil {
 		return []byte{}, fmt.Errorf("error making request to server:\n\t%v", err)
 	}
@@ -196,7 +197,7 @@ func (c *Client) apiCreate(url string, o interface{}) (objJSON []byte, err error
 	return objJSON, nil
 }
 
-func (c *Client) apiGet(path string) (objJSON []byte, found bool, err error) {
+func (c *Client) apiGet(ctx context.Context, path string) (objJSON []byte, found bool, err error) {
 	glog.V(2).Infof("apiGet calling %s", path)
 
 	// split url containing query into component pieces (path and raw query)
@@ -209,7 +210,7 @@ func (c *Client) apiGet(path string) (objJSON []byte, found bool, err error) {
 	if err != nil {
 		return []byte{}, false, fmt.Errorf("error creating request to server:\n\t%v", err)
 	}
-	res, err := c.HTTPClient.Do(req)
+	res, err := c.HTTPClient.Do(req.WithContext(ctx))
 	if err != nil {
 		return []byte{}, false, fmt.Errorf("error making request to server:\n\t%v", err)
 	}
@@ -233,14 +234,14 @@ func (c *Client) apiGet(path string) (objJSON []byte, found bool, err error) {
 }
 
 // getTags returns a tag map for the specified containerID
-func (c *Client) getTags(containerID string) (TagMap, error) {
+func (c *Client) getTags(ctx context.Context, containerID string) (TagMap, error) {
 	url := fmt.Sprintf("/v1/tags/%s", containerID)
 	glog.V(2).Infof("getTags calling %s", url)
 	req, err := c.newRequest(http.MethodGet, url, "", nil)
 	if err != nil {
 		return nil, fmt.Errorf("error creating request to server:\n\t%v", err)
 	}
-	res, err := c.HTTPClient.Do(req)
+	res, err := c.HTTPClient.Do(req.WithContext(ctx))
 	if err != nil {
 		return nil, fmt.Errorf("error making request to server:\n\t%v", err)
 	}
@@ -260,7 +261,7 @@ func (c *Client) getTags(containerID string) (TagMap, error) {
 }
 
 // setTag sets tag on specified containerID
-func (c *Client) setTag(containerID string, t ImageTag) error {
+func (c *Client) setTag(ctx context.Context, containerID string, t ImageTag) error {
 	url := "/v1/tags/" + containerID
 	glog.V(2).Infof("setTag calling %s", url)
 	s, err := json.Marshal(t)
@@ -271,7 +272,7 @@ func (c *Client) setTag(containerID string, t ImageTag) error {
 	if err != nil {
 		return fmt.Errorf("error creating POST request:\n\t%v", err)
 	}
-	res, err := c.HTTPClient.Do(req)
+	res, err := c.HTTPClient.Do(req.WithContext(ctx))
 	if err != nil {
 		return fmt.Errorf("error making request to server:\n\t%v", err)
 	}
@@ -286,9 +287,9 @@ func (c *Client) setTag(containerID string, t ImageTag) error {
 }
 
 // GetImage returns the Image object if exists, otherwise returns error
-func (c *Client) GetImage(imageRef string) (*Image, bool, error) {
+func (c *Client) GetImage(ctx context.Context, imageRef string) (*Image, bool, error) {
 	url := "/v1/images/" + imageRef
-	imgJSON, found, err := c.apiGet(url)
+	imgJSON, found, err := c.apiGet(ctx, url)
 	if err != nil {
 		return nil, false, err
 	}

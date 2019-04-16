@@ -11,18 +11,16 @@ import (
 	"io"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/golang/glog"
 	jsonresp "github.com/sylabs/json-resp"
 )
 
-// Timeout for an image pull - could be a large download...
-const pullTimeout = time.Duration(1800 * time.Second)
-
-// DownloadImage will retrieve an image from the Container Library,
-// saving it into the specified file
-func (c *Client) DownloadImage(w io.Writer, path, tag string, callback func(int64, io.Reader, io.Writer) error) error {
+// DownloadImage will retrieve an image from the Container Library, saving it
+// into the specified io.Writer. The timeout value for this operation is set
+// within the context. It is recommended to use a large value (ie. 1800 seconds)
+// to prevent timeout when downloading large images.
+func (c *Client) DownloadImage(ctx context.Context, w io.Writer, path, tag string, callback func(int64, io.Reader, io.Writer) error) error {
 
 	if strings.Contains(path, ":") {
 		return fmt.Errorf("Malformed image path: %s", path)
@@ -40,9 +38,6 @@ func (c *Client) DownloadImage(w io.Writer, path, tag string, callback func(int6
 	if err != nil {
 		return err
 	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), pullTimeout)
-	defer cancel()
 
 	res, err := c.HTTPClient.Do(req.WithContext(ctx))
 	if err != nil {
