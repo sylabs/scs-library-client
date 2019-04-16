@@ -1,0 +1,11 @@
+linters:
+  enable-all: true
+  disable:
+    - dupl
+    - gochecknoglobals
+    - gosec
+    - interfacer
+    - lll
+    - nakedret
+    - scopelint
+    - unconvert
