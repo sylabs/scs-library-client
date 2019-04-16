@@ -26,7 +26,10 @@ type UploadCallback interface {
 	Finish()
 }
 
-// UploadImage will push a specified image up to the Container Library,
+// UploadImage will push a specified image from an io.ReadSeeker up to the
+// Container Library, The timeout value for this operation is set within
+// the context. It is recommended to use a large value (ie. 1800 seconds) to
+// prevent timeout when uploading large images.
 func (c *Client) UploadImage(ctx context.Context, r io.ReadSeeker, path string, tags []string, description string, callback UploadCallback) error {
 
 	entityName, collectionName, containerName, parsedTags := ParseLibraryPath(path)
