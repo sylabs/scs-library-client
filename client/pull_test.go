@@ -21,6 +21,9 @@ import (
 	"github.com/golang/glog"
 )
 
+// Timeout for the upload unit test
+const pullTimeout = time.Duration(1800 * time.Second)
+
 type mockRawService struct {
 	t           *testing.T
 	code        int
@@ -113,10 +116,7 @@ func Test_DownloadImage(t *testing.T) {
 				t.Errorf("Error opening file %s for writing: %v", tt.outFile, err)
 			}
 
-			// Timeout for the main upload (not api calls)
-			const pushTimeout = time.Duration(1800 * time.Second)
-
-			ctx, cancel := context.WithTimeout(context.Background(), pushTimeout)
+			ctx, cancel := context.WithTimeout(context.Background(), pullTimeout)
 			defer cancel()
 
 			err = c.DownloadImage(ctx, out, tt.path, tt.tag, nil)

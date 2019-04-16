@@ -16,6 +16,9 @@ import (
 	"github.com/globalsign/mgo/bson"
 )
 
+// Timeout for the main upload unit test
+const pushTimeout = time.Duration(1800 * time.Second)
+
 //func postFile(baseURL string, filePath string, imageID string) error {
 func Test_postFile(t *testing.T) {
 
@@ -87,9 +90,6 @@ func Test_postFile(t *testing.T) {
 			if err != nil {
 				t.Errorf("Error seeking in stream: %v", err)
 			}
-
-			// Timeout for the main upload (not api calls)
-			const pushTimeout = time.Duration(1800 * time.Second)
 
 			ctx, cancel := context.WithTimeout(context.Background(), pushTimeout)
 			defer cancel()
