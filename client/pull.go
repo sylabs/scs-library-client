@@ -16,8 +16,10 @@ import (
 	jsonresp "github.com/sylabs/json-resp"
 )
 
-// DownloadImage will retrieve an image from the Container Library,
-// saving it into the specified file
+// DownloadImage will retrieve an image from the Container Library, saving it
+// into the specified io.Writer. The timeout value for this operation is set
+// within the context. It is recommended to use a large value (ie. 1800 seconds)
+// to prevent timeout when downloading large images.
 func (c *Client) DownloadImage(ctx context.Context, w io.Writer, path, tag string, callback func(int64, io.Reader, io.Writer) error) error {
 
 	if strings.Contains(path, ":") {
