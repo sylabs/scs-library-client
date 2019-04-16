@@ -5,6 +5,5 @@ linters:
     - gochecknoglobals
     - gosec
     - lll
-    - nakedret
     - scopelint
     - unconvert

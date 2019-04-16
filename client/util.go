@@ -89,7 +89,7 @@ func ParseLibraryPath(libraryRef string) (entity string, collection string, cont
 		}
 	}
 
-	return
+	return entity, collection, container, tags
 }
 
 // IDInSlice returns true if ID is present in the slice
