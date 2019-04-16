@@ -64,7 +64,8 @@ func (c *Client) UploadImage(ctx context.Context, r io.ReadSeeker, path string, 
 	}
 
 	// Find or create collection
-	collection, found, err := c.getCollection(ctx, entityName+"/"+collectionName)
+	qualifiedCollectionName := fmt.Sprintf("%s/%s", entityName, collectionName)
+	collection, found, err := c.getCollection(ctx, qualifiedCollectionName)
 	if err != nil {
 		return err
 	}
@@ -77,7 +78,8 @@ func (c *Client) UploadImage(ctx context.Context, r io.ReadSeeker, path string, 
 	}
 
 	// Find or create container
-	container, found, err := c.getContainer(ctx, entityName+"/"+collectionName+"/"+containerName)
+	computedName := fmt.Sprintf("%s/%s", qualifiedCollectionName, containerName)
+	container, found, err := c.getContainer(ctx, computedName)
 	if err != nil {
 		return err
 	}
@@ -90,7 +92,7 @@ func (c *Client) UploadImage(ctx context.Context, r io.ReadSeeker, path string, 
 	}
 
 	// Find or create image
-	image, found, err := c.GetImage(ctx, entityName+"/"+collectionName+"/"+containerName+":"+imageHash)
+	image, found, err := c.GetImage(ctx, computedName+":"+imageHash)
 	if err != nil {
 		return err
 	}
