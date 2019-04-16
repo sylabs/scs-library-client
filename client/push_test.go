@@ -6,10 +6,12 @@
 package client
 
 import (
+	"context"
 	"io"
 	"net/http"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/globalsign/mgo/bson"
 )
@@ -86,7 +88,13 @@ func Test_postFile(t *testing.T) {
 				t.Errorf("Error seeking in stream: %v", err)
 			}
 
-			err = c.postFile(f, fileSize, tt.imageRef, nil)
+			// Timeout for the main upload (not api calls)
+			const pushTimeout = time.Duration(1800 * time.Second)
+
+			ctx, cancel := context.WithTimeout(context.Background(), pushTimeout)
+			defer cancel()
+
+			err = c.postFile(ctx, f, fileSize, tt.imageRef, nil)
 
 			if err != nil && !tt.expectError {
 				t.Errorf("Unexpected error: %v", err)

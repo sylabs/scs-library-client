@@ -10,14 +10,10 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"time"
 
 	"github.com/golang/glog"
 	jsonresp "github.com/sylabs/json-resp"
 )
-
-// Timeout for the main upload (not api calls)
-const pushTimeout = time.Duration(1800 * time.Second)
 
 // UploadCallback defines an interface used to perform a call-out to
 // set up the source file Reader.
@@ -31,7 +27,7 @@ type UploadCallback interface {
 }
 
 // UploadImage will push a specified image up to the Container Library,
-func (c *Client) UploadImage(r io.ReadSeeker, path string, tags []string, description string, callback UploadCallback) error {
+func (c *Client) UploadImage(ctx context.Context, r io.ReadSeeker, path string, tags []string, description string, callback UploadCallback) error {
 
 	entityName, collectionName, containerName, parsedTags := ParseLibraryPath(path)
 	if len(parsedTags) != 0 {
@@ -52,52 +48,52 @@ func (c *Client) UploadImage(r io.ReadSeeker, path string, tags []string, descri
 	glog.V(2).Infof("Image hash computed as %s", imageHash)
 
 	// Find or create entity
-	entity, found, err := c.getEntity(entityName)
+	entity, found, err := c.getEntity(ctx, entityName)
 	if err != nil {
 		return err
 	}
 	if !found {
 		glog.V(1).Infof("Entity %s does not exist in library - creating it.", entityName)
-		entity, err = c.createEntity(entityName)
+		entity, err = c.createEntity(ctx, entityName)
 		if err != nil {
 			return err
 		}
 	}
 
 	// Find or create collection
-	collection, found, err := c.getCollection(entityName + "/" + collectionName)
+	collection, found, err := c.getCollection(ctx, entityName+"/"+collectionName)
 	if err != nil {
 		return err
 	}
 	if !found {
 		glog.V(1).Infof("Collection %s does not exist in library - creating it.", collectionName)
-		collection, err = c.createCollection(collectionName, entity.ID)
+		collection, err = c.createCollection(ctx, collectionName, entity.ID)
 		if err != nil {
 			return err
 		}
 	}
 
 	// Find or create container
-	container, found, err := c.getContainer(entityName + "/" + collectionName + "/" + containerName)
+	container, found, err := c.getContainer(ctx, entityName+"/"+collectionName+"/"+containerName)
 	if err != nil {
 		return err
 	}
 	if !found {
 		glog.V(1).Infof("Container %s does not exist in library - creating it.", containerName)
-		container, err = c.createContainer(containerName, collection.ID)
+		container, err = c.createContainer(ctx, containerName, collection.ID)
 		if err != nil {
 			return err
 		}
 	}
 
 	// Find or create image
-	image, found, err := c.GetImage(entityName + "/" + collectionName + "/" + containerName + ":" + imageHash)
+	image, found, err := c.GetImage(ctx, entityName+"/"+collectionName+"/"+containerName+":"+imageHash)
 	if err != nil {
 		return err
 	}
 	if !found {
 		glog.V(1).Infof("Image %s does not exist in library - creating it.", imageHash)
-		image, err = c.createImage(imageHash, container.ID, description)
+		image, err = c.createImage(ctx, imageHash, container.ID, description)
 		if err != nil {
 			return err
 		}
@@ -105,7 +101,7 @@ func (c *Client) UploadImage(r io.ReadSeeker, path string, tags []string, descri
 
 	if !image.Uploaded {
 		glog.Info("Now uploading to the library")
-		err = c.postFile(r, fileSize, image.ID, callback)
+		err = c.postFile(ctx, r, fileSize, image.ID, callback)
 		if err != nil {
 			return err
 		}
@@ -115,7 +111,7 @@ func (c *Client) UploadImage(r io.ReadSeeker, path string, tags []string, descri
 	}
 
 	glog.V(2).Infof("Setting tags against uploaded image")
-	err = c.setTags(container.ID, image.ID, append(tags, parsedTags...))
+	err = c.setTags(ctx, container.ID, image.ID, append(tags, parsedTags...))
 	if err != nil {
 		return err
 	}
@@ -123,7 +119,7 @@ func (c *Client) UploadImage(r io.ReadSeeker, path string, tags []string, descri
 	return nil
 }
 
-func (c *Client) postFile(r io.ReadSeeker, fileSize int64, imageID string, callback UploadCallback) error {
+func (c *Client) postFile(ctx context.Context, r io.ReadSeeker, fileSize int64, imageID string, callback UploadCallback) error {
 
 	postURL := "/v1/imagefile/" + imageID
 	glog.V(2).Infof("postFile calling %s", postURL)
@@ -139,9 +135,6 @@ func (c *Client) postFile(r io.ReadSeeker, fileSize int64, imageID string, callb
 	} else {
 		bodyProgress = r
 	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), pushTimeout)
-	defer cancel()
 
 	// Make an upload request
 	req, _ := c.newRequest("POST", postURL, "", bodyProgress)

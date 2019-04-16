@@ -8,6 +8,7 @@ package client
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -15,6 +16,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/golang/glog"
 )
@@ -111,7 +113,13 @@ func Test_DownloadImage(t *testing.T) {
 				t.Errorf("Error opening file %s for writing: %v", tt.outFile, err)
 			}
 
-			err = c.DownloadImage(out, tt.path, tt.tag, nil)
+			// Timeout for the main upload (not api calls)
+			const pushTimeout = time.Duration(1800 * time.Second)
+
+			ctx, cancel := context.WithTimeout(context.Background(), pushTimeout)
+			defer cancel()
+
+			err = c.DownloadImage(ctx, out, tt.path, tt.tag, nil)
 
 			out.Close()
 

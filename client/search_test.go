@@ -7,12 +7,14 @@ package client
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"log"
 	"net/http"
 	"os"
 	"reflect"
 	"testing"
+	"time"
 
 	jsonresp "github.com/sylabs/json-resp"
 )
@@ -91,7 +93,10 @@ func Test_Search(t *testing.T) {
 				t.Errorf("Error initializing client: %v", err)
 			}
 
-			results, err := c.Search(tt.value)
+			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			defer cancel()
+
+			results, err := c.Search(ctx, tt.value)
 
 			if err != nil && !tt.expectError {
 				t.Errorf("Unexpected error: %v", err)
@@ -122,11 +127,14 @@ func Test_SearchLibrary(t *testing.T) {
 		t.Errorf("Error initializing client: %v", err)
 	}
 
-	err = c.searchLibrary("a")
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	err = c.searchLibrary(ctx, "a")
 	if err == nil {
 		t.Errorf("Search of 1 character shouldn't be submitted")
 	}
-	err = c.searchLibrary("ab")
+	err = c.searchLibrary(ctx, "ab")
 	if err == nil {
 		t.Errorf("Search of 2 characters shouldn't be submitted")
 	}
@@ -135,7 +143,7 @@ func Test_SearchLibrary(t *testing.T) {
 	r, w, _ := os.Pipe()
 	os.Stdout = w
 
-	err = c.searchLibrary("test")
+	err = c.searchLibrary(ctx, "test")
 	if err != nil {
 		t.Errorf("Search failed: %v", err)
 	}
@@ -185,7 +193,10 @@ func Test_SearchLibraryEmpty(t *testing.T) {
 		t.Errorf("Error initializing client: %v", err)
 	}
 
-	err = c.searchLibrary("test")
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	err = c.searchLibrary(ctx, "test")
 
 	outC := make(chan string)
 	go func() {

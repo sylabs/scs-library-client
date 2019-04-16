@@ -6,6 +6,7 @@
 package client
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/url"
@@ -13,10 +14,10 @@ import (
 
 // Search searches library by name, returns any matching collections,
 // containers, entities, or images.
-func (c *Client) Search(value string) (*SearchResults, error) {
+func (c *Client) Search(ctx context.Context, value string) (*SearchResults, error) {
 	url := fmt.Sprintf("/v1/search?value=%s", url.QueryEscape(value))
 
-	resJSON, _, err := c.apiGet(url)
+	resJSON, _, err := c.apiGet(ctx, url)
 	if err != nil {
 		return nil, err
 	}
@@ -30,12 +31,12 @@ func (c *Client) Search(value string) (*SearchResults, error) {
 }
 
 // searchLibrary will search the library for a given query and display results
-func (c *Client) searchLibrary(value string) error {
+func (c *Client) searchLibrary(ctx context.Context, value string) error {
 	if len(value) < 3 {
 		return fmt.Errorf("Bad query '%s'. You must search for at least 3 characters", value)
 	}
 
-	results, err := c.Search(value)
+	results, err := c.Search(ctx, value)
 	if err != nil {
 		return err
 	}
