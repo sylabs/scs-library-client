@@ -23,7 +23,7 @@ import (
 func (c *Client) DownloadImage(ctx context.Context, w io.Writer, path, tag string, callback func(int64, io.Reader, io.Writer) error) error {
 
 	if strings.Contains(path, ":") {
-		return fmt.Errorf("Malformed image path: %s", path)
+		return fmt.Errorf("malformed image path: %s", path)
 	}
 
 	if tag == "" {
@@ -46,13 +46,13 @@ func (c *Client) DownloadImage(ctx context.Context, w io.Writer, path, tag strin
 	defer res.Body.Close()
 
 	if res.StatusCode == http.StatusNotFound {
-		return fmt.Errorf("The requested image was not found in the library")
+		return fmt.Errorf("requested image was not found in the library")
 	}
 
 	if res.StatusCode != http.StatusOK {
 		err := jsonresp.ReadError(res.Body)
 		if err != nil {
-			return fmt.Errorf("Download did not succeed: %v", err)
+			return fmt.Errorf("download did not succeed: %v", err)
 		}
 		return fmt.Errorf("unexpected http status code: %d", res.StatusCode)
 	}

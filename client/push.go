@@ -34,18 +34,18 @@ func (c *Client) UploadImage(ctx context.Context, r io.ReadSeeker, path string, 
 
 	entityName, collectionName, containerName, parsedTags := ParseLibraryPath(path)
 	if len(parsedTags) != 0 {
-		return fmt.Errorf("Malformed image path: %s", path)
+		return fmt.Errorf("malformed image path: %s", path)
 	}
 
 	imageHash, fileSize, err := sha256sum(r)
 	if err != nil {
-		return fmt.Errorf("Error calculating SHA checksum: %v", err)
+		return fmt.Errorf("error calculating SHA checksum: %v", err)
 	}
 
 	// rollback to top of file
 	_, err = r.Seek(0, io.SeekStart)
 	if err != nil {
-		return fmt.Errorf("Error seeking to start stream: %v", err)
+		return fmt.Errorf("error seeking to start stream: %v", err)
 	}
 
 	glog.V(2).Infof("Image hash computed as %s", imageHash)
@@ -124,7 +124,7 @@ func (c *Client) UploadImage(ctx context.Context, r io.ReadSeeker, path string, 
 	return nil
 }
 
-func (c *Client) postFile(ctx context.Context, r io.ReadSeeker, fileSize int64, imageID string, callback UploadCallback) error {
+func (c *Client) postFile(ctx context.Context, r io.Reader, fileSize int64, imageID string, callback UploadCallback) error {
 
 	postURL := "/v1/imagefile/" + imageID
 	glog.V(2).Infof("postFile calling %s", postURL)
@@ -148,14 +148,14 @@ func (c *Client) postFile(ctx context.Context, r io.ReadSeeker, fileSize int64, 
 	res, err := c.HTTPClient.Do(req.WithContext(ctx))
 
 	if err != nil {
-		return fmt.Errorf("Error uploading file to server: %s", err.Error())
+		return fmt.Errorf("error uploading file to server: %s", err.Error())
 	}
 	if res.StatusCode != http.StatusOK {
 		err := jsonresp.ReadError(res.Body)
 		if err != nil {
-			return fmt.Errorf("Sending file did not succeed: %v", err)
+			return fmt.Errorf("sending file did not succeed: %v", err)
 		}
-		return fmt.Errorf("Sending file did not succeed: http status code %d", res.StatusCode)
+		return fmt.Errorf("sending file did not succeed: http status code %d", res.StatusCode)
 	}
 
 	return nil

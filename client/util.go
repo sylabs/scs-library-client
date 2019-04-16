@@ -89,7 +89,7 @@ func ParseLibraryPath(libraryRef string) (entity string, collection string, cont
 		}
 	}
 
-	return
+	return entity, collection, container, tags
 }
 
 // IDInSlice returns true if ID is present in the slice
@@ -154,7 +154,7 @@ func ImageHash(filePath string) (result string, err error) {
 
 // sha256sum computes the sha256sum of the specified reader; caller is
 // responsible for resetting file pointer
-func sha256sum(r io.ReadSeeker) (result string, s int64, err error) {
+func sha256sum(r io.Reader) (result string, s int64, err error) {
 	hash := sha256.New()
 	s, err = io.Copy(hash, r)
 	if err != nil {

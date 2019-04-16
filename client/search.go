@@ -33,7 +33,7 @@ func (c *Client) Search(ctx context.Context, value string) (*SearchResults, erro
 // searchLibrary will search the library for a given query and display results
 func (c *Client) searchLibrary(ctx context.Context, value string) error {
 	if len(value) < 3 {
-		return fmt.Errorf("Bad query '%s'. You must search for at least 3 characters", value)
+		return fmt.Errorf("bad query '%s'. You must search for at least 3 characters", value)
 	}
 
 	results, err := c.Search(ctx, value)
