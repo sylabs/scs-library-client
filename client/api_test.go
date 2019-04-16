@@ -18,7 +18,12 @@ import (
 	jsonresp "github.com/sylabs/json-resp"
 )
 
-const testToken = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWUsImlhdCI6MTUxNjIzOTAyMn0.TCYt5XsITJX1CxPCT8yAV-TVkIEq_PbChOMqsLfRoPsnsgw5WEuts01mq-pQy7UJiN5mgRxD-WUcX16dUEMGlv50aqzpqh4Qktb3rk-BuQy72IFLOqV0G_zS245-kronKb78cPN25DGlcTwLtjPAYuNzVBAh4vGHSrQyHUdBBPM"
+const (
+	testToken = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWUsImlhdCI6MTUxNjIzOTAyMn0.TCYt5XsITJX1CxPCT8yAV-TVkIEq_PbChOMqsLfRoPsnsgw5WEuts01mq-pQy7UJiN5mgRxD-WUcX16dUEMGlv50aqzpqh4Qktb3rk-BuQy72IFLOqV0G_zS245-kronKb78cPN25DGlcTwLtjPAYuNzVBAh4vGHSrQyHUdBBPM"
+
+	// timeout used with context for API calls
+	unitTestTimeout = time.Duration(60 * time.Second)
+)
 
 var (
 	testEntity = Entity{
@@ -165,7 +170,7 @@ func Test_getEntity(t *testing.T) {
 				t.Errorf("Error initializing client: %v", err)
 			}
 
-			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), unitTestTimeout)
 			defer cancel()
 
 			entity, found, err := c.getEntity(ctx, tt.entityRef)
@@ -250,7 +255,7 @@ func Test_getCollection(t *testing.T) {
 				t.Errorf("Error initializing client: %v", err)
 			}
 
-			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), unitTestTimeout)
 			defer cancel()
 
 			collection, found, err := c.getCollection(ctx, tt.collectionRef)
@@ -335,7 +340,7 @@ func Test_getContainer(t *testing.T) {
 				t.Errorf("Error initializing client: %v", err)
 			}
 
-			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), unitTestTimeout)
 			defer cancel()
 
 			container, found, err := c.getContainer(ctx, tt.containerRef)
@@ -420,7 +425,7 @@ func Test_getImage(t *testing.T) {
 				t.Errorf("Error initializing client: %v", err)
 			}
 
-			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), unitTestTimeout)
 			defer cancel()
 
 			image, found, err := c.GetImage(ctx, tt.imageRef)
@@ -490,7 +495,7 @@ func Test_createEntity(t *testing.T) {
 				t.Errorf("Error initializing client: %v", err)
 			}
 
-			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), unitTestTimeout)
 			defer cancel()
 
 			entity, err := c.createEntity(ctx, tt.entityRef)
@@ -549,7 +554,7 @@ func Test_createCollection(t *testing.T) {
 				t.Errorf("Error initializing client: %v", err)
 			}
 
-			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), unitTestTimeout)
 			defer cancel()
 
 			collection, err := c.createCollection(ctx, tt.collectionRef, bson.NewObjectId().Hex())
@@ -608,7 +613,7 @@ func Test_createContainer(t *testing.T) {
 				t.Errorf("Error initializing client: %v", err)
 			}
 
-			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), unitTestTimeout)
 			defer cancel()
 
 			container, err := c.createContainer(ctx, tt.containerRef, bson.NewObjectId().Hex())
@@ -675,7 +680,7 @@ func Test_createImage(t *testing.T) {
 				t.Errorf("Error initializing client: %v", err)
 			}
 
-			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), unitTestTimeout)
 			defer cancel()
 
 			image, err := c.createImage(ctx, tt.imageRef, bson.NewObjectId().Hex(), "No Description")
@@ -741,7 +746,7 @@ func Test_setTags(t *testing.T) {
 				t.Errorf("Error initializing client: %v", err)
 			}
 
-			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), unitTestTimeout)
 			defer cancel()
 
 			err = c.setTags(ctx, tt.containerRef, tt.imageRef, tt.tags)

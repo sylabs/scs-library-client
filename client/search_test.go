@@ -14,7 +14,6 @@ import (
 	"os"
 	"reflect"
 	"testing"
-	"time"
 
 	jsonresp "github.com/sylabs/json-resp"
 )
@@ -93,7 +92,7 @@ func Test_Search(t *testing.T) {
 				t.Errorf("Error initializing client: %v", err)
 			}
 
-			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), unitTestTimeout)
 			defer cancel()
 
 			results, err := c.Search(ctx, tt.value)
@@ -127,7 +126,7 @@ func Test_SearchLibrary(t *testing.T) {
 		t.Errorf("Error initializing client: %v", err)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), unitTestTimeout)
 	defer cancel()
 
 	err = c.searchLibrary(ctx, "a")
@@ -193,7 +192,7 @@ func Test_SearchLibraryEmpty(t *testing.T) {
 		t.Errorf("Error initializing client: %v", err)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), unitTestTimeout)
 	defer cancel()
 
 	err = c.searchLibrary(ctx, "test")
