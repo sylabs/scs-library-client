@@ -42,3 +42,13 @@ func (log TestLogger) Debug(args ...interface{}) {
 func (log TestLogger) Debugf(format string, args ...interface{}) {
 	log.T.Logf(format, args...)
 }
+
+// Warning logs at warning level
+func (log TestLogger) Warning(args ...interface{}) {
+	log.T.Log(args...)
+}
+
+// Warningf takes a format string and args
+func (log TestLogger) Warningf(format string, args ...interface{}) {
+	log.T.Logf(format, args...)
+}

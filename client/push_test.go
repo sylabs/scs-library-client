@@ -65,7 +65,7 @@ func Test_postFile(t *testing.T) {
 			m.Run()
 			defer m.Stop()
 
-			c, err := NewClient(&Config{AuthToken: testToken, BaseURL: m.baseURI})
+			c, err := NewClient(&Config{AuthToken: testToken, BaseURL: m.baseURI, Logger: &TestLogger{T: t}})
 			if err != nil {
 				t.Errorf("Error initializing client: %v", err)
 			}

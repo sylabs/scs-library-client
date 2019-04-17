@@ -11,7 +11,6 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/golang/glog"
 	jsonresp "github.com/sylabs/json-resp"
 )
 
@@ -48,7 +47,7 @@ func (c *Client) UploadImage(ctx context.Context, r io.ReadSeeker, path string, 
 		return fmt.Errorf("Error seeking to start stream: %v", err)
 	}
 
-	glog.V(2).Infof("Image hash computed as %s", imageHash)
+	c.Debugf("Image hash computed as %s", imageHash)
 
 	// Find or create entity
 	entity, found, err := c.getEntity(ctx, entityName)
@@ -56,7 +55,7 @@ func (c *Client) UploadImage(ctx context.Context, r io.ReadSeeker, path string, 
 		return err
 	}
 	if !found {
-		glog.V(1).Infof("Entity %s does not exist in library - creating it.", entityName)
+		c.Infof("Entity %s does not exist in library - creating it.", entityName)
 		entity, err = c.createEntity(ctx, entityName)
 		if err != nil {
 			return err
@@ -70,7 +69,7 @@ func (c *Client) UploadImage(ctx context.Context, r io.ReadSeeker, path string, 
 		return err
 	}
 	if !found {
-		glog.V(1).Infof("Collection %s does not exist in library - creating it.", collectionName)
+		c.Infof("Collection %s does not exist in library - creating it.", collectionName)
 		collection, err = c.createCollection(ctx, collectionName, entity.ID)
 		if err != nil {
 			return err
@@ -84,7 +83,7 @@ func (c *Client) UploadImage(ctx context.Context, r io.ReadSeeker, path string, 
 		return err
 	}
 	if !found {
-		glog.V(1).Infof("Container %s does not exist in library - creating it.", containerName)
+		c.Infof("Container %s does not exist in library - creating it.", containerName)
 		container, err = c.createContainer(ctx, containerName, collection.ID)
 		if err != nil {
 			return err
@@ -97,7 +96,7 @@ func (c *Client) UploadImage(ctx context.Context, r io.ReadSeeker, path string, 
 		return err
 	}
 	if !found {
-		glog.V(1).Infof("Image %s does not exist in library - creating it.", imageHash)
+		c.Infof("Image %s does not exist in library - creating it.", imageHash)
 		image, err = c.createImage(ctx, imageHash, container.ID, description)
 		if err != nil {
 			return err
@@ -105,17 +104,17 @@ func (c *Client) UploadImage(ctx context.Context, r io.ReadSeeker, path string, 
 	}
 
 	if !image.Uploaded {
-		glog.Info("Now uploading to the library")
+		c.Info("Now uploading to the library")
 		err = c.postFile(ctx, r, fileSize, image.ID, callback)
 		if err != nil {
 			return err
 		}
-		glog.V(2).Infof("Upload completed OK")
+		c.Debugf("Upload completed OK")
 	} else {
-		glog.Infof("Image is already present in the library - not uploading.")
+		c.Infof("Image is already present in the library - not uploading.")
 	}
 
-	glog.V(2).Infof("Setting tags against uploaded image")
+	c.Debugf("Setting tags against uploaded image")
 	err = c.setTags(ctx, container.ID, image.ID, append(tags, parsedTags...))
 	if err != nil {
 		return err
@@ -127,7 +126,7 @@ func (c *Client) UploadImage(ctx context.Context, r io.ReadSeeker, path string, 
 func (c *Client) postFile(ctx context.Context, r io.ReadSeeker, fileSize int64, imageID string, callback UploadCallback) error {
 
 	postURL := "/v1/imagefile/" + imageID
-	glog.V(2).Infof("postFile calling %s", postURL)
+	c.Debugf("postFile calling %s", postURL)
 
 	var bodyProgress io.Reader
 

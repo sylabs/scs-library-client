@@ -15,7 +15,6 @@ import (
 	"net/url"
 
 	"github.com/globalsign/mgo/bson"
-	"github.com/golang/glog"
 	jsonresp "github.com/sylabs/json-resp"
 )
 
@@ -150,10 +149,10 @@ func (c *Client) setTags(ctx context.Context, containerID, imageID string, tags 
 	}
 
 	for _, tag := range tags {
-		glog.Infof("Setting tag %s", tag)
+		c.Infof("Setting tag %s", tag)
 
 		if _, ok := existingTags[tag]; ok {
-			glog.Warningf("%s replaces an existing tag", tag)
+			c.Warningf("%s replaces an existing tag", tag)
 		}
 
 		imgTag := ImageTag{
@@ -169,7 +168,7 @@ func (c *Client) setTags(ctx context.Context, containerID, imageID string, tags 
 }
 
 func (c *Client) apiCreate(ctx context.Context, url string, o interface{}) (objJSON []byte, err error) {
-	glog.V(2).Infof("apiCreate calling %s", url)
+	c.Debugf("apiCreate calling %s", url)
 	s, err := json.Marshal(o)
 	if err != nil {
 		return []byte{}, fmt.Errorf("error encoding object to JSON:\n\t%v", err)
@@ -198,7 +197,7 @@ func (c *Client) apiCreate(ctx context.Context, url string, o interface{}) (objJ
 }
 
 func (c *Client) apiGet(ctx context.Context, path string) (objJSON []byte, found bool, err error) {
-	glog.V(2).Infof("apiGet calling %s", path)
+	c.Debugf("apiGet calling %s", path)
 
 	// split url containing query into component pieces (path and raw query)
 	u, err := url.Parse(path)
@@ -236,7 +235,7 @@ func (c *Client) apiGet(ctx context.Context, path string) (objJSON []byte, found
 // getTags returns a tag map for the specified containerID
 func (c *Client) getTags(ctx context.Context, containerID string) (TagMap, error) {
 	url := fmt.Sprintf("/v1/tags/%s", containerID)
-	glog.V(2).Infof("getTags calling %s", url)
+	c.Debugf("getTags calling %s", url)
 	req, err := c.newRequest(http.MethodGet, url, "", nil)
 	if err != nil {
 		return nil, fmt.Errorf("error creating request to server:\n\t%v", err)
@@ -263,7 +262,7 @@ func (c *Client) getTags(ctx context.Context, containerID string) (TagMap, error
 // setTag sets tag on specified containerID
 func (c *Client) setTag(ctx context.Context, containerID string, t ImageTag) error {
 	url := "/v1/tags/" + containerID
-	glog.V(2).Infof("setTag calling %s", url)
+	c.Debugf("setTag calling %s", url)
 	s, err := json.Marshal(t)
 	if err != nil {
 		return fmt.Errorf("error encoding object to JSON:\n\t%v", err)

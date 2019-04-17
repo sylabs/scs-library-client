@@ -78,6 +78,8 @@ type mockService struct {
 	baseURI     string
 }
 
+
+
 func (m *mockService) Run() {
 	mux := http.NewServeMux()
 	mux.HandleFunc(m.httpPath, m.ServeHTTP)
@@ -161,7 +163,11 @@ func Test_getEntity(t *testing.T) {
 			m.Run()
 			defer m.Stop()
 
-			c, err := NewClient(&Config{AuthToken: testToken, BaseURL: m.baseURI})
+			c, err := NewClient(&Config{
+				AuthToken: testToken,
+				BaseURL:   m.baseURI,
+				Logger:    &TestLogger{T: t},
+			})
 			if err != nil {
 				t.Errorf("Error initializing client: %v", err)
 			}
@@ -243,7 +249,7 @@ func Test_getCollection(t *testing.T) {
 			m.Run()
 			defer m.Stop()
 
-			c, err := NewClient(&Config{AuthToken: testToken, BaseURL: m.baseURI})
+			c, err := NewClient(&Config{AuthToken: testToken, BaseURL: m.baseURI, Logger: &TestLogger{T: t}})
 			if err != nil {
 				t.Errorf("Error initializing client: %v", err)
 			}
@@ -325,7 +331,7 @@ func Test_getContainer(t *testing.T) {
 			m.Run()
 			defer m.Stop()
 
-			c, err := NewClient(&Config{AuthToken: testToken, BaseURL: m.baseURI})
+			c, err := NewClient(&Config{AuthToken: testToken, BaseURL: m.baseURI, Logger: &TestLogger{T: t}})
 			if err != nil {
 				t.Errorf("Error initializing client: %v", err)
 			}
@@ -407,7 +413,7 @@ func Test_getImage(t *testing.T) {
 			m.Run()
 			defer m.Stop()
 
-			c, err := NewClient(&Config{AuthToken: testToken, BaseURL: m.baseURI})
+			c, err := NewClient(&Config{AuthToken: testToken, BaseURL: m.baseURI, Logger: &TestLogger{T: t}})
 			if err != nil {
 				t.Errorf("Error initializing client: %v", err)
 			}
@@ -474,7 +480,7 @@ func Test_createEntity(t *testing.T) {
 			m.Run()
 			defer m.Stop()
 
-			c, err := NewClient(&Config{AuthToken: testToken, BaseURL: m.baseURI})
+			c, err := NewClient(&Config{AuthToken: testToken, BaseURL: m.baseURI, Logger: &TestLogger{T: t}})
 			if err != nil {
 				t.Errorf("Error initializing client: %v", err)
 			}
@@ -530,7 +536,7 @@ func Test_createCollection(t *testing.T) {
 			m.Run()
 			defer m.Stop()
 
-			c, err := NewClient(&Config{AuthToken: testToken, BaseURL: m.baseURI})
+			c, err := NewClient(&Config{AuthToken: testToken, BaseURL: m.baseURI, Logger: &TestLogger{T: t}})
 			if err != nil {
 				t.Errorf("Error initializing client: %v", err)
 			}
@@ -586,7 +592,7 @@ func Test_createContainer(t *testing.T) {
 			m.Run()
 			defer m.Stop()
 
-			c, err := NewClient(&Config{AuthToken: testToken, BaseURL: m.baseURI})
+			c, err := NewClient(&Config{AuthToken: testToken, BaseURL: m.baseURI, Logger: &TestLogger{T: t}})
 			if err != nil {
 				t.Errorf("Error initializing client: %v", err)
 			}
@@ -650,7 +656,7 @@ func Test_createImage(t *testing.T) {
 			m.Run()
 			defer m.Stop()
 
-			c, err := NewClient(&Config{AuthToken: testToken, BaseURL: m.baseURI})
+			c, err := NewClient(&Config{AuthToken: testToken, BaseURL: m.baseURI, Logger: &TestLogger{T: t}})
 			if err != nil {
 				t.Errorf("Error initializing client: %v", err)
 			}
@@ -713,7 +719,7 @@ func Test_setTags(t *testing.T) {
 			m.Run()
 			defer m.Stop()
 
-			c, err := NewClient(&Config{AuthToken: testToken, BaseURL: m.baseURI})
+			c, err := NewClient(&Config{AuthToken: testToken, BaseURL: m.baseURI, Logger: &TestLogger{T: t}})
 			if err != nil {
 				t.Errorf("Error initializing client: %v", err)
 			}

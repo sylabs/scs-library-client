@@ -16,8 +16,6 @@ import (
 	"net/http/httptest"
 	"os"
 	"testing"
-
-	"github.com/golang/glog"
 )
 
 type mockRawService struct {
@@ -57,7 +55,7 @@ func (m *mockRawService) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	_, err = io.Copy(w, bufio.NewReader(inFile))
 	if err != nil {
-		glog.Fatalf("Test HTTP server unable to output file: %v", err)
+		m.t.Fatalf("Test HTTP server unable to output file: %v", err)
 	}
 
 }
@@ -102,7 +100,7 @@ func Test_DownloadImage(t *testing.T) {
 			m.Run()
 			defer m.Stop()
 
-			c, err := NewClient(&Config{AuthToken: tt.tokenFile, BaseURL: m.baseURI})
+			c, err := NewClient(&Config{AuthToken: tt.tokenFile, BaseURL: m.baseURI, Logger: &TestLogger{T: t}})
 			if err != nil {
 				t.Errorf("Error initializing client: %v", err)
 			}

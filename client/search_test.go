@@ -87,7 +87,7 @@ func Test_Search(t *testing.T) {
 			m.Run()
 			defer m.Stop()
 
-			c, err := NewClient(&Config{AuthToken: testToken, BaseURL: m.baseURI})
+			c, err := NewClient(&Config{AuthToken: testToken, BaseURL: m.baseURI, Logger: &TestLogger{T: t}})
 			if err != nil {
 				t.Errorf("Error initializing client: %v", err)
 			}
@@ -118,7 +118,7 @@ func Test_SearchLibrary(t *testing.T) {
 	m.Run()
 	defer m.Stop()
 
-	c, err := NewClient(&Config{BaseURL: m.baseURI})
+	c, err := NewClient(&Config{BaseURL: m.baseURI, Logger: &TestLogger{T: t}})
 	if err != nil {
 		t.Errorf("Error initializing client: %v", err)
 	}
@@ -181,7 +181,7 @@ func Test_SearchLibraryEmpty(t *testing.T) {
 	r, w, _ := os.Pipe()
 	os.Stdout = w
 
-	c, err := NewClient(&Config{BaseURL: m.baseURI})
+	c, err := NewClient(&Config{BaseURL: m.baseURI, Logger: &TestLogger{T: t}})
 	if err != nil {
 		t.Errorf("Error initializing client: %v", err)
 	}

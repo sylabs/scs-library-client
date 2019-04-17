@@ -22,6 +22,7 @@ type Config struct {
 	UserAgent string
 	// HTTPClient to use to make HTTP requests (if supplied).
 	HTTPClient *http.Client
+	Logger     Logger
 }
 
 // DefaultConfig is a configuration that uses default values.
@@ -29,6 +30,8 @@ var DefaultConfig = &Config{}
 
 // Client describes the client details.
 type Client struct {
+	Logger
+
 	// Base URL of the service.
 	BaseURL *url.URL
 	// Auth token to include in the Authorization header of each request (if supplied).
@@ -66,6 +69,14 @@ func NewClient(cfg *Config) (*Client, error) {
 		c.HTTPClient = cfg.HTTPClient
 	} else {
 		c.HTTPClient = http.DefaultClient
+	}
+
+	// Set logger from config; use sane default if none provided
+	if cfg.Logger != nil {
+		c.Logger = cfg.Logger
+	} else {
+		// use DummyLogger as a log sink
+		c.Logger = &DummyLogger{}
 	}
 
 	return c, nil

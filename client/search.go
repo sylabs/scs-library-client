@@ -46,35 +46,31 @@ func (c *Client) searchLibrary(ctx context.Context, value string) error {
 	numContainers := len(results.Containers)
 
 	if numEntities > 0 {
-		fmt.Printf("Found %d users for '%s'\n", numEntities, value)
+		c.Infof("Found %d users for '%s'", numEntities, value)
 		for _, ent := range results.Entities {
-			fmt.Printf("\t%s\n", ent.LibraryURI())
+			c.Infof("\t%s\n", ent.LibraryURI())
 		}
-		fmt.Printf("\n")
 	} else {
-		fmt.Printf("No users found for '%s'\n\n", value)
+		c.Infof("No users found for '%s'", value)
 	}
 
 	if numCollections > 0 {
-		fmt.Printf("Found %d collections for '%s'\n", numCollections, value)
+		c.Infof("Found %d collections for '%s'", numCollections, value)
 		for _, col := range results.Collections {
-			fmt.Printf("\t%s\n", col.LibraryURI())
+			c.Infof("\t%s", col.LibraryURI())
 		}
-		fmt.Printf("\n")
 	} else {
-		fmt.Printf("No collections found for '%s'\n\n", value)
+		c.Infof("No collections found for '%s'", value)
 	}
 
 	if numContainers > 0 {
-		fmt.Printf("Found %d containers for '%s'\n", numContainers, value)
+		c.Infof("Found %d containers for '%s'", numContainers, value)
 		for _, con := range results.Containers {
-			fmt.Printf("\t%s\n", con.LibraryURI())
-			fmt.Printf("\t\tTags: %s\n", con.TagList())
+			c.Infof("\t%s", con.LibraryURI())
+			c.Infof("\t\tTags: %s", con.TagList())
 		}
-		fmt.Printf("\n")
-
 	} else {
-		fmt.Printf("No containers found for '%s'\n\n", value)
+		c.Infof("No containers found for '%s'", value)
 	}
 
 	return nil

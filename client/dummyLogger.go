@@ -30,3 +30,13 @@ func (DummyLogger) Debug(...interface{}) {
 func (DummyLogger) Debugf(string, ...interface{}) {
 	// do nothing
 }
+
+// Warning logs at warning level
+func (DummyLogger) Warning(args ...interface{}) {
+	// do nothing
+}
+
+// Warningf takes a format string and args
+func (DummyLogger) Warningf(format string, args ...interface{}) {
+	// do nothing
+}
