@@ -39,6 +39,8 @@ type Client struct {
 	HTTPClient *http.Client
 }
 
+const defaultBaseURL = "https://library.sylabs.io"
+
 // NewClient sets up a new Cloud-Library Service client with the specified base URL and auth token.
 func NewClient(cfg *Config) (*Client, error) {
 	if cfg == nil {
@@ -46,13 +48,16 @@ func NewClient(cfg *Config) (*Client, error) {
 	}
 
 	// Determine base URL
-	bu := "https://library.sylabs.io"
+	bu := defaultBaseURL
 	if cfg.BaseURL != "" {
 		bu = cfg.BaseURL
 	}
 	baseURL, err := url.Parse(bu)
 	if err != nil {
 		return nil, err
+	}
+	if baseURL.Scheme != "http" && baseURL.Scheme != "https" {
+		return nil, fmt.Errorf("unsupported protocol scheme %q", baseURL.Scheme)
 	}
 
 	c := &Client{
@@ -82,7 +87,7 @@ func (c *Client) newRequest(method, path, rawQuery string, body io.Reader) (*htt
 		return nil, err
 	}
 	if v := c.AuthToken; v != "" {
-		r.Header.Set("Authorization", fmt.Sprintf("Bearer %s", v))
+		r.Header.Set("Authorization", fmt.Sprintf("BEARER %s", v))
 	}
 	if v := c.UserAgent; v != "" {
 		r.Header.Set("User-Agent", v)
