@@ -13,7 +13,6 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/globalsign/mgo/bson"
 	jsonresp "github.com/sylabs/json-resp"
 )
 
@@ -23,13 +22,13 @@ const (
 
 var (
 	testEntity = Entity{
-		ID:          bson.NewObjectId().Hex(),
+		ID:          "5cb9c34d7d960d82f5f5bc4a",
 		Name:        "test-user",
 		Description: "A test user",
 	}
 
 	testCollection = Collection{
-		ID:          bson.NewObjectId().Hex(),
+		ID:          "5cb9c34d7d960d82f5f5bc4b",
 		Name:        "test-collection",
 		Description: "A test collection",
 		Entity:      testEntity.ID,
@@ -37,7 +36,7 @@ var (
 	}
 
 	testContainer = Container{
-		ID:             bson.NewObjectId().Hex(),
+		ID:             "5cb9c34d7d960d82f5f5bc4c",
 		Name:           "test-container",
 		Description:    "A test container",
 		Entity:         testEntity.ID,
@@ -45,12 +44,13 @@ var (
 		Collection:     testEntity.ID,
 		CollectionName: testCollection.Name,
 		ImageTags: map[string]string{
-			"test-tag": bson.NewObjectId().Hex(),
-			"latest":   bson.NewObjectId().Hex()},
+			"test-tag": "5cb9c34d7d960d82f5f5bc4d",
+			"latest":   "5cb9c34d7d960d82f5f5bc4e",
+		},
 	}
 
 	testImage = Image{
-		ID:             bson.NewObjectId().Hex(),
+		ID:             "5cb9c34d7d960d82f5f5bc4f",
 		Hash:           "sha256.e50a30881ace3d5944f5661d222db7bee5296be9e4dc7c1fcb7604bcae926e88",
 		Entity:         testEntity.ID,
 		EntityName:     testEntity.Name,
@@ -535,7 +535,7 @@ func Test_createCollection(t *testing.T) {
 				t.Errorf("Error initializing client: %v", err)
 			}
 
-			collection, err := c.createCollection(context.Background(), tt.collectionRef, bson.NewObjectId().Hex())
+			collection, err := c.createCollection(context.Background(), tt.collectionRef, "5cb9c34d7d960d82f5f5bc50")
 
 			if err != nil && !tt.expectError {
 				t.Errorf("Unexpected error: %v", err)
@@ -591,7 +591,7 @@ func Test_createContainer(t *testing.T) {
 				t.Errorf("Error initializing client: %v", err)
 			}
 
-			container, err := c.createContainer(context.Background(), tt.containerRef, bson.NewObjectId().Hex())
+			container, err := c.createContainer(context.Background(), tt.containerRef, "5cb9c34d7d960d82f5f5bc51")
 
 			if err != nil && !tt.expectError {
 				t.Errorf("Unexpected error: %v", err)
@@ -655,7 +655,7 @@ func Test_createImage(t *testing.T) {
 				t.Errorf("Error initializing client: %v", err)
 			}
 
-			image, err := c.createImage(context.Background(), tt.imageRef, bson.NewObjectId().Hex(), "No Description")
+			image, err := c.createImage(context.Background(), tt.imageRef, "5cb9c34d7d960d82f5f5bc52", "No Description")
 
 			if err != nil && !tt.expectError {
 				t.Errorf("Unexpected error: %v", err)
@@ -685,7 +685,7 @@ func Test_setTags(t *testing.T) {
 			description:  "Valid Request",
 			code:         http.StatusOK,
 			containerRef: "test",
-			imageRef:     bson.NewObjectId().Hex(),
+			imageRef:     "5cb9c34d7d960d82f5f5bc53",
 			tags:         []string{"tag1", "tag2", "tag3"},
 			expectError:  false,
 		},
@@ -693,7 +693,7 @@ func Test_setTags(t *testing.T) {
 			description:  "Error response",
 			code:         http.StatusInternalServerError,
 			containerRef: "test",
-			imageRef:     bson.NewObjectId().Hex(),
+			imageRef:     "5cb9c34d7d960d82f5f5bc54",
 			tags:         []string{"tag1", "tag2", "tag3"},
 			expectError:  true,
 		},
