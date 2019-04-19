@@ -14,7 +14,6 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/globalsign/mgo/bson"
 	"github.com/golang/glog"
 	jsonresp "github.com/sylabs/json-resp"
 )
@@ -92,7 +91,7 @@ func (c *Client) createCollection(ctx context.Context, name string, entityID str
 	newCollection := Collection{
 		Name:        name,
 		Description: "No description",
-		Entity:      bson.ObjectIdHex(entityID).Hex(),
+		Entity:      entityID,
 	}
 	colJSON, err := c.apiCreate(ctx, "/v1/collections", newCollection)
 	if err != nil {
@@ -110,7 +109,7 @@ func (c *Client) createContainer(ctx context.Context, name string, collectionID 
 	newContainer := Container{
 		Name:        name,
 		Description: "No description",
-		Collection:  bson.ObjectIdHex(collectionID).Hex(),
+		Collection:  collectionID,
 	}
 	conJSON, err := c.apiCreate(ctx, "/v1/containers", newContainer)
 	if err != nil {
@@ -128,7 +127,7 @@ func (c *Client) createImage(ctx context.Context, hash string, containerID strin
 	i := Image{
 		Hash:        hash,
 		Description: description,
-		Container:   bson.ObjectIdHex(containerID).Hex(),
+		Container:   containerID,
 	}
 	imgJSON, err := c.apiCreate(ctx, "/v1/images", i)
 	if err != nil {
@@ -158,7 +157,7 @@ func (c *Client) setTags(ctx context.Context, containerID, imageID string, tags 
 
 		imgTag := ImageTag{
 			tag,
-			bson.ObjectIdHex(imageID).Hex(),
+			imageID,
 		}
 		err := c.setTag(ctx, containerID, imgTag)
 		if err != nil {
