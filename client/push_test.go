@@ -11,8 +11,6 @@ import (
 	"net/http"
 	"os"
 	"testing"
-
-	"github.com/globalsign/mgo/bson"
 )
 
 //func postFile(baseURL string, filePath string, imageID string) error {
@@ -30,7 +28,7 @@ func Test_postFile(t *testing.T) {
 			description: "Container not found response",
 			code:        404,
 			reqCallback: nil,
-			imageRef:    bson.NewObjectId().Hex(),
+			imageRef:    "5cb9c34d7d960d82f5f5bc55",
 			testFile:    "test_data/test_sha256",
 			expectError: true,
 		},
@@ -38,7 +36,7 @@ func Test_postFile(t *testing.T) {
 			description: "Unauthorized response",
 			code:        401,
 			reqCallback: nil,
-			imageRef:    bson.NewObjectId().Hex(),
+			imageRef:    "5cb9c34d7d960d82f5f5bc56",
 			testFile:    "test_data/test_sha256",
 			expectError: true,
 		},
@@ -46,7 +44,7 @@ func Test_postFile(t *testing.T) {
 			description: "Valid Response",
 			code:        200,
 			reqCallback: nil,
-			imageRef:    bson.NewObjectId().Hex(),
+			imageRef:    "5cb9c34d7d960d82f5f5bc57",
 			testFile:    "test_data/test_sha256",
 			expectError: false,
 		},

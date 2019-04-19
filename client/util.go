@@ -13,9 +13,6 @@ import (
 	"os"
 	"regexp"
 	"strings"
-	"time"
-
-	"github.com/globalsign/mgo/bson"
 )
 
 // IsLibraryPullRef returns true if the provided string is a valid library
@@ -126,11 +123,6 @@ func StringInSlice(a string, list []string) bool {
 func PrettyPrint(v interface{}) {
 	b, _ := json.MarshalIndent(v, "", "  ")
 	println(string(b))
-}
-
-// BsonUTCNow returns a time.Time in UTC, with the precision supported by BSON
-func BsonUTCNow() time.Time {
-	return bson.Now().UTC()
 }
 
 // ImageHash returns the appropriate hash for a provided image file

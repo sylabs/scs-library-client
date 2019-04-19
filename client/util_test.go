@@ -9,8 +9,6 @@ import (
 	"os"
 	"reflect"
 	"testing"
-
-	"github.com/globalsign/mgo/bson"
 )
 
 func Test_isLibraryPullRef(t *testing.T) {
@@ -160,24 +158,24 @@ func Test_ParseLibraryPath(t *testing.T) {
 
 func TestIdInSlice(t *testing.T) {
 
-	trueID := bson.NewObjectId().Hex()
+	trueID := "5cb9c34d7d960d82f5f5bc58"
 
-	slice := []string{trueID, bson.NewObjectId().Hex(), bson.NewObjectId().Hex(), bson.NewObjectId().Hex()}
+	slice := []string{trueID, "5cb9c34d7d960d82f5f5bc59", "5cb9c34d7d960d82f5f5bc5a", "5cb9c34d7d960d82f5f5bc5b"}
 	if !IDInSlice(trueID, slice) {
 		t.Errorf("should find %v in %v", trueID, slice)
 	}
 
-	slice = []string{bson.NewObjectId().Hex(), bson.NewObjectId().Hex(), trueID, bson.NewObjectId().Hex()}
+	slice = []string{"5cb9c34d7d960d82f5f5bc5c", "5cb9c34d7d960d82f5f5bc5d", trueID, "5cb9c34d7d960d82f5f5bc5e"}
 	if !IDInSlice(trueID, slice) {
 		t.Errorf("should find %v in %v", trueID, slice)
 	}
 
-	slice = []string{bson.NewObjectId().Hex(), bson.NewObjectId().Hex(), bson.NewObjectId().Hex(), trueID}
+	slice = []string{"5cb9c34d7d960d82f5f5bc5f", "5cb9c34d7d960d82f5f5bc60", "5cb9c34d7d960d82f5f5bc61", trueID}
 	if !IDInSlice(trueID, slice) {
 		t.Errorf("should find %v in %v", trueID, slice)
 	}
 
-	falseID := bson.NewObjectId().Hex()
+	falseID := "5cb9c34d7d960d82f5f5bc62"
 	if IDInSlice(falseID, slice) {
 		t.Errorf("should not find %v in %v", trueID, slice)
 	}
@@ -186,11 +184,11 @@ func TestIdInSlice(t *testing.T) {
 
 func TestSliceWithoutID(t *testing.T) {
 
-	a := bson.NewObjectId().Hex()
-	b := bson.NewObjectId().Hex()
-	c := bson.NewObjectId().Hex()
-	d := bson.NewObjectId().Hex()
-	z := bson.NewObjectId().Hex()
+	a := "5cb9c34d7d960d82f5f5bc63"
+	b := "5cb9c34d7d960d82f5f5bc64"
+	c := "5cb9c34d7d960d82f5f5bc65"
+	d := "5cb9c34d7d960d82f5f5bc66"
+	z := "5cb9c34d7d960d82f5f5bc67"
 	slice := []string{a, b, c, d}
 
 	result := SliceWithoutID(slice, a)
@@ -213,24 +211,24 @@ func TestSliceWithoutID(t *testing.T) {
 
 func TestStringInSlice(t *testing.T) {
 
-	trueID := bson.NewObjectId().Hex()
+	trueID := "5cb9c34d7d960d82f5f5bc68"
 
-	slice := []string{trueID, bson.NewObjectId().Hex(), bson.NewObjectId().Hex(), bson.NewObjectId().Hex()}
+	slice := []string{trueID, "5cb9c34d7d960d82f5f5bc69", "5cb9c34d7d960d82f5f5bc6a", "5cb9c34d7d960d82f5f5bc6b"}
 	if !StringInSlice(trueID, slice) {
 		t.Errorf("should find %v in %v", trueID, slice)
 	}
 
-	slice = []string{bson.NewObjectId().Hex(), bson.NewObjectId().Hex(), trueID, bson.NewObjectId().Hex()}
+	slice = []string{"5cb9c34d7d960d82f5f5bc6c", "5cb9c34d7d960d82f5f5bc6d", trueID, "5cb9c34d7d960d82f5f5bc6e"}
 	if !StringInSlice(trueID, slice) {
 		t.Errorf("should find %v in %v", trueID, slice)
 	}
 
-	slice = []string{bson.NewObjectId().Hex(), bson.NewObjectId().Hex(), bson.NewObjectId().Hex(), trueID}
+	slice = []string{"5cb9c34d7d960d82f5f5bc6f", "5cb9c34d7d960d82f5f5bc70", "5cb9c34d7d960d82f5f5bc71", trueID}
 	if !StringInSlice(trueID, slice) {
 		t.Errorf("should find %v in %v", trueID, slice)
 	}
 
-	falseID := bson.NewObjectId().Hex()
+	falseID := "5cb9c34d7d960d82f5f5bc72"
 	if StringInSlice(falseID, slice) {
 		t.Errorf("should not find %v in %v", trueID, slice)
 	}
