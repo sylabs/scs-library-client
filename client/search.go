@@ -12,8 +12,13 @@ import (
 	"net/url"
 )
 
-// Search searches library by name, returns any matching collections,
-// containers, entities, or images.
+// Search searches library, returns any matching collections, containers,
+// entities, or images.
+//
+// args is key-value pairs, such as "arch" (ie. "amd64") or "signed" ("true" or
+// "false"). "value" is the keyword argument and is required for a search.  It
+// will be matched again all collections (Entity, Collection, Container, and
+// Image)
 func (c *Client) Search(ctx context.Context, args map[string]string) (*SearchResults, error) {
 	v := url.Values{}
 	for key, value := range args {
