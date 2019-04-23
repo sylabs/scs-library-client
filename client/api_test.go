@@ -106,11 +106,23 @@ var (
 		Signed:         &unsignedImage,
 	}
 
+	testImage5 = Image{
+		ID:             "1111222223333031a01f83dc",
+		Hash:           "sha256.4f4ba1112223331734a33247a06e75d06af2999103139a2e2b767dc873a21b7a",
+		Entity:         testEntity.ID,
+		EntityName:     testEntity.Name,
+		Collection:     testEntity.ID,
+		CollectionName: testCollection.Name,
+		Container:      testContainer.ID,
+		ContainerName:  testContainer.Name,
+		Signed:         &unsignedImage,
+	}
+
 	testSearch = SearchResults{
 		Entities:    []Entity{testEntity},
 		Collections: []Collection{testCollection},
 		Containers:  []Container{testContainer},
-		Images:      []Image{testImage, testImage2, testImage3, testImage4},
+		Images:      []Image{testImage, testImage2, testImage3, testImage4, testImage5},
 	}
 )
 
