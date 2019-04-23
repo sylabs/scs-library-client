@@ -12,13 +12,28 @@ import (
 	"net/url"
 )
 
-// Search searches library, returns any matching collections, containers,
-// entities, or images.
+// Search performs a library search, returning any matching collections,
+// containers, entities, or images.
 //
-// args is key-value pairs, such as "arch" (ie. "amd64") or "signed" ("true" or
-// "false"). "value" is the keyword argument and is required for a search.  It
-// will be matched against all collections (Entity, Collection, Container, and
-// Image)
+// args specifies key-value pairs to be used as a search spec, such as "arch"
+// (ie. "amd64") or "signed" (valid values "true" or "false").
+//
+// "value" is a required keyword for all searches. It will be matched against
+// all collections (Entity, Collection, Container, and Image)
+//
+// Multiple architectures may be searched by specifying a comma-separated list
+// (ie. "amd64,arm64") for the value of "arch".
+//
+// Match all collections with name "thename":
+//
+//     c.Search(ctx, map[string]string{"value": "thename"})
+//
+// Match all images with name "imagename" and arch "amd64"
+//
+//     c.Search(ctx, map[string]string{
+//         "value": "imagename",
+//         "arch": "amd64"
+//     })
 func (c *Client) Search(ctx context.Context, args map[string]string) (*SearchResults, error) {
 	// "value" is minimally required in "args"
 	value, ok := args["value"]
