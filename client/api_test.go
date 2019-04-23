@@ -21,6 +21,9 @@ const (
 )
 
 var (
+	signedImage   = true
+	unsignedImage = false
+
 	testEntity = Entity{
 		ID:          "5cb9c34d7d960d82f5f5bc4a",
 		Name:        "test-user",
@@ -49,6 +52,8 @@ var (
 		},
 	}
 
+	archIntel = "x86_64"
+
 	testImage = Image{
 		ID:             "5cb9c34d7d960d82f5f5bc4f",
 		Hash:           "sha256.e50a30881ace3d5944f5661d222db7bee5296be9e4dc7c1fcb7604bcae926e88",
@@ -58,12 +63,66 @@ var (
 		CollectionName: testCollection.Name,
 		Container:      testContainer.ID,
 		ContainerName:  testContainer.Name,
+		Architecture:   &archIntel,
+	}
+
+	archARM = "cortex-a9"
+
+	testImage2 = Image{
+		ID:             "bf396e3d2de63215e731c11f",
+		Hash:           "sha256.d8fb363e56735af5f127a2f12bdba8d7aedf5861c7ef7eb7197f56323d1831f7",
+		Entity:         testEntity.ID,
+		EntityName:     testEntity.Name,
+		Collection:     testEntity.ID,
+		CollectionName: testCollection.Name,
+		Container:      testContainer.ID,
+		ContainerName:  testContainer.Name,
+		Architecture:   &archARM,
+	}
+
+	testImage3 = Image{
+		ID:             "49a312c677e2e3f3d36ac3d0",
+		Hash:           "sha256.b23a9b9f41809a2dfe16a9e3b1d948909dab2efbf1997d6f5a46dea8af5cdb78",
+		Entity:         testEntity.ID,
+		EntityName:     testEntity.Name,
+		Collection:     testEntity.ID,
+		CollectionName: testCollection.Name,
+		Container:      testContainer.ID,
+		ContainerName:  testContainer.Name,
+		Architecture:   &archARM,
+		Signed:         &signedImage,
+	}
+
+	testImage4 = Image{
+		ID:             "2c2e6c834274f031a01f83dc",
+		Hash:           "sha256.4f4ba1a6b584001734a33247a06e75d06af2999103139a2e2b767dc873a21b7a",
+		Entity:         testEntity.ID,
+		EntityName:     testEntity.Name,
+		Collection:     testEntity.ID,
+		CollectionName: testCollection.Name,
+		Container:      testContainer.ID,
+		ContainerName:  testContainer.Name,
+		Architecture:   &archARM,
+		Signed:         &unsignedImage,
+	}
+
+	testImage5 = Image{
+		ID:             "1111222223333031a01f83dc",
+		Hash:           "sha256.4f4ba1112223331734a33247a06e75d06af2999103139a2e2b767dc873a21b7a",
+		Entity:         testEntity.ID,
+		EntityName:     testEntity.Name,
+		Collection:     testEntity.ID,
+		CollectionName: testCollection.Name,
+		Container:      testContainer.ID,
+		ContainerName:  testContainer.Name,
+		Signed:         &unsignedImage,
 	}
 
 	testSearch = SearchResults{
 		Entities:    []Entity{testEntity},
 		Collections: []Collection{testCollection},
 		Containers:  []Container{testContainer},
+		Images:      []Image{testImage, testImage2, testImage3, testImage4, testImage5},
 	}
 )
 

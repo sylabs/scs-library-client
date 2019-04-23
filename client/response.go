@@ -44,6 +44,7 @@ type SearchResults struct {
 	Entities    []Entity     `json:"entity"`
 	Collections []Collection `json:"collection"`
 	Containers  []Container  `json:"container"`
+	Images      []Image      `json:"image"`
 }
 
 // SearchResponse - Response from the API for a search request
