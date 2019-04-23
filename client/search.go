@@ -34,6 +34,9 @@ import (
 //         "value": "imagename",
 //         "arch": "amd64"
 //     })
+//
+// Note: if 'arch' and/or 'signed' are specified, the search is limited in
+// scope only to the "Image" collection.
 func (c *Client) Search(ctx context.Context, args map[string]string) (*SearchResults, error) {
 	// "value" is minimally required in "args"
 	value, ok := args["value"]
