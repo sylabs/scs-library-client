@@ -17,7 +17,7 @@ import (
 //
 // args is key-value pairs, such as "arch" (ie. "amd64") or "signed" ("true" or
 // "false"). "value" is the keyword argument and is required for a search.  It
-// will be matched again all collections (Entity, Collection, Container, and
+// will be matched against all collections (Entity, Collection, Container, and
 // Image)
 func (c *Client) Search(ctx context.Context, args map[string]string) (*SearchResults, error) {
 	// "value" is minimally required in "args"
