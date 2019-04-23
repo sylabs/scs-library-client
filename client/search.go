@@ -20,11 +20,6 @@ import (
 // will be matched again all collections (Entity, Collection, Container, and
 // Image)
 func (c *Client) Search(ctx context.Context, args map[string]string) (*SearchResults, error) {
-	v := url.Values{}
-	for key, value := range args {
-		v.Set(key, value)
-	}
-
 	// "value" is minimally required in "args"
 	value, ok := args["value"]
 	if !ok {
@@ -33,6 +28,11 @@ func (c *Client) Search(ctx context.Context, args map[string]string) (*SearchRes
 
 	if len(value) < 3 {
 		return nil, fmt.Errorf("bad query '%s'. You must search for at least 3 characters", value)
+	}
+
+	v := url.Values{}
+	for key, value := range args {
+		v.Set(key, value)
 	}
 
 	resJSON, _, err := c.apiGet(ctx, "/v1/search?"+v.Encode())
