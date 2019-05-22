@@ -195,6 +195,35 @@ func (c *Client) apiCreate(ctx context.Context, url string, o interface{}) (objJ
 	return objJSON, nil
 }
 
+func (c *Client) apiUpdate(ctx context.Context, url string, o interface{}) (objJSON []byte, err error) {
+	c.Logger.Logf("apiCreate calling %s", url)
+	s, err := json.Marshal(o)
+	if err != nil {
+		return []byte{}, fmt.Errorf("error encoding object to JSON:\n\t%v", err)
+	}
+	req, err := c.newRequest("PUT", url, "", bytes.NewBuffer(s))
+	if err != nil {
+		return []byte{}, fmt.Errorf("error creating PUT request:\n\t%v", err)
+	}
+
+	res, err := c.HTTPClient.Do(req.WithContext(ctx))
+	if err != nil {
+		return []byte{}, fmt.Errorf("error making request to server:\n\t%v", err)
+	}
+	if res.StatusCode != http.StatusOK && res.StatusCode != http.StatusNoContent {
+		err := jsonresp.ReadError(res.Body)
+		if err != nil {
+			return []byte{}, fmt.Errorf("update did not succeed: %v", err)
+		}
+		return []byte{}, fmt.Errorf("update did not succeed: http status code: %d", res.StatusCode)
+	}
+	objJSON, err = ioutil.ReadAll(res.Body)
+	if err != nil {
+		return []byte{}, fmt.Errorf("error reading response from server:\n\t%v", err)
+	}
+	return objJSON, nil
+}
+
 func (c *Client) apiGet(ctx context.Context, path string) (objJSON []byte, found bool, err error) {
 	c.Logger.Logf("apiGet calling %s", path)
 

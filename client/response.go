@@ -52,3 +52,13 @@ type SearchResponse struct {
 	Data  SearchResults   `json:"data"`
 	Error *jsonresp.Error `json:"error,omitempty"`
 }
+
+type UploadImage struct {
+	UploadURL string `json:"uploadURL"`
+}
+
+// UploadImageResponse - Response from the API for an image upload request
+type UploadImageResponse struct {
+	Data  UploadImage     `json:"data"`
+	Error *jsonresp.Error `json:"error,omitempty"`
+}
