@@ -5,9 +5,12 @@
 
 package client
 
+// UploadImageRequest is sent to initiate V2 image upload
 type UploadImageRequest struct {
 	Size int64 `json:"filesize"`
 }
 
+// UploadImageCompleteRequest is sent to complete V2 image upload; it is
+// currently unused.
 type UploadImageCompleteRequest struct {
 }
