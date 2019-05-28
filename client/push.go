@@ -99,7 +99,7 @@ func (c *Client) UploadImage(ctx context.Context, r io.ReadSeeker, path string, 
 	// calculate sha256 and md5 checksums for Reader
 	md5Checksum, imageHash, fileSize, err := calculateChecksums(r)
 	if err != nil {
-		return fmt.Errorf("Error calculating checksums: %v", err)
+		return fmt.Errorf("error calculating checksums: %v", err)
 	}
 
 	// rollback to top of file
@@ -173,11 +173,8 @@ func (c *Client) UploadImage(ctx context.Context, r io.ReadSeeker, path string, 
 			if err := c.postFileV2(ctx, r, fileSize, image.ID, callback, metadata); err != nil {
 				return err
 			}
-		} else {
-			// legacy image upload
-			if err := c.postFile(ctx, r, fileSize, image.ID, callback); err != nil {
-				return err
-			}
+		} else if err := c.postFile(ctx, r, fileSize, image.ID, callback); err != nil {
+			return err
 		}
 		c.Logger.Logf("Upload completed OK")
 	} else {
