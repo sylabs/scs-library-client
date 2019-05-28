@@ -7,13 +7,13 @@ package client
 
 import (
 	"context"
-	"io"
 	"net/http"
 	"os"
 	"testing"
+
+	jsonresp "github.com/sylabs/json-resp"
 )
 
-//func postFile(baseURL string, filePath string, imageID string) error {
 func Test_postFile(t *testing.T) {
 
 	tests := []struct {
@@ -80,11 +80,6 @@ func Test_postFile(t *testing.T) {
 			}
 			fileSize := fi.Size()
 
-			_, err = f.Seek(0, io.SeekStart)
-			if err != nil {
-				t.Errorf("Error seeking in stream: %v", err)
-			}
-
 			err = c.postFile(context.Background(), f, fileSize, tt.imageRef, nil)
 
 			if err != nil && !tt.expectError {
@@ -92,6 +87,55 @@ func Test_postFile(t *testing.T) {
 			}
 			if err == nil && tt.expectError {
 				t.Errorf("Unexpected success. Expected error.")
+			}
+		})
+	}
+}
+
+func Test_isV2API(t *testing.T) {
+	type legacyVersionInfo struct {
+		Version string `json:"version"`
+	}
+
+	ctx := context.Background()
+
+	tests := []struct {
+		description      string
+		body             interface{}
+		code             int
+		isV2APIOrGreater bool
+	}{
+		{"legacy", legacyVersionInfo{Version: "1.0.0-alpha.1"}, 200, false},
+		{"malformed", legacyVersionInfo{}, 200, false},
+		{"error", nil, 404, false},
+		{"current", VersionInfo{Version: "1.0.0-alpha.1", APIVersion: "2.0.0-alpha.1"}, 200, true},
+		{"slightly newer", VersionInfo{Version: "1.0.0-alpha.1", APIVersion: "2.0.0-alpha.2"}, 200, true},
+		{"newer than that", VersionInfo{Version: "1.0.0-alpha.1", APIVersion: "2.0.5-alpha.1"}, 200, true},
+		{"distant future", VersionInfo{Version: "1.0.0-alpha.1", APIVersion: "3.0.0"}, 200, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.description, func(t *testing.T) {
+			m := mockService{
+				t:        t,
+				code:     200,
+				body:     jsonresp.Response{Data: tt.body},
+				httpPath: "/version",
+			}
+			m.Run()
+			defer m.Stop()
+
+			c, err := NewClient(&Config{BaseURL: m.baseURI})
+			if err != nil {
+				t.Errorf("Error initializing client: %v", err)
+			}
+
+			result := c.isV2API(ctx)
+			if result && !tt.isV2APIOrGreater {
+				t.Errorf("Unexpected V2 API. Expected V1 API")
+			}
+			if !result && tt.isV2APIOrGreater {
+				t.Errorf("Unexpected V1 API. Expected V2 API or greater")
 			}
 		})
 	}
