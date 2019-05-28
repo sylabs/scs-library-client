@@ -200,7 +200,7 @@ func (c *Client) postFileV2(ctx context.Context, r io.Reader, fileSize int64, im
 	}
 
 	postURL := "/v2/imagefile/" + imageID
-	c.Logger.Logf("postFile calling %s", postURL)
+	c.Logger.Logf("postFileV2 calling %s", postURL)
 
 	// issue upload request (POST) to obtain presigned S3 URL
 	body := UploadImageRequest{
