@@ -275,7 +275,7 @@ func (c *Client) postFileV2(ctx context.Context, r io.Reader, fileSize int64, im
 	req.ContentLength = fileSize
 	req.Header.Set("Content-Type", "application/octet-stream")
 
-	// set S3 custom metdata containing the MD5 checksum
+	// set S3 custom metadata containing the MD5 checksum
 	for key, value := range metadata {
 		req.Header.Set("x-amz-meta-client-"+key, value)
 	}
