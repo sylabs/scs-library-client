@@ -222,6 +222,9 @@ func (c *Client) postFileV2(ctx context.Context, r io.Reader, fileSize int64, im
 
 	// upload (PUT) directly to S3 presigned URL provided above
 	presignedURL := res.Data.UploadURL
+	if presignedURL == "" {
+		return fmt.Errorf("error getting presigned URL")
+	}
 
 	req, err := retryablehttp.NewRequest("PUT", presignedURL, callback.GetReader())
 	if err != nil {
