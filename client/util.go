@@ -6,6 +6,7 @@
 package client
 
 import (
+	"crypto/md5"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -151,4 +152,16 @@ func sha256sum(r io.Reader) (result string, s int64, err error) {
 	}
 
 	return "sha256." + hex.EncodeToString(hash.Sum(nil)), s, nil
+}
+
+// md5sum computes the MD5 checksum of the specified reader; caller is
+// responsible for resetting file pointer
+func md5sum(r io.Reader) (result string, s int64, err error) {
+	hash := md5.New()
+	s, err = io.Copy(hash, r)
+	if err != nil {
+		return "", 0, err
+	}
+
+	return hex.EncodeToString(hash.Sum(nil)), s, nil
 }

@@ -15,6 +15,7 @@ import (
 	"github.com/go-log/log"
 	"github.com/hashicorp/go-retryablehttp"
 	jsonresp "github.com/sylabs/json-resp"
+	"golang.org/x/sync/errgroup"
 )
 
 // UploadCallback defines an interface used to perform a call-out to
@@ -44,6 +45,46 @@ func (c *defaultUploadCallback) GetReader() io.Reader {
 func (c *defaultUploadCallback) Finish() {
 }
 
+// calculateChecksums uses a TeeReader to calculate MD5 and SHA256
+// checksums concurrently
+func calculateChecksums(r io.Reader) (string, string, int64, error) {
+	pr, pw := io.Pipe()
+	tr := io.TeeReader(r, pw)
+
+	var g errgroup.Group
+
+	var md5checksum string
+	var sha256checksum string
+	var fileSize int64
+
+	// compute MD5 checksum for comparison with S3 checksum
+	g.Go(func() error {
+		// The pipe writer must be closed so sha256 computation gets EOF and will
+		// complete.
+		defer pw.Close()
+		var err error
+
+		md5checksum, fileSize, err = md5sum(tr)
+		if err != nil {
+			return fmt.Errorf("error calculating MD5 checksum: %v", err)
+		}
+		return nil
+	})
+
+	// Compute sha256
+	g.Go(func() error {
+		var err error
+		sha256checksum, _, err = sha256sum(pr)
+		if err != nil {
+			return fmt.Errorf("error calculating SHA checksum: %v", err)
+		}
+		return nil
+	})
+
+	err := g.Wait()
+	return md5checksum, sha256checksum, fileSize, err
+}
+
 // UploadImage will push a specified image from an io.ReadSeeker up to the
 // Container Library, The timeout value for this operation is set within
 // the context. It is recommended to use a large value (ie. 1800 seconds) to
@@ -55,14 +96,14 @@ func (c *Client) UploadImage(ctx context.Context, r io.ReadSeeker, path string, 
 		return fmt.Errorf("malformed image path: %s", path)
 	}
 
-	imageHash, fileSize, err := sha256sum(r)
+	// calculate sha256 and md5 checksums for Reader
+	md5Checksum, imageHash, fileSize, err := calculateChecksums(r)
 	if err != nil {
-		return fmt.Errorf("error calculating SHA checksum: %v", err)
+		return fmt.Errorf("Error calculating checksums: %v", err)
 	}
 
 	// rollback to top of file
-	_, err = r.Seek(0, io.SeekStart)
-	if err != nil {
+	if _, err = r.Seek(0, io.SeekStart); err != nil {
 		return fmt.Errorf("error seeking to start stream: %v", err)
 	}
 
@@ -126,7 +167,10 @@ func (c *Client) UploadImage(ctx context.Context, r io.ReadSeeker, path string, 
 		c.Logger.Log("Now uploading to the library")
 		if c.isV2API(ctx) {
 			// use v2 post file api
-			if err := c.postFileV2(ctx, r, fileSize, image.ID, callback); err != nil {
+			metadata := map[string]string{
+				"md5sum": md5Checksum,
+			}
+			if err := c.postFileV2(ctx, r, fileSize, image.ID, callback, metadata); err != nil {
 				return err
 			}
 		} else {
@@ -192,7 +236,7 @@ func (l *loggingAdapter) Printf(fmt string, args ...interface{}) {
 // a three step operation: "create" upload image request, which returns a
 // URL to issue an http PUT operation against, and then finally calls the
 // completion endpoint once upload is complete.
-func (c *Client) postFileV2(ctx context.Context, r io.Reader, fileSize int64, imageID string, callback UploadCallback) error {
+func (c *Client) postFileV2(ctx context.Context, r io.Reader, fileSize int64, imageID string, callback UploadCallback, metadata map[string]string) error {
 
 	if callback == nil {
 		// fallback to default upload callback
@@ -233,6 +277,11 @@ func (c *Client) postFileV2(ctx context.Context, r io.Reader, fileSize int64, im
 
 	req.ContentLength = fileSize
 	req.Header.Set("Content-Type", "application/octet-stream")
+
+	// set S3 custom metdata containing the MD5 checksum
+	for key, value := range metadata {
+		req.Header.Set("x-amz-meta-client-"+key, value)
+	}
 
 	// redirect log output from retryablehttp to our logger
 	l := loggingAdapter{
