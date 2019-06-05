@@ -288,10 +288,14 @@ func (c *Client) postFileV2(ctx context.Context, r io.Reader, fileSize int64, im
 	client := retryablehttp.NewClient()
 	client.Logger = &l
 
-	_, err = client.Do(req.WithContext(ctx))
+	resp, err := client.Do(req.WithContext(ctx))
 	callback.Finish()
 	if err != nil {
 		return fmt.Errorf("error uploading image: %v", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("error uploading image: HTTP status %d", resp.StatusCode)
 	}
 
 	// send (PUT) image upload completion
