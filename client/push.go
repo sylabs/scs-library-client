@@ -204,10 +204,10 @@ func (c *Client) postFile(ctx context.Context, r io.Reader, fileSize int64, imag
 	// Content length is required by the API
 	req.ContentLength = fileSize
 	res, err := c.HTTPClient.Do(req.WithContext(ctx))
-
 	if err != nil {
 		return fmt.Errorf("error uploading file to server: %s", err.Error())
 	}
+	defer res.Body.Close()
 	if res.StatusCode != http.StatusOK {
 		err := jsonresp.ReadError(res.Body)
 		if err != nil {
@@ -289,6 +289,7 @@ func (c *Client) postFileV2(ctx context.Context, r io.Reader, fileSize int64, im
 	if err != nil {
 		return fmt.Errorf("error uploading image: %v", err)
 	}
+	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("error uploading image: HTTP status %d", resp.StatusCode)
