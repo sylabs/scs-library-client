@@ -170,6 +170,7 @@ func (c *Client) getTags(ctx context.Context, containerID string) (TagMap, error
 	if err != nil {
 		return nil, fmt.Errorf("error making request to server:\n\t%v", err)
 	}
+	defer res.Body.Close()
 	if res.StatusCode != http.StatusOK {
 		err := jsonresp.ReadError(res.Body)
 		if err != nil {
@@ -201,6 +202,7 @@ func (c *Client) setTag(ctx context.Context, containerID string, t ImageTag) err
 	if err != nil {
 		return fmt.Errorf("error making request to server:\n\t%v", err)
 	}
+	defer res.Body.Close()
 	if res.StatusCode != http.StatusOK {
 		err := jsonresp.ReadError(res.Body)
 		if err != nil {
