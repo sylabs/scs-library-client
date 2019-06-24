@@ -90,6 +90,7 @@ func (c *Client) commonRequestHandler(ctx context.Context, method string, path s
 	if err != nil {
 		return []byte{}, fmt.Errorf("error making request to server:\n\t%v", err)
 	}
+	defer res.Body.Close()
 
 	// check http status code
 	if res.StatusCode == http.StatusNotFound {
