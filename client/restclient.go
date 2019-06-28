@@ -20,39 +20,27 @@ import (
 )
 
 var (
+	// ErrNotFound is returned by when a resource is not found (http status 404)
 	ErrNotFound = errors.New("not found")
 )
 
-func (c *Client) apiGet(ctx context.Context, path string) (objJSON []byte, found bool, err error) {
+func (c *Client) apiGet(ctx context.Context, path string) (objJSON []byte, err error) {
 	c.Logger.Logf("apiGet calling %s", path)
 	return c.doGETRequest(ctx, path)
 }
 
 func (c *Client) apiCreate(ctx context.Context, url string, o interface{}) (objJSON []byte, err error) {
 	c.Logger.Logf("apiCreate calling %s", url)
-	objJSON, err = c.doPOSTRequest(ctx, url, o)
-	if err != nil {
-		return []byte{}, err
-	}
-	return
+	return c.doPOSTRequest(ctx, url, o)
 }
 
 func (c *Client) apiUpdate(ctx context.Context, url string, o interface{}) (objJSON []byte, err error) {
 	c.Logger.Logf("apiUpdate calling %s", url)
-
-	objJSON, err = c.doPUTRequest(ctx, url, o)
-	if err != nil {
-		return []byte{}, err
-	}
-	return
+	return c.doPUTRequest(ctx, url, o)
 }
 
-func (c *Client) doGETRequest(ctx context.Context, path string) (objJSON []byte, found bool, err error) {
-	objJSON, err = c.commonRequestHandler(ctx, "GET", path, nil, []int{http.StatusOK})
-	if err == ErrNotFound {
-		return []byte{}, false, nil
-	}
-	return objJSON, true, err
+func (c *Client) doGETRequest(ctx context.Context, path string) (objJSON []byte, err error) {
+	return c.commonRequestHandler(ctx, "GET", path, nil, []int{http.StatusOK})
 }
 
 func (c *Client) doPUTRequest(ctx context.Context, path string, o interface{}) (objJSON []byte, err error) {

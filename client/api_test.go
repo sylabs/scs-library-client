@@ -181,7 +181,7 @@ func Test_getEntity(t *testing.T) {
 			entityRef:    "notthere",
 			expectEntity: nil,
 			expectFound:  false,
-			expectError:  false,
+			expectError:  true,
 		},
 		{
 			description:  "Unauthorized",
@@ -225,7 +225,7 @@ func Test_getEntity(t *testing.T) {
 				t.Errorf("Error initializing client: %v", err)
 			}
 
-			entity, found, err := c.getEntity(context.Background(), tt.entityRef)
+			entity, err := c.getEntity(context.Background(), tt.entityRef)
 
 			if err != nil && !tt.expectError {
 				t.Errorf("Unexpected error: %v", err)
@@ -233,8 +233,8 @@ func Test_getEntity(t *testing.T) {
 			if err == nil && tt.expectError {
 				t.Errorf("Unexpected success. Expected error.")
 			}
-			if found != tt.expectFound {
-				t.Errorf("Got found %v - expected %v", found, tt.expectFound)
+			if err != nil && err == ErrNotFound && tt.expectFound {
+				t.Errorf("Got found %v - expected %v", err != ErrNotFound, tt.expectFound)
 			}
 			if !reflect.DeepEqual(entity, tt.expectEntity) {
 				t.Errorf("Got entity %v - expected %v", entity, tt.expectEntity)
@@ -263,7 +263,7 @@ func Test_getCollection(t *testing.T) {
 			collectionRef:    "notthere",
 			expectCollection: nil,
 			expectFound:      false,
-			expectError:      false,
+			expectError:      true,
 		},
 		{
 			description:      "Unauthorized",
@@ -307,7 +307,7 @@ func Test_getCollection(t *testing.T) {
 				t.Errorf("Error initializing client: %v", err)
 			}
 
-			collection, found, err := c.getCollection(context.Background(), tt.collectionRef)
+			collection, err := c.getCollection(context.Background(), tt.collectionRef)
 
 			if err != nil && !tt.expectError {
 				t.Errorf("Unexpected error: %v", err)
@@ -315,8 +315,8 @@ func Test_getCollection(t *testing.T) {
 			if err == nil && tt.expectError {
 				t.Errorf("Unexpected success. Expected error.")
 			}
-			if found != tt.expectFound {
-				t.Errorf("Got found %v - expected %v", found, tt.expectFound)
+			if err != nil && err == ErrNotFound && tt.expectFound {
+				t.Errorf("Got found %v - expected %v", err != ErrNotFound, tt.expectFound)
 			}
 			if !reflect.DeepEqual(collection, tt.expectCollection) {
 				t.Errorf("Got entity %v - expected %v", collection, tt.expectCollection)
@@ -345,7 +345,7 @@ func Test_getContainer(t *testing.T) {
 			containerRef:    "notthere",
 			expectContainer: nil,
 			expectFound:     false,
-			expectError:     false,
+			expectError:     true,
 		},
 		{
 			description:     "Unauthorized",
@@ -389,7 +389,7 @@ func Test_getContainer(t *testing.T) {
 				t.Errorf("Error initializing client: %v", err)
 			}
 
-			container, found, err := c.getContainer(context.Background(), tt.containerRef)
+			container, err := c.getContainer(context.Background(), tt.containerRef)
 
 			if err != nil && !tt.expectError {
 				t.Errorf("Unexpected error: %v", err)
@@ -397,8 +397,8 @@ func Test_getContainer(t *testing.T) {
 			if err == nil && tt.expectError {
 				t.Errorf("Unexpected success. Expected error.")
 			}
-			if found != tt.expectFound {
-				t.Errorf("Got found %v - expected %v", found, tt.expectFound)
+			if err != nil && err != ErrNotFound && tt.expectFound {
+				t.Errorf("Got found %v - expected %v", err != ErrNotFound, tt.expectFound)
 			}
 			if !reflect.DeepEqual(container, tt.expectContainer) {
 				t.Errorf("Got container %v - expected %v", container, tt.expectContainer)
@@ -427,7 +427,7 @@ func Test_getImage(t *testing.T) {
 			imageRef:    "notthere",
 			expectImage: nil,
 			expectFound: false,
-			expectError: false,
+			expectError: true,
 		},
 		{
 			description: "Unauthorized",
@@ -471,7 +471,7 @@ func Test_getImage(t *testing.T) {
 				t.Errorf("Error initializing client: %v", err)
 			}
 
-			image, found, err := c.GetImage(context.Background(), tt.imageRef)
+			image, err := c.GetImage(context.Background(), tt.imageRef)
 
 			if err != nil && !tt.expectError {
 				t.Errorf("Unexpected error: %v", err)
@@ -479,8 +479,8 @@ func Test_getImage(t *testing.T) {
 			if err == nil && tt.expectError {
 				t.Errorf("Unexpected success. Expected error.")
 			}
-			if found != tt.expectFound {
-				t.Errorf("Got found %v - expected %v", found, tt.expectFound)
+			if err != nil && err != ErrNotFound && tt.expectFound {
+				t.Errorf("Got found %v - expected %v", err != ErrNotFound, tt.expectFound)
 			}
 			if !reflect.DeepEqual(image, tt.expectImage) {
 				t.Errorf("Got image %v - expected %v", image, tt.expectImage)
