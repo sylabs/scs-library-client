@@ -72,6 +72,7 @@ func Test_DownloadImage(t *testing.T) {
 
 	tests := []struct {
 		name         string
+		arch		 string
 		path         string
 		tag          string
 		outFile      string
@@ -81,10 +82,10 @@ func Test_DownloadImage(t *testing.T) {
 		checkContent bool
 		expectError  bool
 	}{
-		{"Bad library ref", "entity/collection/im,age", "tag", tempFile, http.StatusBadRequest, "test_data/test_sha256", "test_data/test_token", false, true},
-		{"Server error", "entity/collection/image", "tag", tempFile, http.StatusInternalServerError, "test_data/test_sha256", "test_data/test_token", false, true},
-		{"Tags in path", "entity/collection/image:tag", "anothertag", tempFile, http.StatusOK, "test_data/test_sha256", "test_data/test_token", false, true},
-		{"Good Download", "entity/collection/image", "tag", tempFile, http.StatusOK, "test_data/test_sha256", "test_data/test_token", true, false},
+		{"Bad library ref", "amd64", "entity/collection/im,age", "tag", tempFile, http.StatusBadRequest, "test_data/test_sha256", "test_data/test_token", false, true},
+		{"Server error", "amd64", "entity/collection/image", "tag", tempFile, http.StatusInternalServerError, "test_data/test_sha256", "test_data/test_token", false, true},
+		{"Tags in path", "amd64", "entity/collection/image:tag", "anothertag", tempFile, http.StatusOK, "test_data/test_sha256", "test_data/test_token", false, true},
+		{"Good Download", "amd64", "entity/collection/image", "tag", tempFile, http.StatusOK, "test_data/test_sha256", "test_data/test_token", true, false},
 	}
 
 	for _, tt := range tests {
@@ -110,7 +111,7 @@ func Test_DownloadImage(t *testing.T) {
 				t.Errorf("Error opening file %s for writing: %v", tt.outFile, err)
 			}
 
-			err = c.DownloadImage(context.Background(), out, tt.path, tt.tag, nil)
+			err = c.DownloadImage(context.Background(), out, tt.arch, tt.path, tt.tag, nil)
 
 			out.Close()
 
