@@ -213,6 +213,89 @@ func (c *Client) setTag(ctx context.Context, containerID string, t ImageTag) err
 	return nil
 }
 
+// setTags applies tags to the specified container
+func (c *Client) setTagsV2(ctx context.Context, containerID, arch string, imageID string, tags []string) error {
+	// Get existing tags, so we know which will be replaced
+	existingTags, err := c.getTagsV2(ctx, containerID)
+	if err != nil {
+		return err
+	}
+
+	for _, tag := range tags {
+		c.Logger.Logf("Setting tag %s", tag)
+
+		if _, ok := existingTags[arch][tag]; ok {
+			c.Logger.Logf("%s replaces an existing tag for arch %s", tag, arch)
+		}
+
+		imgTag := ArchImageTag{
+			Arch:    arch,
+			Tag:     tag,
+			ImageID: imageID,
+		}
+		err := c.setTagV2(ctx, containerID, imgTag)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// getTagsV2 returns a arch->tag map for the specified containerID
+func (c *Client) getTagsV2(ctx context.Context, containerID string) (ArchTagMap, error) {
+	url := fmt.Sprintf("/v2/tags/%s", containerID)
+	c.Logger.Logf("getTagsV2 calling %s", url)
+	req, err := c.newRequest(http.MethodGet, url, "", nil)
+	if err != nil {
+		return nil, fmt.Errorf("error creating request to server:\n\t%v", err)
+	}
+	res, err := c.HTTPClient.Do(req.WithContext(ctx))
+	if err != nil {
+		return nil, fmt.Errorf("error making request to server:\n\t%v", err)
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusOK {
+		err := jsonresp.ReadError(res.Body)
+		if err != nil {
+			return nil, fmt.Errorf("creation did not succeed: %v", err)
+		}
+		return nil, fmt.Errorf("unexpected http status code: %d", res.StatusCode)
+	}
+	var tagRes ArchTagsResponse
+	err = json.NewDecoder(res.Body).Decode(&tagRes)
+	if err != nil {
+		return nil, fmt.Errorf("error decoding tags: %v", err)
+	}
+	return tagRes.Data, nil
+}
+
+// setTag sets an arch->tag on specified containerID
+func (c *Client) setTagV2(ctx context.Context, containerID string, t ArchImageTag) error {
+	url := "/v2/tags/" + containerID
+	c.Logger.Logf("setTag calling %s", url)
+	s, err := json.Marshal(t)
+	if err != nil {
+		return fmt.Errorf("error encoding object to JSON:\n\t%v", err)
+	}
+	req, err := c.newRequest("POST", url, "", bytes.NewBuffer(s))
+	if err != nil {
+		return fmt.Errorf("error creating POST request:\n\t%v", err)
+	}
+	res, err := c.HTTPClient.Do(req.WithContext(ctx))
+	if err != nil {
+		return fmt.Errorf("error making request to server:\n\t%v", err)
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusOK {
+		err := jsonresp.ReadError(res.Body)
+		if err != nil {
+			return fmt.Errorf("creation did not succeed: %v", err)
+		}
+		return fmt.Errorf("creation did not succeed: http status code: %d", res.StatusCode)
+	}
+	return nil
+}
+
 // GetImage returns the Image object if exists; returns ErrNotFound if image is
 // not found, otherwise error.
 func (c *Client) GetImage(ctx context.Context, imageRef string) (*Image, error) {

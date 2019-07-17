@@ -89,7 +89,7 @@ func calculateChecksums(r io.Reader) (string, string, int64, error) {
 // Container Library, The timeout value for this operation is set within
 // the context. It is recommended to use a large value (ie. 1800 seconds) to
 // prevent timeout when uploading large images.
-func (c *Client) UploadImage(ctx context.Context, r io.ReadSeeker, path string, tags []string, description string, callback UploadCallback) error {
+func (c *Client) UploadImage(ctx context.Context, r io.ReadSeeker, path, arch string, tags []string, description string, callback UploadCallback) error {
 
 	entityName, collectionName, containerName, parsedTags := ParseLibraryPath(path)
 	if len(parsedTags) != 0 {
@@ -185,6 +185,12 @@ func (c *Client) UploadImage(ctx context.Context, r io.ReadSeeker, path string, 
 	}
 
 	c.Logger.Logf("Setting tags against uploaded image")
+
+	if c.isV2API(ctx) {
+		return c.setTagsV2(ctx, container.ID, image.ID, arch, append(tags, parsedTags...))
+	}
+	c.Logger.Logf("This library does not support multiple architecture per tag.")
+	c.Logger.Logf("This tag will replace any already uploaded with the same name.")
 	return c.setTags(ctx, container.ID, image.ID, append(tags, parsedTags...))
 }
 
