@@ -414,6 +414,7 @@ func Test_getImage(t *testing.T) {
 		code        int
 		body        interface{}
 		reqCallback func(*http.Request, *testing.T)
+		arch 		string
 		imageRef    string
 		expectImage *Image
 		expectFound bool
@@ -424,6 +425,7 @@ func Test_getImage(t *testing.T) {
 			code:        http.StatusNotFound,
 			body:        jsonresp.Response{Error: &jsonresp.Error{Code: http.StatusNotFound}},
 			reqCallback: nil,
+			arch:		 "amd64",
 			imageRef:    "notthere",
 			expectImage: nil,
 			expectFound: false,
@@ -434,6 +436,7 @@ func Test_getImage(t *testing.T) {
 			code:        http.StatusUnauthorized,
 			body:        jsonresp.Response{Error: &jsonresp.Error{Code: http.StatusUnauthorized}},
 			reqCallback: nil,
+			arch:		 "amd64",
 			imageRef:    "notmine",
 			expectImage: nil,
 			expectFound: false,
@@ -444,6 +447,7 @@ func Test_getImage(t *testing.T) {
 			code:        http.StatusOK,
 			body:        ImageResponse{Data: testImage},
 			reqCallback: nil,
+			arch:		 "amd64",
 			imageRef:    "test",
 			expectImage: &testImage,
 			expectFound: true,
@@ -471,7 +475,7 @@ func Test_getImage(t *testing.T) {
 				t.Errorf("Error initializing client: %v", err)
 			}
 
-			image, err := c.GetImage(context.Background(), tt.imageRef)
+			image, err := c.GetImage(context.Background(), tt.arch, tt.imageRef)
 
 			if err != nil && !tt.expectError {
 				t.Errorf("Unexpected error: %v", err)
