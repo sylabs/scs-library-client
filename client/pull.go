@@ -22,6 +22,11 @@ import (
 // to prevent timeout when downloading large images.
 func (c *Client) DownloadImage(ctx context.Context, w io.Writer, arch, path, tag string, callback func(int64, io.Reader, io.Writer) error) error {
 
+	if arch != "" && !c.apiAtLeast(ctx, APIVersionV2ArchTags) {
+		c.Logger.Logf("This library does not support architecture specific tags")
+		c.Logger.Logf("The image returned may not be the requested architecture")
+	}
+
 	if strings.Contains(path, ":") {
 		return fmt.Errorf("malformed image path: %s", path)
 	}
@@ -30,7 +35,6 @@ func (c *Client) DownloadImage(ctx context.Context, w io.Writer, arch, path, tag
 		tag = "latest"
 	}
 
-	// TODO REFACTOR THIS
 	apiPath := fmt.Sprintf("/v1/imagefile/%s:%s", path, tag)
 	apiURL, err := url.Parse(apiPath)
 	if err != nil {
@@ -39,8 +43,6 @@ func (c *Client) DownloadImage(ctx context.Context, w io.Writer, arch, path, tag
 	q := url.Values{}
 	q.Add("arch", arch)
 	apiURL.RawQuery = q.Encode()
-
-	fmt.Printf("Pulling from URL: %s", apiURL.String())
 
 	c.Logger.Logf("Pulling from URL: %s", apiURL.String())
 
