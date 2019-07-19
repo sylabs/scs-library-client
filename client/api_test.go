@@ -414,7 +414,7 @@ func Test_getImage(t *testing.T) {
 		code        int
 		body        interface{}
 		reqCallback func(*http.Request, *testing.T)
-		arch 		string
+		arch        string
 		imageRef    string
 		expectImage *Image
 		expectFound bool
@@ -425,7 +425,7 @@ func Test_getImage(t *testing.T) {
 			code:        http.StatusNotFound,
 			body:        jsonresp.Response{Error: &jsonresp.Error{Code: http.StatusNotFound}},
 			reqCallback: nil,
-			arch:		 "amd64",
+			arch:        "amd64",
 			imageRef:    "notthere",
 			expectImage: nil,
 			expectFound: false,
@@ -436,7 +436,7 @@ func Test_getImage(t *testing.T) {
 			code:        http.StatusUnauthorized,
 			body:        jsonresp.Response{Error: &jsonresp.Error{Code: http.StatusUnauthorized}},
 			reqCallback: nil,
-			arch:		 "amd64",
+			arch:        "amd64",
 			imageRef:    "notmine",
 			expectImage: nil,
 			expectFound: false,
@@ -447,7 +447,7 @@ func Test_getImage(t *testing.T) {
 			code:        http.StatusOK,
 			body:        ImageResponse{Data: testImage},
 			reqCallback: nil,
-			arch:		 "amd64",
+			arch:        "amd64",
 			imageRef:    "test",
 			expectImage: &testImage,
 			expectFound: true,

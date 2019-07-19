@@ -72,7 +72,7 @@ func Test_DownloadImage(t *testing.T) {
 
 	tests := []struct {
 		name         string
-		arch		 string
+		arch         string
 		path         string
 		tag          string
 		outFile      string

@@ -33,7 +33,7 @@ func (c *Client) DownloadImage(ctx context.Context, w io.Writer, arch, path, tag
 	// TODO REFACTOR THIS
 	apiPath := fmt.Sprintf("/v1/imagefile/%s:%s", path, tag)
 	apiURL, err := url.Parse(apiPath)
-	if err != nil{
+	if err != nil {
 		return fmt.Errorf("error constructing API url: %v", err)
 	}
 	q := url.Values{}
