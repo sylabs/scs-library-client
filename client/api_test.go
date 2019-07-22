@@ -52,7 +52,7 @@ var (
 		},
 	}
 
-	archIntel = "x86_64"
+	archIntel = "amd64"
 
 	testImage = Image{
 		ID:             "5cb9c34d7d960d82f5f5bc4f",
@@ -66,7 +66,7 @@ var (
 		Architecture:   &archIntel,
 	}
 
-	archARM = "cortex-a9"
+	archARM = "arm64"
 
 	testImage2 = Image{
 		ID:             "bf396e3d2de63215e731c11f",
@@ -414,6 +414,7 @@ func Test_getImage(t *testing.T) {
 		code        int
 		body        interface{}
 		reqCallback func(*http.Request, *testing.T)
+		arch        string
 		imageRef    string
 		expectImage *Image
 		expectFound bool
@@ -424,6 +425,7 @@ func Test_getImage(t *testing.T) {
 			code:        http.StatusNotFound,
 			body:        jsonresp.Response{Error: &jsonresp.Error{Code: http.StatusNotFound}},
 			reqCallback: nil,
+			arch:        archIntel,
 			imageRef:    "notthere",
 			expectImage: nil,
 			expectFound: false,
@@ -434,6 +436,7 @@ func Test_getImage(t *testing.T) {
 			code:        http.StatusUnauthorized,
 			body:        jsonresp.Response{Error: &jsonresp.Error{Code: http.StatusUnauthorized}},
 			reqCallback: nil,
+			arch:        archIntel,
 			imageRef:    "notmine",
 			expectImage: nil,
 			expectFound: false,
@@ -444,6 +447,7 @@ func Test_getImage(t *testing.T) {
 			code:        http.StatusOK,
 			body:        ImageResponse{Data: testImage},
 			reqCallback: nil,
+			arch:        archIntel,
 			imageRef:    "test",
 			expectImage: &testImage,
 			expectFound: true,
@@ -471,7 +475,7 @@ func Test_getImage(t *testing.T) {
 				t.Errorf("Error initializing client: %v", err)
 			}
 
-			image, err := c.GetImage(context.Background(), tt.imageRef)
+			image, err := c.GetImage(context.Background(), tt.arch, tt.imageRef)
 
 			if err != nil && !tt.expectError {
 				t.Errorf("Unexpected error: %v", err)
@@ -778,6 +782,69 @@ func Test_setTags(t *testing.T) {
 			}
 
 			err = c.setTags(context.Background(), tt.containerRef, tt.imageRef, tt.tags)
+
+			if err != nil && !tt.expectError {
+				t.Errorf("Unexpected error: %v", err)
+			}
+			if err == nil && tt.expectError {
+				t.Errorf("Unexpected success. Expected error.")
+			}
+		})
+	}
+}
+
+func Test_setTagsV2(t *testing.T) {
+
+	tests := []struct {
+		description  string
+		code         int
+		reqCallback  func(*http.Request, *testing.T)
+		containerRef string
+		imageRef     string
+		arch         string
+		tags         []string
+		expectError  bool
+	}{
+		{
+			description:  "Valid Request",
+			code:         http.StatusOK,
+			containerRef: "test",
+			imageRef:     "5cb9c34d7d960d82f5f5bc53",
+			arch:         archIntel,
+			tags:         []string{"tag1", "tag2", "tag3"},
+			expectError:  false,
+		},
+		{
+			description:  "Error response",
+			code:         http.StatusInternalServerError,
+			containerRef: "test",
+			imageRef:     "5cb9c34d7d960d82f5f5bc54",
+			arch:         archIntel,
+			tags:         []string{"tag1", "tag2", "tag3"},
+			expectError:  true,
+		},
+	}
+
+	// Loop over test cases
+	for _, tt := range tests {
+		t.Run(tt.description, func(t *testing.T) {
+
+			m := mockService{
+				t:           t,
+				code:        tt.code,
+				reqCallback: tt.reqCallback,
+				httpPath:    "/v2/tags/" + tt.containerRef,
+			}
+
+			m.Run()
+			defer m.Stop()
+
+			c, err := NewClient(&Config{AuthToken: testToken, BaseURL: m.baseURI})
+			if err != nil {
+				t.Errorf("Error initializing client: %v", err)
+			}
+
+			err = c.setTagsV2(context.Background(), tt.containerRef, tt.imageRef, tt.arch, tt.tags)
 
 			if err != nil && !tt.expectError {
 				t.Errorf("Unexpected error: %v", err)
