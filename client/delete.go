@@ -6,13 +6,13 @@ import (
 	"fmt"
 )
 
-// DeleteImage deletes requested image.
-func (c *Client) DeleteImage(ctx context.Context, image, tag string) error {
-	if image == "" || tag == "" {
-		return errors.New("image and tag are required")
+// DeleteImage deletes requested imageRef.
+func (c *Client) DeleteImage(ctx context.Context, imageRef, arch string) error {
+	if imageRef == "" || arch == "" {
+		return errors.New("imageRef and arch are required")
 	}
 
-	path := fmt.Sprintf("/v1/images/%s:%s", image, tag)
+	path := fmt.Sprintf("/v1/images/%s?arch=%s", imageRef, arch)
 	_, err := c.doDeleteRequest(ctx, path)
 	return err
 }

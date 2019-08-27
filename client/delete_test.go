@@ -10,30 +10,30 @@ func Test_DeleteImage(t *testing.T) {
 	ctx := context.Background()
 
 	tests := []struct {
-		image       string
-		tag         string
+		imageRef    string
+		arch        string
 		expectError bool
 		code        int
 	}{
 		{
-			image:       "",
-			tag:         "",
+			imageRef:    "",
+			arch:        "",
 			expectError: true,
 		},
 		{
-			image:       "test",
-			tag:         "",
+			imageRef:    "test:v0.0.1",
+			arch:        "",
 			expectError: true,
 		},
 		{
-			image:       "",
-			tag:         "v0.0.1",
+			imageRef:    "test:v0.0.1",
+			arch:        "arm64",
 			expectError: true,
 		},
 		{
-			image: "test",
-			tag:   "v0.0.1",
-			code:  200,
+			imageRef: "test",
+			arch:     "v0.0.1",
+			code:     200,
 		},
 	}
 
@@ -41,7 +41,7 @@ func Test_DeleteImage(t *testing.T) {
 		m := mockService{
 			t:        t,
 			code:     tt.code,
-			httpPath: fmt.Sprintf("/v1/images/%s:%s", tt.image, tt.tag),
+			httpPath: fmt.Sprintf("/v1/images/%s?%s", tt.imageRef, tt.arch),
 		}
 		m.Run()
 		defer m.Stop()
@@ -51,7 +51,7 @@ func Test_DeleteImage(t *testing.T) {
 			t.Errorf("Error initializing client: %v", err)
 		}
 
-		err = c.DeleteImage(ctx, tt.image, tt.tag)
+		err = c.DeleteImage(ctx, tt.imageRef, tt.arch)
 		if !tt.expectError && err != nil {
 			t.Errorf("Unexpected err: %s", err)
 		}
