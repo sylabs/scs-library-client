@@ -52,7 +52,7 @@ func (c *Client) doPOSTRequest(ctx context.Context, path string, o interface{}) 
 }
 
 func (c *Client) doDeleteRequest(ctx context.Context, path string) (objJSON []byte, err error) {
-	return c.commonRequestHandler(ctx, "DELETE", path, nil, []int{http.StatusOK, http.StatusOK})
+	return c.commonRequestHandler(ctx, "DELETE", path, nil, []int{http.StatusOK})
 }
 
 func (c *Client) commonRequestHandler(ctx context.Context, method string, path string, o interface{}, acceptedStatusCodes []int) (objJSON []byte, err error) {
