@@ -26,13 +26,8 @@ func Test_DeleteImage(t *testing.T) {
 			expectError: true,
 		},
 		{
-			imageRef:    "test:v0.0.1",
-			arch:        "arm64",
-			expectError: true,
-		},
-		{
 			imageRef: "test",
-			arch:     "v0.0.1",
+			arch:     "1",
 			code:     200,
 		},
 	}
@@ -41,11 +36,10 @@ func Test_DeleteImage(t *testing.T) {
 		m := mockService{
 			t:        t,
 			code:     tt.code,
-			httpPath: fmt.Sprintf("/v1/images/%s?%s", tt.imageRef, tt.arch),
+			httpPath: fmt.Sprintf("/v1/images/%s", tt.imageRef),
 		}
 		m.Run()
 		defer m.Stop()
-
 		c, err := NewClient(&Config{BaseURL: m.baseURI})
 		if err != nil {
 			t.Errorf("Error initializing client: %v", err)
