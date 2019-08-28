@@ -21,8 +21,10 @@ const (
 )
 
 var (
-	signedImage   = true
-	unsignedImage = false
+	signedImage      = true
+	unsignedImage    = false
+	encryptedImage   = true
+	unencryptedImage = false
 
 	testEntity = Entity{
 		ID:          "5cb9c34d7d960d82f5f5bc4a",
@@ -118,11 +120,38 @@ var (
 		Signed:         &unsignedImage,
 	}
 
+	testImage6 = Image{
+		ID:             "222233334444031a01f83dc",
+		Hash:           "sha256.4f4ba1112223331734a33247a06e75d06af2999103139a2e2b767dc873a21b7a",
+		Entity:         testEntity.ID,
+		EntityName:     testEntity.Name,
+		Collection:     testEntity.ID,
+		CollectionName: testCollection.Name,
+		Container:      testContainer.ID,
+		ContainerName:  testContainer.Name,
+		Signed:         &unsignedImage,
+		Encrypted:      &unencryptedImage,
+	}
+
+	testImage7 = Image{
+		ID:             "333344445555031a01f83dc",
+		Hash:           "sha256.4f4ba1112223331734a33247a06e75d06af2999103139a2e2b767dc873a21b7a",
+		Entity:         testEntity.ID,
+		EntityName:     testEntity.Name,
+		Collection:     testEntity.ID,
+		CollectionName: testCollection.Name,
+		Container:      testContainer.ID,
+		ContainerName:  testContainer.Name,
+		Signed:         &unsignedImage,
+		Encrypted:      &encryptedImage,
+	}
+
 	testSearch = SearchResults{
 		Entities:    []Entity{testEntity},
 		Collections: []Collection{testCollection},
 		Containers:  []Container{testContainer},
-		Images:      []Image{testImage, testImage2, testImage3, testImage4, testImage5},
+		Images: []Image{testImage, testImage2, testImage3, testImage4,
+			testImage5, testImage6, testImage7},
 	}
 )
 
