@@ -6,7 +6,7 @@ github.com/hashicorp/go-cleanhttp v0.5.0 h1:wvCrVc9TjDls6+YGAF2hAifE1E5U1+b4tH6K
 github.com/hashicorp/go-cleanhttp v0.5.0/go.mod h1:JpRdi6/HCYpAwUzNwuwqhbovhLtngrth3wmdIIUrZ80=
 github.com/hashicorp/go-retryablehttp v0.5.3 h1:QlWt0KvWT0lq8MFppF9tsJGF+ynG7ztc2KIPhzRGk7s=
 github.com/hashicorp/go-retryablehttp v0.5.3/go.mod h1:9B5zBasrRhHXnJnui7y6sL7es7NDiJgTc6Er0maI1Xs=
-github.com/sylabs/json-resp v0.5.0 h1:AWdKu6aS0WrkkltX1M0ex0lENrIcx5TISox902s2L2M=
-github.com/sylabs/json-resp v0.5.0/go.mod h1:anCzED2SGHHZQDubMuoVtwMuJZdpqQ+7iso8yDFm/nQ=
+github.com/sylabs/json-resp v0.6.0 h1:W/yxwBu6WPMqiU9YBaelUsfWU1ZD+x4f4rxqmTr0LaI=
+github.com/sylabs/json-resp v0.6.0/go.mod h1:QYGGBTYDgiIH+c6zRQuVd4PIYfm//vFD2flnIdF1k7E=
 golang.org/x/sync v0.0.0-20190423024810-112230192c58 h1:8gQV6CLnAEikrhgkHFbMAEhagSSnXWGV915qUMm9mrU=
 golang.org/x/sync v0.0.0-20190423024810-112230192c58/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
