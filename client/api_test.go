@@ -1,4 +1,4 @@
-// Copyright (c) 2018, Sylabs Inc. All rights reserved.
+// Copyright (c) 2018-2019, Sylabs Inc. All rights reserved.
 // This software is licensed under a 3-clause BSD license. Please consult the
 // LICENSE.md file distributed with the sources of this project regarding your
 // rights to use or distribute this software.
@@ -354,7 +354,7 @@ func Test_getCollection(t *testing.T) {
 	}
 }
 
-func Test_getContainer(t *testing.T) {
+func Test_GetContainer(t *testing.T) {
 
 	tests := []struct {
 		description     string
@@ -418,7 +418,7 @@ func Test_getContainer(t *testing.T) {
 				t.Errorf("Error initializing client: %v", err)
 			}
 
-			container, err := c.getContainer(context.Background(), tt.containerRef)
+			container, err := c.GetContainer(context.Background(), tt.containerRef)
 
 			if err != nil && !tt.expectError {
 				t.Errorf("Unexpected error: %v", err)

@@ -137,7 +137,7 @@ func (c *Client) UploadImage(ctx context.Context, r io.ReadSeeker, path, arch st
 
 	// Find or create container
 	computedName := fmt.Sprintf("%s/%s", qualifiedCollectionName, containerName)
-	container, err := c.getContainer(ctx, computedName)
+	container, err := c.GetContainer(ctx, computedName)
 	if err != nil {
 		if err != ErrNotFound {
 			return err

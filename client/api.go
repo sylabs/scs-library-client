@@ -1,4 +1,4 @@
-// Copyright (c) 2018, Sylabs Inc. All rights reserved.
+// Copyright (c) 2018-2019, Sylabs Inc. All rights reserved.
 // This software is licensed under a 3-clause BSD license. Please consult the
 // LICENSE.md file distributed with the sources of this project regarding your
 // rights to use or distribute this software.
@@ -46,9 +46,9 @@ func (c *Client) getCollection(ctx context.Context, collectionRef string) (*Coll
 	return &res.Data, nil
 }
 
-// getContainer returns container by ref id; returns ErrNotFound if container
+// GetContainer returns container by ref id; returns ErrNotFound if container
 // is not found, otherwise error.
-func (c *Client) getContainer(ctx context.Context, containerRef string) (*Container, error) {
+func (c *Client) GetContainer(ctx context.Context, containerRef string) (*Container, error) {
 	url := "/v1/containers/" + containerRef
 	conJSON, err := c.apiGet(ctx, url)
 	if err != nil {
@@ -159,8 +159,8 @@ func (c *Client) setTags(ctx context.Context, containerID, imageID string, tags 
 	return nil
 }
 
-// getTags returns a tag map for the specified containerID
-func (c *Client) getTags(ctx context.Context, containerID string) (TagMap, error) {
+// GetTags returns a tag map for the specified containerID
+func (c *Client) GetTags(ctx context.Context, containerID string) (TagMap, error) {
 	url := fmt.Sprintf("/v1/tags/%s", containerID)
 	c.Logger.Logf("getTags calling %s", url)
 	req, err := c.newRequest(http.MethodGet, url, "", nil)
