@@ -159,8 +159,8 @@ func (c *Client) setTags(ctx context.Context, containerID, imageID string, tags 
 	return nil
 }
 
-// GetTags returns a tag map for the specified containerID
-func (c *Client) GetTags(ctx context.Context, containerID string) (TagMap, error) {
+// getTags returns a tag map for the specified containerID
+func (c *Client) getTags(ctx context.Context, containerID string) (TagMap, error) {
 	url := fmt.Sprintf("/v1/tags/%s", containerID)
 	c.Logger.Logf("getTags calling %s", url)
 	req, err := c.newRequest(http.MethodGet, url, "", nil)
