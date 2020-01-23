@@ -136,21 +136,22 @@ func Test_ParseLibraryPath(t *testing.T) {
 		{"Good short ref 3", "library://collection/image:tag", "", "collection", "image", []string{"tag"}},
 		{"Good short ref 4", "collection/image:tag", "", "collection", "image", []string{"tag"}},
 		{"Good short ref multi tag", "library://image:tag1,tag2,tag3", "", "", "image", []string{"tag1", "tag2", "tag3"}},
+		{"Bad ref", "library://entity/collection/extra/image", "", "", "", []string{}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ent, col, con, tags := ParseLibraryPath(tt.libraryRef)
 			if ent != tt.wantEnt {
-				t.Errorf("ParseLibraryRef() = entity %v, want %v", ent, tt.wantEnt)
+				t.Errorf("ParseLibraryPath() = entity %v, want %v", ent, tt.wantEnt)
 			}
 			if col != tt.wantCol {
-				t.Errorf("ParseLibraryRef() = collection %v, want %v", col, tt.wantCol)
+				t.Errorf("ParseLibraryPath() = collection %v, want %v", col, tt.wantCol)
 			}
 			if con != tt.wantCon {
-				t.Errorf("ParseLibraryRef() = container %v, want %v", con, tt.wantCon)
+				t.Errorf("ParseLibraryPath() = container %v, want %v", con, tt.wantCon)
 			}
 			if !reflect.DeepEqual(tags, tt.wantTags) {
-				t.Errorf("ParseLibraryRef() = entity %v, want %v", tags, tt.wantTags)
+				t.Errorf("ParseLibraryPath() = tags %v, want %v", tags, tt.wantTags)
 			}
 		})
 	}

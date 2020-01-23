@@ -90,6 +90,10 @@ func calculateChecksums(r io.Reader) (string, string, int64, error) {
 func (c *Client) UploadImage(ctx context.Context, r io.ReadSeeker, path, arch string, tags []string, description string, callback UploadCallback) error {
 
 	entityName, collectionName, containerName, parsedTags := ParseLibraryPath(path)
+	if entityName == "" && collectionName == "" && containerName == "" {
+		// error parsing library path
+		return fmt.Errorf("malformed image path: %s", path)
+	}
 	if len(parsedTags) != 0 {
 		return fmt.Errorf("malformed image path: %s", path)
 	}
