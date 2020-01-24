@@ -88,12 +88,11 @@ func calculateChecksums(r io.Reader) (string, string, int64, error) {
 // the context. It is recommended to use a large value (ie. 1800 seconds) to
 // prevent timeout when uploading large images.
 func (c *Client) UploadImage(ctx context.Context, r io.ReadSeeker, path, arch string, tags []string, description string, callback UploadCallback) error {
-
-	entityName, collectionName, containerName, parsedTags := ParseLibraryPath(path)
-	if entityName == "" && collectionName == "" && containerName == "" {
-		// error parsing library path
+	if !IsLibraryPushRef(path) {
 		return fmt.Errorf("malformed image path: %s", path)
 	}
+
+	entityName, collectionName, containerName, parsedTags := ParseLibraryPath(path)
 	if len(parsedTags) != 0 {
 		return fmt.Errorf("malformed image path: %s", path)
 	}
