@@ -73,6 +73,13 @@ func ParseLibraryPath(libraryRef string) (entity string, collection string, cont
 		entity = ""
 		collection = ""
 		container = refParts[0]
+	default:
+		// malformed libraryRef; must conform to "library://entity/collection/container[:tag[,tag]...]"
+		entity = ""
+		collection = ""
+		container = ""
+		tags = []string{}
+		return
 	}
 
 	if strings.Contains(container, ":") {
