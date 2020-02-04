@@ -159,7 +159,7 @@ func sha256sum(r io.Reader) (result string, nBytes int64, err error) {
 		return "", 0, err
 	}
 
-	return "sha256." + hex.EncodeToString(hash.Sum(nil)), nBytes, nil
+	return hex.EncodeToString(hash.Sum(nil)), nBytes, nil
 }
 
 // md5sum computes the MD5 checksum of the specified reader; caller is

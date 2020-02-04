@@ -154,14 +154,14 @@ func (c *Client) UploadImage(ctx context.Context, r io.ReadSeeker, path, arch st
 	}
 
 	// Find or create image
-	image, err := c.GetImage(ctx, arch, computedName+":"+imageHash)
+	image, err := c.GetImage(ctx, arch, computedName+":"+"sha256."+imageHash)
 	if err != nil {
 		if err != ErrNotFound {
 			return err
 		}
 		// Create image
 		c.Logger.Logf("Image %s does not exist in library - creating it.", imageHash)
-		image, err = c.createImage(ctx, imageHash, container.ID, description)
+		image, err = c.createImage(ctx, "sha256."+imageHash, container.ID, description)
 		if err != nil {
 			return err
 		}
