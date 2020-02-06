@@ -98,7 +98,7 @@ func (c *Client) UploadImage(ctx context.Context, r io.ReadSeeker, path, arch st
 	}
 
 	// calculate sha256 and md5 checksums for Reader
-	md5Checksum, imageHash, fileSize, err := calculateChecksums(r)
+	_, imageHash, fileSize, err := calculateChecksums(r)
 	if err != nil {
 		return fmt.Errorf("error calculating checksums: %v", err)
 	}
@@ -172,7 +172,7 @@ func (c *Client) UploadImage(ctx context.Context, r io.ReadSeeker, path, arch st
 		if c.apiAtLeast(ctx, APIVersionV2Upload) {
 			// use v2 post file api
 			metadata := map[string]string{
-				"md5sum": md5Checksum,
+				"sha256sum": imageHash,
 			}
 			if err := c.postFileV2(ctx, r, fileSize, image.ID, callback, metadata); err != nil {
 				return err
@@ -244,8 +244,8 @@ func (c *Client) postFileV2(ctx context.Context, r io.Reader, fileSize int64, im
 
 	// issue upload request (POST) to obtain presigned S3 URL
 	body := UploadImageRequest{
-		Size:        fileSize,
-		MD5Checksum: metadata["md5sum"],
+		Size:           fileSize,
+		SHA256Checksum: metadata["sha256sum"],
 	}
 
 	objJSON, err := c.apiCreate(ctx, postURL, body)
@@ -255,7 +255,7 @@ func (c *Client) postFileV2(ctx context.Context, r io.Reader, fileSize int64, im
 
 	var res UploadImageResponse
 	if err := json.Unmarshal(objJSON, &res); err != nil {
-		return nil
+		return err
 	}
 
 	// set up source file reader
@@ -274,6 +274,7 @@ func (c *Client) postFileV2(ctx context.Context, r io.Reader, fileSize int64, im
 
 	req.ContentLength = fileSize
 	req.Header.Set("Content-Type", "application/octet-stream")
+	req.Header.Set("x-amz-content-sha256", metadata["sha256sum"])
 
 	resp, err := http.DefaultClient.Do(req.WithContext(ctx))
 	callback.Finish()
