@@ -105,7 +105,7 @@ func (c *Client) UploadImage(ctx context.Context, r io.ReadSeeker, path, arch st
 		return fmt.Errorf("malformed image path: %s", path)
 	}
 
-	// calculate sha256 and md5 checksums for Reader
+	// calculate sha256 and md5 checksums
 	md5Checksum, imageHash, fileSize, err := calculateChecksums(r)
 	if err != nil {
 		return fmt.Errorf("error calculating checksums: %v", err)
@@ -176,38 +176,26 @@ func (c *Client) UploadImage(ctx context.Context, r io.ReadSeeker, path, arch st
 	}
 
 	if !image.Uploaded {
+		// upload image
+
 		if callback == nil {
-			// fallback to default upload callback
+			// use default (noop) upload callback
 			callback = &defaultUploadCallback{}
 		}
 
-		// use callback to set up source file reader
-		callback.InitUpload(fileSize, r)
-		defer callback.Finish()
-
-		c.Logger.Log("Now uploading to the library")
-
-		if c.apiAtLeast(ctx, APIVersionV2Upload) {
-			// use v2 post file api. Send both md5 and sha256 checksums. If the
-			// remote does not support sha256, it will be ignored and fallback
-			// to md5. If the remote is aware of sha256, will be used and md5
-			// will be ignored.
-			metadata := map[string]string{
-				"sha256sum": imageHash,
-				"md5sum":    md5Checksum,
-			}
-			if err := c.postFileV2(ctx, r, fileSize, image.ID, callback, metadata); err != nil {
-				return err
-			}
-		} else if err := c.postFile(ctx, r, fileSize, image.ID, callback); err != nil {
-			return err
+		metadata := map[string]string{
+			"sha256sum": imageHash,
+			"md5sum":    md5Checksum,
 		}
 
-		c.Logger.Logf("Upload completed OK")
+		if err := c.postFileWrapper(ctx, r, fileSize, image.ID, callback, metadata); err != nil {
+			return err
+		}
 	} else {
 		c.Logger.Logf("Image is already present in the library - not uploading.")
 	}
 
+	// set tags on image
 	c.Logger.Logf("Setting tags against uploaded image")
 
 	if c.apiAtLeast(ctx, APIVersionV2ArchTags) {
@@ -219,6 +207,30 @@ func (c *Client) UploadImage(ctx context.Context, r io.ReadSeeker, path, arch st
 	c.Logger.Logf("This tag will replace any already uploaded with the same name.")
 
 	return c.setTags(ctx, container.ID, image.ID, append(tags, parsedTags...))
+}
+
+func (c *Client) postFileWrapper(ctx context.Context, r io.ReadSeeker, fileSize int64, imageID string, callback UploadCallback, metadata map[string]string) error {
+	// use callback to set up source file reader
+	callback.InitUpload(fileSize, r)
+	defer callback.Finish()
+
+	c.Logger.Log("Now uploading to the library")
+
+	if c.apiAtLeast(ctx, APIVersionV2Upload) {
+		// use v2 post file api. Send both md5 and sha256 checksums. If the
+		// remote does not support sha256, it will be ignored and fallback
+		// to md5. If the remote is aware of sha256, will be used and md5
+		// will be ignored.
+		if err := c.postFileV2(ctx, r, fileSize, imageID, callback, metadata); err != nil {
+			return err
+		}
+	} else if err := c.postFile(ctx, r, fileSize, imageID, callback); err != nil {
+		return err
+	}
+
+	c.Logger.Logf("Upload completed OK")
+
+	return nil
 }
 
 func (c *Client) postFile(ctx context.Context, r io.Reader, fileSize int64, imageID string, callback UploadCallback) error {
