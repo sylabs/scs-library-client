@@ -1,4 +1,4 @@
-// Copyright (c) 2018, Sylabs Inc. All rights reserved.
+// Copyright (c) 2018-2020, Sylabs Inc. All rights reserved.
 // This software is licensed under a 3-clause BSD license. Please consult the
 // LICENSE.md file distributed with the sources of this project regarding your
 // rights to use or distribute this software.
@@ -10,10 +10,18 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math"
 	"net/http"
+	"net/url"
+	"strings"
 
 	jsonresp "github.com/sylabs/json-resp"
 	"golang.org/x/sync/errgroup"
+)
+
+const (
+	// Default part size for multipart uploads (64MB)
+	minimumPartSize int64 = 64 * 1024 * 1024
 )
 
 // UploadCallback defines an interface used to perform a call-out to
@@ -98,7 +106,7 @@ func (c *Client) UploadImage(ctx context.Context, r io.ReadSeeker, path, arch st
 	}
 
 	// calculate sha256 and md5 checksums for Reader
-	_, imageHash, fileSize, err := calculateChecksums(r)
+	md5Checksum, imageHash, fileSize, err := calculateChecksums(r)
 	if err != nil {
 		return fmt.Errorf("error calculating checksums: %v", err)
 	}
@@ -168,11 +176,25 @@ func (c *Client) UploadImage(ctx context.Context, r io.ReadSeeker, path, arch st
 	}
 
 	if !image.Uploaded {
+		if callback == nil {
+			// fallback to default upload callback
+			callback = &defaultUploadCallback{}
+		}
+
+		// use callback to set up source file reader
+		callback.InitUpload(fileSize, r)
+		defer callback.Finish()
+
 		c.Logger.Log("Now uploading to the library")
+
 		if c.apiAtLeast(ctx, APIVersionV2Upload) {
-			// use v2 post file api
+			// use v2 post file api. Send both md5 and sha256 checksums. If the
+			// remote does not support sha256, it will be ignored and fallback
+			// to md5. If the remote is aware of sha256, will be used and md5
+			// will be ignored.
 			metadata := map[string]string{
 				"sha256sum": imageHash,
+				"md5sum":    md5Checksum,
 			}
 			if err := c.postFileV2(ctx, r, fileSize, image.ID, callback, metadata); err != nil {
 				return err
@@ -180,6 +202,7 @@ func (c *Client) UploadImage(ctx context.Context, r io.ReadSeeker, path, arch st
 		} else if err := c.postFile(ctx, r, fileSize, image.ID, callback); err != nil {
 			return err
 		}
+
 		c.Logger.Logf("Upload completed OK")
 	} else {
 		c.Logger.Logf("Image is already present in the library - not uploading.")
@@ -190,24 +213,18 @@ func (c *Client) UploadImage(ctx context.Context, r io.ReadSeeker, path, arch st
 	if c.apiAtLeast(ctx, APIVersionV2ArchTags) {
 		return c.setTagsV2(ctx, container.ID, arch, image.ID, append(tags, parsedTags...))
 	}
+
 	c.Logger.Logf("This library does not support multiple architecture per tag.")
+
 	c.Logger.Logf("This tag will replace any already uploaded with the same name.")
+
 	return c.setTags(ctx, container.ID, image.ID, append(tags, parsedTags...))
 }
 
 func (c *Client) postFile(ctx context.Context, r io.Reader, fileSize int64, imageID string, callback UploadCallback) error {
-
 	postURL := "/v1/imagefile/" + imageID
+
 	c.Logger.Logf("postFile calling %s", postURL)
-
-	if callback == nil {
-		// fallback to default upload callback
-		callback = &defaultUploadCallback{}
-	}
-
-	// use callback to set up source file reader
-	callback.InitUpload(fileSize, r)
-	defer callback.Finish()
 
 	// Make an upload request
 	req, _ := c.newRequest(http.MethodPost, postURL, "", callback.GetReader())
@@ -232,20 +249,148 @@ func (c *Client) postFile(ctx context.Context, r io.Reader, fileSize int64, imag
 // a three step operation: "create" upload image request, which returns a
 // URL to issue an http PUT operation against, and then finally calls the
 // completion endpoint once upload is complete.
-func (c *Client) postFileV2(ctx context.Context, r io.Reader, fileSize int64, imageID string, callback UploadCallback, metadata map[string]string) error {
+func (c *Client) postFileV2(ctx context.Context, r io.ReadSeeker, fileSize int64, imageID string, callback UploadCallback, metadata map[string]string) error {
+	if fileSize > minimumPartSize {
+		// only attempt multipart upload if size greater than S3 minimum
+		c.Logger.Log("Attempting to use multipart uploader")
 
-	if callback == nil {
-		// fallback to default upload callback
-		callback = &defaultUploadCallback{}
+		if err := c.postFileV2Multipart(ctx, r, fileSize, imageID, callback, metadata); err != nil {
+			// if the error is anything other than ErrNotFound, fallback to legacy (single part)
+			// uploader.
+			if err != ErrNotFound {
+				return err
+			}
+			// fallthrough to legacy (single part) uploader
+		} else {
+			// multipart upload successful
+			return nil
+		}
 	}
 
-	postURL := "/v2/imagefile/" + imageID
+	// fallback to legacy uploader
+	c.Logger.Log("Using legacy (single part) uploader")
+
+	return c.legacyPostFileV2(ctx, r, fileSize, imageID, callback, metadata)
+}
+
+// uploadManager contains common params for multipart part function
+type uploadManager struct {
+	Source   io.ReadSeeker
+	Size     int64
+	ImageID  string
+	UploadID string
+}
+
+func (c *Client) postFileV2Multipart(ctx context.Context, r io.ReadSeeker, fileSize int64, imageID string, callback UploadCallback, metadata map[string]string) error {
+	uploadID, err := c.startMultipartUpload(ctx, fileSize, imageID)
+	if err != nil {
+		c.Logger.Logf("Error starting multipart upload: %v", err)
+
+		return err
+	}
+
+	c.Logger.Logf("Using multi-part upload for upload ID: %s", uploadID)
+
+	totalParts := int64(math.Ceil(float64(fileSize) / float64(minimumPartSize)))
+
+	c.Logger.Logf("Total parts: %d (%d bytes)", totalParts, fileSize)
+
+	// maintain list of completed parts which will be passed to the completion function
+	completedParts := []CompletedPart{}
+
+	bytesRemaining := fileSize
+
+	var nPart int64
+
+	for nPart = 1; nPart <= totalParts; nPart++ {
+		count := getPartSize(bytesRemaining)
+
+		c.Logger.Logf("Uploading part %d (%d bytes)", nPart, count)
+
+		mgr := &uploadManager{
+			Source:   r,
+			Size:     count,
+			ImageID:  imageID,
+			UploadID: uploadID,
+		}
+
+		etag, err := c.multipartUploadPart(ctx, nPart, mgr, callback)
+		if err != nil {
+			// error uploading part
+			c.Logger.Logf("Error uploading part %d: %v", nPart, err)
+
+			return c.abortMultipartUpload(ctx, mgr)
+		}
+
+		// append completed part info to list
+		completedParts = append(completedParts, CompletedPart{PartNumber: nPart, Token: etag})
+
+		// decrement upload bytes remaining
+		bytesRemaining -= count
+	}
+
+	c.Logger.Logf("Uploaded %d parts", totalParts)
+
+	return c.completeMultipartUpload(ctx, &completedParts, &uploadManager{
+		ImageID:  imageID,
+		UploadID: uploadID,
+	})
+}
+
+func getPartSize(r int64) int64 {
+	if r > minimumPartSize {
+		return minimumPartSize
+	}
+	return r
+}
+
+func (c *Client) startMultipartUpload(ctx context.Context, fileSize int64, imageID string) (string, error) {
+	// attempt to initiate multipart upload
+	postURL := fmt.Sprintf("/v2/imagefile/%s/_multipart", imageID)
+
+	c.Logger.Logf("startMultipartUpload calling %s", postURL)
+
+	body := MultipartUploadStartRequest{
+		Size: fileSize,
+	}
+
+	objJSON, err := c.apiCreate(ctx, postURL, body)
+	if err != nil {
+		return "", err
+	}
+
+	var res MultipartUploadStartResponse
+	if err := json.Unmarshal(objJSON, &res); err != nil {
+		return "", err
+	}
+
+	return res.Data.UploadID, nil
+}
+
+// remoteSHA256ChecksumSupport parses the 'X-Amz-SignedHeaders' from the
+// presigned PUT URL query string to determine if 'x-amz-content-sha256' is
+// present. If 'x-amz-content-sha256' is present, the remote is expecting the
+// SHA256 checksum in the headers of the presigned PUT URL request.
+func remoteSHA256ChecksumSupport(u *url.URL) bool {
+	for _, h := range strings.Split(u.Query()["X-Amz-SignedHeaders"][0], ";") {
+		if h == "x-amz-content-sha256" {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (c *Client) legacyPostFileV2(ctx context.Context, r io.ReadSeeker, fileSize int64, imageID string, callback UploadCallback, metadata map[string]string) error {
+	postURL := fmt.Sprintf("/v2/imagefile/%s", imageID)
+
 	c.Logger.Logf("postFileV2 calling %s", postURL)
 
 	// issue upload request (POST) to obtain presigned S3 URL
 	body := UploadImageRequest{
 		Size:           fileSize,
 		SHA256Checksum: metadata["sha256sum"],
+		MD5Checksum:    metadata["md5sum"],
 	}
 
 	objJSON, err := c.apiCreate(ctx, postURL, body)
@@ -258,14 +403,19 @@ func (c *Client) postFileV2(ctx context.Context, r io.Reader, fileSize int64, im
 		return err
 	}
 
-	// set up source file reader
-	callback.InitUpload(fileSize, r)
-
 	// upload (PUT) directly to S3 presigned URL provided above
 	presignedURL := res.Data.UploadURL
 	if presignedURL == "" {
 		return fmt.Errorf("error getting presigned URL")
 	}
+
+	parsedURL, err := url.Parse(presignedURL)
+	if err != nil {
+		return fmt.Errorf("error parsing presigned URL")
+	}
+
+	// parse presigned URL to determine if we need to send sha256 checksum
+	useSHA256Checksum := remoteSHA256ChecksumSupport(parsedURL)
 
 	req, err := http.NewRequest(http.MethodPut, presignedURL, callback.GetReader())
 	if err != nil {
@@ -274,7 +424,10 @@ func (c *Client) postFileV2(ctx context.Context, r io.Reader, fileSize int64, im
 
 	req.ContentLength = fileSize
 	req.Header.Set("Content-Type", "application/octet-stream")
-	req.Header.Set("x-amz-content-sha256", metadata["sha256sum"])
+
+	if useSHA256Checksum {
+		req.Header.Set("x-amz-content-sha256", metadata["sha256sum"])
+	}
 
 	resp, err := http.DefaultClient.Do(req.WithContext(ctx))
 	callback.Finish()
@@ -288,6 +441,117 @@ func (c *Client) postFileV2(ctx context.Context, r io.Reader, fileSize int64, im
 	}
 
 	// send (PUT) image upload completion
-	_, err = c.apiUpdate(ctx, postURL+"/_complete", UploadImageCompleteRequest{})
-	return err
+	if _, err := c.apiUpdate(ctx, postURL+"/_complete", UploadImageCompleteRequest{}); err != nil {
+		return fmt.Errorf("error sending upload complete request: %v", err)
+	}
+	return nil
+}
+
+func getPartSHA256Sum(r io.Reader, size int64) (string, error) {
+	// calculate sha256sum of part
+	tmpChunk := io.LimitReader(r, size)
+	chunkHash, _, err := sha256sum(tmpChunk)
+	return chunkHash, err
+}
+
+func (c *Client) multipartUploadPart(ctx context.Context, partNumber int64, m *uploadManager, callback UploadCallback) (string, error) {
+	// calculate sha256sum of part being uploaded
+	chunkHash, err := getPartSHA256Sum(m.Source, m.Size)
+	if err != nil {
+		c.Logger.Logf("Error calculating SHA256 checksum: %v", err)
+		return "", err
+	}
+
+	// rollback file pointer to beginning of part
+	if _, err := m.Source.Seek(-m.Size, io.SeekCurrent); err != nil {
+		c.Logger.Logf("Error repositioning file pointer: %v", err)
+		return "", err
+	}
+
+	// send request to cloud-library for presigned PUT url
+	uri := fmt.Sprintf("/v2/imagefile/%s/_multipart", m.ImageID)
+
+	objJSON, err := c.apiUpdate(ctx, uri, UploadImagePartRequest{
+		PartSize:       m.Size,
+		UploadID:       m.UploadID,
+		PartNumber:     partNumber,
+		SHA256Checksum: chunkHash,
+	})
+	if err != nil {
+		return "", err
+	}
+
+	var res UploadImagePartResponse
+	if err := json.Unmarshal(objJSON, &res); err != nil {
+		return "", err
+	}
+
+	// send request to S3
+	req, err := http.NewRequest(http.MethodPut, res.Data.PresignedURL, io.LimitReader(callback.GetReader(), m.Size))
+	if err != nil {
+		return "", fmt.Errorf("error creating request: %v", err)
+	}
+
+	// add headers to be signed
+	req.ContentLength = m.Size
+	req.Header.Add("x-amz-content-sha256", chunkHash)
+
+	resp, err := http.DefaultClient.Do(req.WithContext(ctx))
+	if err != nil {
+		c.Logger.Logf("Failure uploading to presigned URL: %v", err)
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	// process response from S3
+	if resp.StatusCode != http.StatusOK {
+		c.Logger.Logf("Object store returned an error: %d", resp.StatusCode)
+		return "", fmt.Errorf("object store returned an error: %d", resp.StatusCode)
+	}
+
+	etag := resp.Header.Get("ETag")
+
+	c.Logger.Logf("Part %d accepted (ETag: %s)", partNumber, etag)
+
+	return etag, nil
+}
+
+func (c *Client) completeMultipartUpload(ctx context.Context, completedParts *[]CompletedPart, m *uploadManager) error {
+	c.Logger.Logf("Completing multipart upload: %s", m.UploadID)
+
+	uri := fmt.Sprintf("/v2/imagefile/%s/_multipart_complete", m.ImageID)
+
+	body := CompleteMultipartUploadRequest{
+		UploadID:       m.UploadID,
+		CompletedParts: *completedParts,
+	}
+
+	objJSON, err := c.apiUpdate(ctx, uri, body)
+	if err != nil {
+		c.Logger.Logf("Error completing multipart upload: %v", err)
+		return err
+	}
+
+	var res CompleteMultipartUploadResponse
+	if err := json.Unmarshal(objJSON, &res); err != nil {
+		c.Logger.Logf("Error decoding complete multipart upload request: %v", err)
+		return err
+	}
+	return nil
+}
+
+func (c *Client) abortMultipartUpload(ctx context.Context, m *uploadManager) error {
+	c.Logger.Logf("Aborting multipart upload (uploadID: %s)", m.UploadID)
+
+	uri := fmt.Sprintf("/v2/imagefile/%s/_multipart_abort", m.ImageID)
+
+	body := AbortMultipartUploadRequest{
+		UploadID: m.UploadID,
+	}
+
+	if _, err := c.apiUpdate(ctx, uri, body); err != nil {
+		c.Logger.Logf("error aborting multipart upload: %v", err)
+		return err
+	}
+	return nil
 }

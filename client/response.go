@@ -1,4 +1,4 @@
-// Copyright (c) 2018, Sylabs Inc. All rights reserved.
+// Copyright (c) 2018-2020, Sylabs Inc. All rights reserved.
 // This software is licensed under a 3-clause BSD license. Please consult the
 // LICENSE.md file distributed with the sources of this project regarding your
 // rights to use or distribute this software.
@@ -68,4 +68,36 @@ type UploadImage struct {
 type UploadImageResponse struct {
 	Data  UploadImage     `json:"data"`
 	Error *jsonresp.Error `json:"error,omitempty"`
+}
+
+// MultipartUpload - Contains data for multipart image upload start request
+type MultipartUpload struct {
+	UploadID string `json:"uploadID"`
+}
+
+// MultipartUploadStartResponse - Response from the API for a multipart image upload start request
+type MultipartUploadStartResponse struct {
+	Data  MultipartUpload `json:"data"`
+	Error *jsonresp.Error `json:"error,omitempty"`
+}
+
+// UploadImagePart - Contains data for multipart image upload part request
+type UploadImagePart struct {
+	PresignedURL string `json:"presignedURL"`
+}
+
+// UploadImagePartResponse - Response from the API for a multipart image upload part request
+type UploadImagePartResponse struct {
+	Data  UploadImagePart `json:"data"`
+	Error *jsonresp.Error `json:"error,omitempty"`
+}
+
+// CompleteMultipartUpload - (Currently empty) data for multipart image upload complete request
+type CompleteMultipartUpload struct {
+}
+
+// CompleteMultipartUploadResponse - Response from the API for a multipart image upload complet request
+type CompleteMultipartUploadResponse struct {
+	Data  CompleteMultipartUpload `json:"data"`
+	Error *jsonresp.Error         `json:"error,omitempty"`
 }
