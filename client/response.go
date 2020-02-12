@@ -72,7 +72,9 @@ type UploadImageResponse struct {
 
 // MultipartUpload - Contains data for multipart image upload start request
 type MultipartUpload struct {
-	UploadID string `json:"uploadID"`
+	UploadID   string `json:"uploadID"`
+	TotalParts int    `json:"totalParts"`
+	PartSize   int64  `json:"partSize"`
 }
 
 // MultipartUploadStartResponse - Response from the API for a multipart image upload start request

@@ -10,7 +10,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"math"
 	"net/http"
 	"net/url"
 	"strings"
@@ -20,8 +19,11 @@ import (
 )
 
 const (
-	// Default part size for multipart uploads (64MB)
-	minimumPartSize int64 = 64 * 1024 * 1024
+	// minimumPartSize is the minimum size of a part in a multipart upload;
+	// this liberty is taken by definining this on the client-side to prevent a
+	// round-trip to the server. The server will return HTTP status 400 if the
+	// requsted multipart upload size is less than 5MiB.
+	minimumPartSize = 64 * 1024 * 1024
 )
 
 // UploadCallback defines an interface used to perform a call-out to
@@ -294,36 +296,32 @@ type uploadManager struct {
 }
 
 func (c *Client) postFileV2Multipart(ctx context.Context, r io.ReadSeeker, fileSize int64, imageID string, callback UploadCallback, metadata map[string]string) error {
-	uploadID, err := c.startMultipartUpload(ctx, fileSize, imageID)
+	// initiate multipart upload with backend to determine number of expected
+	// parts and part size
+	response, err := c.startMultipartUpload(ctx, fileSize, imageID)
 	if err != nil {
 		c.Logger.Logf("Error starting multipart upload: %v", err)
 
 		return err
 	}
 
-	c.Logger.Logf("Using multi-part upload for upload ID: %s", uploadID)
-
-	totalParts := int64(math.Ceil(float64(fileSize) / float64(minimumPartSize)))
-
-	c.Logger.Logf("Total parts: %d (%d bytes)", totalParts, fileSize)
+	c.Logger.Logf("Multi-part upload: ID=[%s] totalParts=[%d] partSize=[%d]", response.UploadID, response.TotalParts, fileSize)
 
 	// maintain list of completed parts which will be passed to the completion function
 	completedParts := []CompletedPart{}
 
 	bytesRemaining := fileSize
 
-	var nPart int64
+	for nPart := 1; nPart <= response.TotalParts; nPart++ {
+		partSize := getPartSize(bytesRemaining, response.PartSize)
 
-	for nPart = 1; nPart <= totalParts; nPart++ {
-		count := getPartSize(bytesRemaining)
-
-		c.Logger.Logf("Uploading part %d (%d bytes)", nPart, count)
+		c.Logger.Logf("Uploading part %d (%d bytes)", nPart, partSize)
 
 		mgr := &uploadManager{
 			Source:   r,
-			Size:     count,
+			Size:     partSize,
 			ImageID:  imageID,
-			UploadID: uploadID,
+			UploadID: response.UploadID,
 		}
 
 		etag, err := c.multipartUploadPart(ctx, nPart, mgr, callback)
@@ -338,25 +336,27 @@ func (c *Client) postFileV2Multipart(ctx context.Context, r io.ReadSeeker, fileS
 		completedParts = append(completedParts, CompletedPart{PartNumber: nPart, Token: etag})
 
 		// decrement upload bytes remaining
-		bytesRemaining -= count
+		bytesRemaining -= partSize
 	}
 
-	c.Logger.Logf("Uploaded %d parts", totalParts)
+	c.Logger.Logf("Uploaded %d parts", response.TotalParts)
 
 	return c.completeMultipartUpload(ctx, &completedParts, &uploadManager{
 		ImageID:  imageID,
-		UploadID: uploadID,
+		UploadID: response.UploadID,
 	})
 }
 
-func getPartSize(r int64) int64 {
-	if r > minimumPartSize {
-		return minimumPartSize
+// getPartSize returns number of bytes to read for "next" part. This value will
+// never exceed the S3 maximum
+func getPartSize(bytesRemaining int64, partSize int64) int64 {
+	if bytesRemaining > int64(partSize) {
+		return partSize
 	}
-	return r
+	return bytesRemaining
 }
 
-func (c *Client) startMultipartUpload(ctx context.Context, fileSize int64, imageID string) (string, error) {
+func (c *Client) startMultipartUpload(ctx context.Context, fileSize int64, imageID string) (MultipartUpload, error) {
 	// attempt to initiate multipart upload
 	postURL := fmt.Sprintf("/v2/imagefile/%s/_multipart", imageID)
 
@@ -368,15 +368,14 @@ func (c *Client) startMultipartUpload(ctx context.Context, fileSize int64, image
 
 	objJSON, err := c.apiCreate(ctx, postURL, body)
 	if err != nil {
-		return "", err
+		return MultipartUpload{}, err
 	}
 
 	var res MultipartUploadStartResponse
 	if err := json.Unmarshal(objJSON, &res); err != nil {
-		return "", err
+		return MultipartUpload{}, err
 	}
-
-	return res.Data.UploadID, nil
+	return res.Data, nil
 }
 
 // remoteSHA256ChecksumSupport parses the 'X-Amz-SignedHeaders' from the
@@ -466,16 +465,16 @@ func getPartSHA256Sum(r io.Reader, size int64) (string, error) {
 	return chunkHash, err
 }
 
-func (c *Client) multipartUploadPart(ctx context.Context, partNumber int64, m *uploadManager, callback UploadCallback) (string, error) {
+func (c *Client) multipartUploadPart(ctx context.Context, partNumber int, m *uploadManager, callback UploadCallback) (string, error) {
 	// calculate sha256sum of part being uploaded
-	chunkHash, err := getPartSHA256Sum(m.Source, m.Size)
+	chunkHash, err := getPartSHA256Sum(m.Source, int64(m.Size))
 	if err != nil {
 		c.Logger.Logf("Error calculating SHA256 checksum: %v", err)
 		return "", err
 	}
 
 	// rollback file pointer to beginning of part
-	if _, err := m.Source.Seek(-m.Size, io.SeekCurrent); err != nil {
+	if _, err := m.Source.Seek(-(int64(m.Size)), io.SeekCurrent); err != nil {
 		c.Logger.Logf("Error repositioning file pointer: %v", err)
 		return "", err
 	}
