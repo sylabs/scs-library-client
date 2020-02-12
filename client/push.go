@@ -268,7 +268,7 @@ func (c *Client) postFileV2(ctx context.Context, r io.ReadSeeker, fileSize int64
 		// only attempt multipart upload if size greater than S3 minimum
 		c.Logger.Log("Attempting to use multipart uploader")
 
-		if err := c.postFileV2Multipart(ctx, r, fileSize, imageID, callback, metadata); err != nil {
+		if err := c.postFileV2Multipart(ctx, r, fileSize, imageID, callback); err != nil {
 			// if the error is anything other than ErrNotFound, fallback to legacy (single part)
 			// uploader.
 			if err != ErrNotFound {
@@ -295,7 +295,7 @@ type uploadManager struct {
 	UploadID string
 }
 
-func (c *Client) postFileV2Multipart(ctx context.Context, r io.ReadSeeker, fileSize int64, imageID string, callback UploadCallback, metadata map[string]string) error {
+func (c *Client) postFileV2Multipart(ctx context.Context, r io.ReadSeeker, fileSize int64, imageID string, callback UploadCallback) error {
 	// initiate multipart upload with backend to determine number of expected
 	// parts and part size
 	response, err := c.startMultipartUpload(ctx, fileSize, imageID)
