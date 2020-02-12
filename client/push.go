@@ -182,7 +182,7 @@ func (c *Client) UploadImage(ctx context.Context, r io.ReadSeeker, path, arch st
 
 		if callback == nil {
 			// use default (noop) upload callback
-			callback = &defaultUploadCallback{}
+			callback = &defaultUploadCallback{r: r}
 		}
 
 		metadata := map[string]string{
@@ -284,7 +284,7 @@ func (c *Client) postFileV2(ctx context.Context, r io.ReadSeeker, fileSize int64
 	// fallback to legacy uploader
 	c.Logger.Log("Using legacy (single part) uploader")
 
-	return c.legacyPostFileV2(ctx, r, fileSize, imageID, callback, metadata)
+	return c.legacyPostFileV2(ctx, fileSize, imageID, callback, metadata)
 }
 
 // uploadManager contains common params for multipart part function
@@ -392,7 +392,7 @@ func remoteSHA256ChecksumSupport(u *url.URL) bool {
 	return false
 }
 
-func (c *Client) legacyPostFileV2(ctx context.Context, r io.ReadSeeker, fileSize int64, imageID string, callback UploadCallback, metadata map[string]string) error {
+func (c *Client) legacyPostFileV2(ctx context.Context, fileSize int64, imageID string, callback UploadCallback, metadata map[string]string) error {
 	postURL := fmt.Sprintf("/v2/imagefile/%s", imageID)
 
 	c.Logger.Logf("postFileV2 calling %s", postURL)
