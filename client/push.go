@@ -482,7 +482,7 @@ func (c *Client) multipartUploadPart(ctx context.Context, partNumber int, m *upl
 	// send request to cloud-library for presigned PUT url
 	uri := fmt.Sprintf("/v2/imagefile/%s/_multipart", m.ImageID)
 
-	c.Logger.Logf("multipartUploadPart calling %s", postURL)
+	c.Logger.Logf("multipartUploadPart calling %s", uri)
 
 	objJSON, err := c.apiUpdate(ctx, uri, UploadImagePartRequest{
 		PartSize:       m.Size,
