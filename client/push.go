@@ -383,7 +383,12 @@ func (c *Client) startMultipartUpload(ctx context.Context, fileSize int64, image
 // present. If 'x-amz-content-sha256' is present, the remote is expecting the
 // SHA256 checksum in the headers of the presigned PUT URL request.
 func remoteSHA256ChecksumSupport(u *url.URL) bool {
-	for _, h := range strings.Split(u.Query()["X-Amz-SignedHeaders"][0], ";") {
+	hdr := u.Query()["X-Amz-SignedHeaders"]
+	if len(hdr) < 1 {
+		return false
+	}
+
+	for _, h := range strings.Split(hdr[0], ";") {
 		if h == "x-amz-content-sha256" {
 			return true
 		}
