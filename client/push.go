@@ -395,7 +395,7 @@ func remoteSHA256ChecksumSupport(u *url.URL) bool {
 func (c *Client) legacyPostFileV2(ctx context.Context, fileSize int64, imageID string, callback UploadCallback, metadata map[string]string) error {
 	postURL := fmt.Sprintf("/v2/imagefile/%s", imageID)
 
-	c.Logger.Logf("postFileV2 calling %s", postURL)
+	c.Logger.Logf("legacyPostFileV2 calling %s", postURL)
 
 	// issue upload request (POST) to obtain presigned S3 URL
 	body := UploadImageRequest{
@@ -482,6 +482,8 @@ func (c *Client) multipartUploadPart(ctx context.Context, partNumber int, m *upl
 	// send request to cloud-library for presigned PUT url
 	uri := fmt.Sprintf("/v2/imagefile/%s/_multipart", m.ImageID)
 
+	c.Logger.Logf("multipartUploadPart calling %s", postURL)
+
 	objJSON, err := c.apiUpdate(ctx, uri, UploadImagePartRequest{
 		PartSize:       m.Size,
 		UploadID:       m.UploadID,
@@ -532,6 +534,8 @@ func (c *Client) completeMultipartUpload(ctx context.Context, completedParts *[]
 
 	uri := fmt.Sprintf("/v2/imagefile/%s/_multipart_complete", m.ImageID)
 
+	c.Logger.Logf("completeMultipartUpload calling %s", uri)
+
 	body := CompleteMultipartUploadRequest{
 		UploadID:       m.UploadID,
 		CompletedParts: *completedParts,
@@ -552,9 +556,11 @@ func (c *Client) completeMultipartUpload(ctx context.Context, completedParts *[]
 }
 
 func (c *Client) abortMultipartUpload(ctx context.Context, m *uploadManager) error {
-	c.Logger.Logf("Aborting multipart upload (uploadID: %s)", m.UploadID)
+	c.Logger.Logf("Aborting multipart upload ID: %s", m.UploadID)
 
 	uri := fmt.Sprintf("/v2/imagefile/%s/_multipart_abort", m.ImageID)
+
+	c.Logger.Logf("abortMultipartUpload calling %s", uri)
 
 	body := AbortMultipartUploadRequest{
 		UploadID: m.UploadID,
