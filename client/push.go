@@ -20,9 +20,9 @@ import (
 
 const (
 	// minimumPartSize is the minimum size of a part in a multipart upload;
-	// this liberty is taken by definining this on the client-side to prevent a
-	// round-trip to the server. The server will return HTTP status 400 if the
-	// requsted multipart upload size is less than 5MiB.
+	// this liberty is taken by defining this value on the client-side to
+	// prevent a round-trip to the server. The server will return HTTP status
+	// 400 if the requsted multipart upload size is less than 5MiB.
 	minimumPartSize = 64 * 1024 * 1024
 )
 
