@@ -200,7 +200,8 @@ func Test_legacyPostFileV2(t *testing.T) {
 			// calculate sha256 checksum
 			sha256checksum, _, err := sha256sum(f)
 			assert.NoError(t, err, "error calculating sha256 checksum")
-			f.Seek(0, 0)
+			_, err = f.Seek(0, 0)
+			assert.NoError(t, err, "unexpected error seeking in sample data file")
 
 			callback := &defaultUploadCallback{r: f}
 
