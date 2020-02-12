@@ -226,7 +226,7 @@ func (c *Client) postFileWrapper(ctx context.Context, r io.ReadSeeker, fileSize 
 		if err := c.postFileV2(ctx, r, fileSize, imageID, callback, metadata); err != nil {
 			return err
 		}
-	} else if err := c.postFile(ctx, r, fileSize, imageID, callback); err != nil {
+	} else if err := c.postFile(ctx, fileSize, imageID, callback); err != nil {
 		return err
 	}
 
@@ -235,7 +235,7 @@ func (c *Client) postFileWrapper(ctx context.Context, r io.ReadSeeker, fileSize 
 	return nil
 }
 
-func (c *Client) postFile(ctx context.Context, r io.Reader, fileSize int64, imageID string, callback UploadCallback) error {
+func (c *Client) postFile(ctx context.Context, fileSize int64, imageID string, callback UploadCallback) error {
 	postURL := "/v1/imagefile/" + imageID
 
 	c.Logger.Logf("postFile calling %s", postURL)
