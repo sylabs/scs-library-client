@@ -78,7 +78,9 @@ func Test_postFile(t *testing.T) {
 			}
 			fileSize := fi.Size()
 
-			err = c.postFile(context.Background(), f, fileSize, tt.imageRef, nil)
+			callback := &defaultUploadCallback{r: f}
+
+			err = c.postFile(context.Background(), fileSize, tt.imageRef, callback)
 
 			if err != nil && !tt.expectError {
 				t.Errorf("Unexpected error: %v", err)
