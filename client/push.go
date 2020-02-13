@@ -204,7 +204,7 @@ func (c *Client) UploadImage(ctx context.Context, r io.ReadSeeker, path, arch st
 		return c.setTagsV2(ctx, container.ID, arch, image.ID, append(tags, parsedTags...))
 	}
 
-	c.Logger.Logf("This library does not support multiple architecture per tag.")
+	c.Logger.Logf("This library does not support multiple architectures per tag.")
 
 	c.Logger.Logf("This tag will replace any already uploaded with the same name.")
 
