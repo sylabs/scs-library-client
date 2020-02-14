@@ -1,4 +1,4 @@
-// Copyright (c) 2018, Sylabs Inc. All rights reserved.
+// Copyright (c) 2018-2020, Sylabs Inc. All rights reserved.
 // This software is licensed under a 3-clause BSD license. Please consult the
 // LICENSE.md file distributed with the sources of this project regarding your
 // rights to use or distribute this software.
@@ -146,7 +146,7 @@ func ImageHash(filePath string) (result string, err error) {
 
 	result, _, err = sha256sum(file)
 
-	return result, err
+	return "sha256." + result, err
 }
 
 // sha256sum computes the sha256sum of the specified reader; caller is
@@ -159,7 +159,7 @@ func sha256sum(r io.Reader) (result string, nBytes int64, err error) {
 		return "", 0, err
 	}
 
-	return "sha256." + hex.EncodeToString(hash.Sum(nil)), nBytes, nil
+	return hex.EncodeToString(hash.Sum(nil)), nBytes, nil
 }
 
 // md5sum computes the MD5 checksum of the specified reader; caller is

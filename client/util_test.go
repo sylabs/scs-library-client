@@ -256,7 +256,7 @@ func Test_imageHash(t *testing.T) {
 
 func Test_sha256sum(t *testing.T) {
 
-	expectedSha256 := "sha256.d7d356079af905c04e5ae10711ecf3f5b34385e9b143c5d9ddbf740665ce2fb7"
+	expectedSha256 := "d7d356079af905c04e5ae10711ecf3f5b34385e9b143c5d9ddbf740665ce2fb7"
 
 	const filename = "test_data/test_sha256"
 
