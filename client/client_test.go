@@ -100,6 +100,9 @@ func TestNewRequest(t *testing.T) {
 		{"HTTPSBaseURL", &Config{
 			BaseURL: "https://library.staging.sylabs.io",
 		}, http.MethodGet, "/path", "", "", false, "https://library.staging.sylabs.io/path", "", ""},
+		{"BaseURLWithPath", &Config{
+			BaseURL: "https://library.staging.sylabs.io/path",
+		}, http.MethodGet, "/path", "", "", false, "https://library.staging.sylabs.io/path/path", "", ""},
 		{"AuthToken", &Config{
 			AuthToken: "blah",
 		}, http.MethodGet, "/path", "", "", false, "https://library.sylabs.io/path", "BEARER blah", ""},

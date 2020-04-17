@@ -10,6 +10,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strings"
 
 	"github.com/go-log/log"
 )
@@ -66,6 +67,13 @@ func NewClient(cfg *Config) (*Client, error) {
 		return nil, fmt.Errorf("unsupported protocol scheme %q", baseURL.Scheme)
 	}
 
+	// If baseURL has a path component, ensure it is terminated with a separator, to prevent
+	// url.ResolveReference from stripping the final component of the path when constructing
+	// request URL.
+	if p := baseURL.Path; p != "" && !strings.HasSuffix(p, "/") {
+		baseURL.Path += "/"
+	}
+
 	c := &Client{
 		BaseURL:   baseURL,
 		AuthToken: cfg.AuthToken,
@@ -88,10 +96,11 @@ func NewClient(cfg *Config) (*Client, error) {
 	return c, nil
 }
 
-// newRequest initializes HTTP request and sets up headers based on configuration
+// newRequest initializes HTTP request to the relative URL path and sets up headers based on
+// configuration.
 func (c *Client) newRequest(method, path, rawQuery string, body io.Reader) (*http.Request, error) {
 	u := c.BaseURL.ResolveReference(&url.URL{
-		Path:     path,
+		Path:     strings.TrimPrefix(path, "/"), // trim leading separator as path is relative.
 		RawQuery: rawQuery,
 	})
 	r, err := http.NewRequest(method, u.String(), body)
