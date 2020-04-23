@@ -59,12 +59,6 @@ func NewClient(cfg *Config) (*Client, error) {
 	if cfg.BaseURL != "" {
 		bu = cfg.BaseURL
 	}
-
-	// ensure base url has trailing forward slash
-	if !strings.HasSuffix(bu, "/") {
-		bu += "/"
-	}
-
 	baseURL, err := url.Parse(bu)
 	if err != nil {
 		return nil, err
