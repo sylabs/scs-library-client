@@ -59,19 +59,20 @@ func NewClient(cfg *Config) (*Client, error) {
 	if cfg.BaseURL != "" {
 		bu = cfg.BaseURL
 	}
+
+	// If baseURL has a path component, ensure it is terminated with a separator, to prevent
+	// url.ResolveReference from stripping the final component of the path when constructing
+	// request URL.
+	if !strings.HasSuffix(bu, "/") {
+		bu += "/"
+	}
+
 	baseURL, err := url.Parse(bu)
 	if err != nil {
 		return nil, err
 	}
 	if baseURL.Scheme != "http" && baseURL.Scheme != "https" {
 		return nil, fmt.Errorf("unsupported protocol scheme %q", baseURL.Scheme)
-	}
-
-	// If baseURL has a path component, ensure it is terminated with a separator, to prevent
-	// url.ResolveReference from stripping the final component of the path when constructing
-	// request URL.
-	if p := baseURL.Path; p != "" && !strings.HasSuffix(p, "/") {
-		baseURL.Path += "/"
 	}
 
 	c := &Client{
