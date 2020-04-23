@@ -96,11 +96,11 @@ func NewClient(cfg *Config) (*Client, error) {
 	return c, nil
 }
 
-// newRequest initializes HTTP request to the relative URL path and sets up headers based on
-// configuration.
+// newRequest returns a new Request given a method, path (relative or
+// absolute), rawQuery, and (optional) body.
 func (c *Client) newRequest(method, path, rawQuery string, body io.Reader) (*http.Request, error) {
 	u := c.BaseURL.ResolveReference(&url.URL{
-		Path:     strings.TrimPrefix(path, "/"), // trim leading separator as path is relative.
+		Path:     path,
 		RawQuery: rawQuery,
 	})
 	r, err := http.NewRequest(method, u.String(), body)
