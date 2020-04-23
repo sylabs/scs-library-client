@@ -24,13 +24,19 @@ func TestNewClient(t *testing.T) {
 		wantUserAgent  string
 		wantHTTPClient *http.Client
 	}{
-		{"NilConfig", nil, false, defaultBaseURL, "", "", http.DefaultClient},
+		{"NilConfig", nil, false, defaultBaseURL + "/", "", "", http.DefaultClient},
 		{"HTTPBaseURL", &Config{
 			BaseURL: "http://library.staging.sylabs.io",
-		}, false, "http://library.staging.sylabs.io", "", "", http.DefaultClient},
+		}, false, "http://library.staging.sylabs.io/", "", "", http.DefaultClient},
+		{"HTTPAlternateBaseURL", &Config{
+			BaseURL: "http://staging.sylabs.io/library",
+		}, false, "http://staging.sylabs.io/library/", "", "", http.DefaultClient},
 		{"HTTPSBaseURL", &Config{
 			BaseURL: "https://library.staging.sylabs.io",
-		}, false, "https://library.staging.sylabs.io", "", "", http.DefaultClient},
+		}, false, "https://library.staging.sylabs.io/", "", "", http.DefaultClient},
+		{"HTTPSAlternateBaseURL", &Config{
+			BaseURL: "https://staging.sylabs.io/library",
+		}, false, "https://staging.sylabs.io/library/", "", "", http.DefaultClient},
 		{"UnsupportedBaseURL", &Config{
 			BaseURL: "bad:",
 		}, true, "", "", "", nil},
@@ -39,13 +45,13 @@ func TestNewClient(t *testing.T) {
 		}, true, "", "", "", nil},
 		{"AuthToken", &Config{
 			AuthToken: "blah",
-		}, false, defaultBaseURL, "blah", "", http.DefaultClient},
+		}, false, defaultBaseURL + "/", "blah", "", http.DefaultClient},
 		{"UserAgent", &Config{
 			UserAgent: "Secret Agent Man",
-		}, false, defaultBaseURL, "", "Secret Agent Man", http.DefaultClient},
+		}, false, defaultBaseURL + "/", "", "Secret Agent Man", http.DefaultClient},
 		{"HTTPClient", &Config{
 			HTTPClient: httpClient,
-		}, false, defaultBaseURL, "", "", httpClient},
+		}, false, defaultBaseURL + "/", "", "", httpClient},
 	}
 
 	for _, tt := range tests {
@@ -97,12 +103,18 @@ func TestNewRequest(t *testing.T) {
 		{"HTTPBaseURL", &Config{
 			BaseURL: "http://library.staging.sylabs.io",
 		}, http.MethodGet, "/path", "", "", false, "http://library.staging.sylabs.io/path", "", ""},
+		{"HTTPAlternateBaseURL", &Config{
+			BaseURL: "http://staging.sylabs.io/library",
+		}, http.MethodGet, "/path", "", "", false, "http://staging.sylabs.io/library/path", "", ""},
 		{"HTTPSBaseURL", &Config{
 			BaseURL: "https://library.staging.sylabs.io",
 		}, http.MethodGet, "/path", "", "", false, "https://library.staging.sylabs.io/path", "", ""},
+		{"HTTPSAlternateBaseURL", &Config{
+			BaseURL: "https://staging.sylabs.io/library",
+		}, http.MethodGet, "/path", "", "", false, "https://staging.sylabs.io/library/path", "", ""},
 		{"BaseURLWithPath", &Config{
-			BaseURL: "https://library.staging.sylabs.io/path",
-		}, http.MethodGet, "/path", "", "", false, "https://library.staging.sylabs.io/path/path", "", ""},
+			BaseURL: "https://library.staging.sylabs.io/path1",
+		}, http.MethodGet, "/path2", "", "", false, "https://library.staging.sylabs.io/path1/path2", "", ""},
 		{"AuthToken", &Config{
 			AuthToken: "blah",
 		}, http.MethodGet, "/path", "", "", false, "https://library.sylabs.io/path", "BEARER blah", ""},

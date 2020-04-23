@@ -35,18 +35,13 @@ func (c *Client) DownloadImage(ctx context.Context, w io.Writer, arch, path, tag
 		tag = "latest"
 	}
 
-	apiPath := fmt.Sprintf("/v1/imagefile/%s:%s", path, tag)
-	apiURL, err := url.Parse(apiPath)
-	if err != nil {
-		return fmt.Errorf("error constructing API url: %v", err)
-	}
+	apiPath := fmt.Sprintf("v1/imagefile/%s:%s", strings.TrimPrefix(path, "/"), tag)
 	q := url.Values{}
 	q.Add("arch", arch)
-	apiURL.RawQuery = q.Encode()
 
-	c.Logger.Logf("Pulling from URL: %s", apiURL.String())
+	c.Logger.Logf("Pulling from URL: %s", apiPath)
 
-	req, err := c.newRequest(http.MethodGet, apiURL.Path, apiURL.RawQuery, nil)
+	req, err := c.newRequest(http.MethodGet, apiPath, q.Encode(), nil)
 	if err != nil {
 		return err
 	}

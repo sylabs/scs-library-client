@@ -19,8 +19,7 @@ import (
 // getEntity returns the specified entity; returns ErrNotFound if entity is not
 // found, otherwise error
 func (c *Client) getEntity(ctx context.Context, entityRef string) (*Entity, error) {
-	url := "/v1/entities/" + entityRef
-	entJSON, err := c.apiGet(ctx, url)
+	entJSON, err := c.apiGet(ctx, "v1/entities/"+entityRef)
 	if err != nil {
 		return nil, err
 	}
@@ -34,8 +33,7 @@ func (c *Client) getEntity(ctx context.Context, entityRef string) (*Entity, erro
 // getCollection returns the specified collection; returns ErrNotFound if
 // collection is not found, otherwise error.
 func (c *Client) getCollection(ctx context.Context, collectionRef string) (*Collection, error) {
-	url := "/v1/collections/" + collectionRef
-	colJSON, err := c.apiGet(ctx, url)
+	colJSON, err := c.apiGet(ctx, "v1/collections/"+collectionRef)
 	if err != nil {
 		return nil, err
 	}
@@ -49,8 +47,7 @@ func (c *Client) getCollection(ctx context.Context, collectionRef string) (*Coll
 // getContainer returns container by ref id; returns ErrNotFound if container
 // is not found, otherwise error.
 func (c *Client) getContainer(ctx context.Context, containerRef string) (*Container, error) {
-	url := "/v1/containers/" + containerRef
-	conJSON, err := c.apiGet(ctx, url)
+	conJSON, err := c.apiGet(ctx, "v1/containers/"+containerRef)
 	if err != nil {
 		return nil, err
 	}
@@ -67,7 +64,7 @@ func (c *Client) createEntity(ctx context.Context, name string) (*Entity, error)
 		Name:        name,
 		Description: "No description",
 	}
-	entJSON, err := c.apiCreate(ctx, "/v1/entities", e)
+	entJSON, err := c.apiCreate(ctx, "v1/entities", e)
 	if err != nil {
 		return nil, err
 	}
@@ -85,7 +82,7 @@ func (c *Client) createCollection(ctx context.Context, name string, entityID str
 		Description: "No description",
 		Entity:      entityID,
 	}
-	colJSON, err := c.apiCreate(ctx, "/v1/collections", newCollection)
+	colJSON, err := c.apiCreate(ctx, "v1/collections", newCollection)
 	if err != nil {
 		return nil, err
 	}
@@ -103,7 +100,7 @@ func (c *Client) createContainer(ctx context.Context, name string, collectionID 
 		Description: "No description",
 		Collection:  collectionID,
 	}
-	conJSON, err := c.apiCreate(ctx, "/v1/containers", newContainer)
+	conJSON, err := c.apiCreate(ctx, "v1/containers", newContainer)
 	if err != nil {
 		return nil, err
 	}
@@ -121,7 +118,7 @@ func (c *Client) createImage(ctx context.Context, hash string, containerID strin
 		Description: description,
 		Container:   containerID,
 	}
-	imgJSON, err := c.apiCreate(ctx, "/v1/images", i)
+	imgJSON, err := c.apiCreate(ctx, "v1/images", i)
 	if err != nil {
 		return nil, err
 	}
@@ -161,7 +158,7 @@ func (c *Client) setTags(ctx context.Context, containerID, imageID string, tags 
 
 // getTags returns a tag map for the specified containerID
 func (c *Client) getTags(ctx context.Context, containerID string) (TagMap, error) {
-	url := fmt.Sprintf("/v1/tags/%s", containerID)
+	url := fmt.Sprintf("v1/tags/%s", containerID)
 	c.Logger.Logf("getTags calling %s", url)
 	req, err := c.newRequest(http.MethodGet, url, "", nil)
 	if err != nil {
@@ -189,7 +186,7 @@ func (c *Client) getTags(ctx context.Context, containerID string) (TagMap, error
 
 // setTag sets tag on specified containerID
 func (c *Client) setTag(ctx context.Context, containerID string, t ImageTag) error {
-	url := "/v1/tags/" + containerID
+	url := "v1/tags/" + containerID
 	c.Logger.Logf("setTag calling %s", url)
 	s, err := json.Marshal(t)
 	if err != nil {
@@ -244,7 +241,7 @@ func (c *Client) setTagsV2(ctx context.Context, containerID, arch string, imageI
 
 // getTagsV2 returns a arch->tag map for the specified containerID
 func (c *Client) getTagsV2(ctx context.Context, containerID string) (ArchTagMap, error) {
-	url := fmt.Sprintf("/v2/tags/%s", containerID)
+	url := fmt.Sprintf("v2/tags/%s", containerID)
 	c.Logger.Logf("getTagsV2 calling %s", url)
 	req, err := c.newRequest(http.MethodGet, url, "", nil)
 	if err != nil {
@@ -272,7 +269,7 @@ func (c *Client) getTagsV2(ctx context.Context, containerID string) (ArchTagMap,
 
 // setTag sets an arch->tag on specified containerID
 func (c *Client) setTagV2(ctx context.Context, containerID string, t ArchImageTag) error {
-	url := "/v2/tags/" + containerID
+	url := "v2/tags/" + containerID
 	c.Logger.Logf("setTag calling %s", url)
 	s, err := json.Marshal(t)
 	if err != nil {
@@ -300,14 +297,12 @@ func (c *Client) setTagV2(ctx context.Context, containerID string, t ArchImageTa
 // GetImage returns the Image object if exists; returns ErrNotFound if image is
 // not found, otherwise error.
 func (c *Client) GetImage(ctx context.Context, arch string, imageRef string) (*Image, error) {
-	apiPath := "/v1/images/" + imageRef
-	apiURL, err := url.Parse(apiPath)
-	if err != nil {
-		return nil, fmt.Errorf("error constructing API url: %v", err)
-	}
-	q := apiURL.Query()
+	q := url.Values{}
 	q.Add("arch", arch)
-	apiURL.RawQuery = q.Encode()
+	apiURL := &url.URL{
+		Path:     "v1/images/" + imageRef,
+		RawQuery: q.Encode(),
+	}
 
 	imgJSON, err := c.apiGet(ctx, apiURL.String())
 	if err != nil {

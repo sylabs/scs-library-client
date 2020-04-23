@@ -358,7 +358,7 @@ func getPartSize(bytesRemaining int64, partSize int64) int64 {
 
 func (c *Client) startMultipartUpload(ctx context.Context, fileSize int64, imageID string) (MultipartUpload, error) {
 	// attempt to initiate multipart upload
-	postURL := fmt.Sprintf("/v2/imagefile/%s/_multipart", imageID)
+	postURL := fmt.Sprintf("v2/imagefile/%s/_multipart", imageID)
 
 	c.Logger.Logf("startMultipartUpload calling %s", postURL)
 

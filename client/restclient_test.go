@@ -9,6 +9,7 @@ import (
 	"context"
 	"encoding/json"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -49,7 +50,7 @@ func Test_apiUpdate(t *testing.T) {
 
 			// use payload matching /v2/imagefile/{ref}/_complete endpoint. This
 			// is an arbitrary test of apiUpdate not specific to this endpoint.
-			res, err := c.apiUpdate(ctx, tt.url, UploadImageCompleteRequest{})
+			res, err := c.apiUpdate(ctx, strings.TrimPrefix(tt.url, "/"), UploadImageCompleteRequest{})
 			if err != nil && !tt.expectError {
 				t.Errorf("Unexpected error: %v", err)
 			}
