@@ -9,7 +9,6 @@ import (
 	"context"
 	"encoding/json"
 	"reflect"
-	"strings"
 	"testing"
 )
 
@@ -27,9 +26,9 @@ func Test_apiUpdate(t *testing.T) {
 		body        interface{}
 		expectError bool
 	}{
-		{"simple", 200, "/v2/imagefile/5cb9c34d7d960d82f5f5bc54/_complete", nil, false},
-		{"notfound", 404, "/v2/nonexistent", nil, true},
-		{"with_response", 200, "/v2/withresponse", endpointResponse{Value: "hello"}, false},
+		{"simple", 200, "v2/imagefile/5cb9c34d7d960d82f5f5bc54/_complete", nil, false},
+		{"notfound", 404, "v2/nonexistent", nil, true},
+		{"with_response", 200, "v2/withresponse", endpointResponse{Value: "hello"}, false},
 	}
 
 	for _, tt := range tests {
@@ -37,7 +36,7 @@ func Test_apiUpdate(t *testing.T) {
 			m := mockService{
 				t:        t,
 				code:     tt.code,
-				httpPath: tt.url,
+				httpPath: "/" + tt.url,
 				body:     tt.body,
 			}
 			m.Run()
@@ -50,7 +49,7 @@ func Test_apiUpdate(t *testing.T) {
 
 			// use payload matching /v2/imagefile/{ref}/_complete endpoint. This
 			// is an arbitrary test of apiUpdate not specific to this endpoint.
-			res, err := c.apiUpdate(ctx, strings.TrimPrefix(tt.url, "/"), UploadImageCompleteRequest{})
+			res, err := c.apiUpdate(ctx, tt.url, UploadImageCompleteRequest{})
 			if err != nil && !tt.expectError {
 				t.Errorf("Unexpected error: %v", err)
 			}

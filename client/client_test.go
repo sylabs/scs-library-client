@@ -102,19 +102,19 @@ func TestNewRequest(t *testing.T) {
 		{"NilConfigPostBody", nil, http.MethodPost, "/path", "", "body", false, "https://library.sylabs.io/path", "", ""},
 		{"HTTPBaseURL", &Config{
 			BaseURL: "http://library.staging.sylabs.io",
-		}, http.MethodGet, "/path", "", "", false, "http://library.staging.sylabs.io/path", "", ""},
+		}, http.MethodGet, "path", "", "", false, "http://library.staging.sylabs.io/path", "", ""},
 		{"HTTPAlternateBaseURL", &Config{
 			BaseURL: "http://staging.sylabs.io/library",
-		}, http.MethodGet, "/path", "", "", false, "http://staging.sylabs.io/library/path", "", ""},
+		}, http.MethodGet, "path", "", "", false, "http://staging.sylabs.io/library/path", "", ""},
 		{"HTTPSBaseURL", &Config{
 			BaseURL: "https://library.staging.sylabs.io",
-		}, http.MethodGet, "/path", "", "", false, "https://library.staging.sylabs.io/path", "", ""},
+		}, http.MethodGet, "path", "", "", false, "https://library.staging.sylabs.io/path", "", ""},
 		{"HTTPSAlternateBaseURL", &Config{
 			BaseURL: "https://staging.sylabs.io/library",
-		}, http.MethodGet, "/path", "", "", false, "https://staging.sylabs.io/library/path", "", ""},
+		}, http.MethodGet, "path", "", "", false, "https://staging.sylabs.io/library/path", "", ""},
 		{"BaseURLWithPath", &Config{
 			BaseURL: "https://library.staging.sylabs.io/path1",
-		}, http.MethodGet, "/path2", "", "", false, "https://library.staging.sylabs.io/path1/path2", "", ""},
+		}, http.MethodGet, "path2", "", "", false, "https://library.staging.sylabs.io/path1/path2", "", ""},
 		{"AuthToken", &Config{
 			AuthToken: "blah",
 		}, http.MethodGet, "/path", "", "", false, "https://library.sylabs.io/path", "BEARER blah", ""},
