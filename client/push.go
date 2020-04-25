@@ -236,7 +236,7 @@ func (c *Client) postFileWrapper(ctx context.Context, r io.ReadSeeker, fileSize 
 }
 
 func (c *Client) postFile(ctx context.Context, fileSize int64, imageID string, callback UploadCallback) error {
-	postURL := "/v1/imagefile/" + imageID
+	postURL := "v1/imagefile/" + imageID
 
 	c.Logger.Logf("postFile calling %s", postURL)
 
@@ -358,7 +358,7 @@ func getPartSize(bytesRemaining int64, partSize int64) int64 {
 
 func (c *Client) startMultipartUpload(ctx context.Context, fileSize int64, imageID string) (MultipartUpload, error) {
 	// attempt to initiate multipart upload
-	postURL := fmt.Sprintf("/v2/imagefile/%s/_multipart", imageID)
+	postURL := fmt.Sprintf("v2/imagefile/%s/_multipart", imageID)
 
 	c.Logger.Logf("startMultipartUpload calling %s", postURL)
 
@@ -398,7 +398,7 @@ func remoteSHA256ChecksumSupport(u *url.URL) bool {
 }
 
 func (c *Client) legacyPostFileV2(ctx context.Context, fileSize int64, imageID string, callback UploadCallback, metadata map[string]string) error {
-	postURL := fmt.Sprintf("/v2/imagefile/%s", imageID)
+	postURL := fmt.Sprintf("v2/imagefile/%s", imageID)
 
 	c.Logger.Logf("legacyPostFileV2 calling %s", postURL)
 
@@ -485,7 +485,7 @@ func (c *Client) multipartUploadPart(ctx context.Context, partNumber int, m *upl
 	}
 
 	// send request to cloud-library for presigned PUT url
-	uri := fmt.Sprintf("/v2/imagefile/%s/_multipart", m.ImageID)
+	uri := fmt.Sprintf("v2/imagefile/%s/_multipart", m.ImageID)
 
 	c.Logger.Logf("multipartUploadPart calling %s", uri)
 
@@ -537,7 +537,7 @@ func (c *Client) multipartUploadPart(ctx context.Context, partNumber int, m *upl
 func (c *Client) completeMultipartUpload(ctx context.Context, completedParts *[]CompletedPart, m *uploadManager) error {
 	c.Logger.Logf("Completing multipart upload: %s", m.UploadID)
 
-	uri := fmt.Sprintf("/v2/imagefile/%s/_multipart_complete", m.ImageID)
+	uri := fmt.Sprintf("v2/imagefile/%s/_multipart_complete", m.ImageID)
 
 	c.Logger.Logf("completeMultipartUpload calling %s", uri)
 
@@ -563,7 +563,7 @@ func (c *Client) completeMultipartUpload(ctx context.Context, completedParts *[]
 func (c *Client) abortMultipartUpload(ctx context.Context, m *uploadManager) error {
 	c.Logger.Logf("Aborting multipart upload ID: %s", m.UploadID)
 
-	uri := fmt.Sprintf("/v2/imagefile/%s/_multipart_abort", m.ImageID)
+	uri := fmt.Sprintf("v2/imagefile/%s/_multipart_abort", m.ImageID)
 
 	c.Logger.Logf("abortMultipartUpload calling %s", uri)
 

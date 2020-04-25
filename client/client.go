@@ -59,19 +59,20 @@ func NewClient(cfg *Config) (*Client, error) {
 	if cfg.BaseURL != "" {
 		bu = cfg.BaseURL
 	}
+
+	// If baseURL has a path component, ensure it is terminated with a separator, to prevent
+	// url.ResolveReference from stripping the final component of the path when constructing
+	// request URL.
+	if !strings.HasSuffix(bu, "/") {
+		bu += "/"
+	}
+
 	baseURL, err := url.Parse(bu)
 	if err != nil {
 		return nil, err
 	}
 	if baseURL.Scheme != "http" && baseURL.Scheme != "https" {
 		return nil, fmt.Errorf("unsupported protocol scheme %q", baseURL.Scheme)
-	}
-
-	// If baseURL has a path component, ensure it is terminated with a separator, to prevent
-	// url.ResolveReference from stripping the final component of the path when constructing
-	// request URL.
-	if p := baseURL.Path; p != "" && !strings.HasSuffix(p, "/") {
-		baseURL.Path += "/"
 	}
 
 	c := &Client{
@@ -96,11 +97,11 @@ func NewClient(cfg *Config) (*Client, error) {
 	return c, nil
 }
 
-// newRequest initializes HTTP request to the relative URL path and sets up headers based on
-// configuration.
+// newRequest returns a new Request given a method, path (relative or
+// absolute), rawQuery, and (optional) body.
 func (c *Client) newRequest(method, path, rawQuery string, body io.Reader) (*http.Request, error) {
 	u := c.BaseURL.ResolveReference(&url.URL{
-		Path:     strings.TrimPrefix(path, "/"), // trim leading separator as path is relative.
+		Path:     path,
 		RawQuery: rawQuery,
 	})
 	r, err := http.NewRequest(method, u.String(), body)
