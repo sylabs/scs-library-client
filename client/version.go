@@ -9,7 +9,7 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/blang/semver"
+	"github.com/blang/semver/v4"
 	jsonresp "github.com/sylabs/json-resp"
 )
 
