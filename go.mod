@@ -3,7 +3,7 @@ module github.com/sylabs/scs-library-client
 go 1.13
 
 require (
-	github.com/blang/semver v3.5.1+incompatible
+	github.com/blang/semver/v4 v4.0.0
 	github.com/go-log/log v0.2.0
 	github.com/stretchr/testify v1.6.0
 	github.com/sylabs/json-resp v0.6.0
