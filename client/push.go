@@ -329,7 +329,10 @@ func (c *Client) postFileV2Multipart(ctx context.Context, r io.ReadSeeker, fileS
 			// error uploading part
 			c.Logger.Logf("Error uploading part %d: %v", nPart, err)
 
-			return c.abortMultipartUpload(ctx, mgr)
+			if err := c.abortMultipartUpload(ctx, mgr); err != nil {
+				c.Logger.Logf("Error aborting multipart upload: %v", err)
+			}
+			return err
 		}
 
 		// append completed part info to list
