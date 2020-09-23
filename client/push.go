@@ -308,10 +308,10 @@ func (c *Client) postFileV2Multipart(ctx context.Context, r io.ReadSeeker, fileS
 		return err
 	}
 
-	c.Logger.Logf("Multi-part upload: ID=[%s] totalParts=[%d] partSize=[%d]", response.Data.UploadID, response.Data.TotalParts, fileSize)
+	c.Logger.Logf("Multi-part upload: ID=[%s] totalParts=[%d] partSize=[%d]", response.UploadID, response.TotalParts, fileSize)
 
 	// Enable S3 compliancy mode by default
-	val := response.Data.Options[OptionS3Compliant]
+	val := response.Options[OptionS3Compliant]
 	s3Compliant := val == "" || val == "true"
 
 	c.Logger.Logf("S3 compliant option: %v", s3Compliant)
@@ -321,8 +321,8 @@ func (c *Client) postFileV2Multipart(ctx context.Context, r io.ReadSeeker, fileS
 
 	bytesRemaining := fileSize
 
-	for nPart := 1; nPart <= response.Data.TotalParts; nPart++ {
-		partSize := getPartSize(bytesRemaining, response.Data.PartSize)
+	for nPart := 1; nPart <= response.TotalParts; nPart++ {
+		partSize := getPartSize(bytesRemaining, response.PartSize)
 
 		c.Logger.Logf("Uploading part %d (%d bytes)", nPart, partSize)
 
@@ -330,7 +330,7 @@ func (c *Client) postFileV2Multipart(ctx context.Context, r io.ReadSeeker, fileS
 			Source:   r,
 			Size:     partSize,
 			ImageID:  imageID,
-			UploadID: response.Data.UploadID,
+			UploadID: response.UploadID,
 		}
 
 		// include "X-Amz-Content-Sha256" header only if object store is 100% S3 compatible
@@ -352,11 +352,11 @@ func (c *Client) postFileV2Multipart(ctx context.Context, r io.ReadSeeker, fileS
 		bytesRemaining -= partSize
 	}
 
-	c.Logger.Logf("Uploaded %d parts", response.Data.TotalParts)
+	c.Logger.Logf("Uploaded %d parts", response.TotalParts)
 
 	return c.completeMultipartUpload(ctx, &completedParts, &uploadManager{
 		ImageID:  imageID,
-		UploadID: response.Data.UploadID,
+		UploadID: response.UploadID,
 	})
 }
 
@@ -369,7 +369,7 @@ func getPartSize(bytesRemaining int64, partSize int64) int64 {
 	return bytesRemaining
 }
 
-func (c *Client) startMultipartUpload(ctx context.Context, fileSize int64, imageID string) (res MultipartUploadStartResponse, err error) {
+func (c *Client) startMultipartUpload(ctx context.Context, fileSize int64, imageID string) (MultipartUpload, error) {
 	// attempt to initiate multipart upload
 	postURL := fmt.Sprintf("v2/imagefile/%s/_multipart", imageID)
 
@@ -381,13 +381,14 @@ func (c *Client) startMultipartUpload(ctx context.Context, fileSize int64, image
 
 	objJSON, err := c.apiCreate(ctx, postURL, body)
 	if err != nil {
-		return MultipartUploadStartResponse{}, err
+		return MultipartUpload{}, err
 	}
 
+	var res MultipartUploadStartResponse
 	if err := json.Unmarshal(objJSON, &res); err != nil {
-		return MultipartUploadStartResponse{}, err
+		return MultipartUpload{}, err
 	}
-	return
+	return res.Data, nil
 }
 
 // remoteSHA256ChecksumSupport parses the 'X-Amz-SignedHeaders' from the
