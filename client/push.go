@@ -24,6 +24,9 @@ const (
 	// prevent a round-trip to the server. The server will return HTTP status
 	// 400 if the requsted multipart upload size is less than 5MiB.
 	minimumPartSize = 64 * 1024 * 1024
+
+	// OptionS3Compliant indicates a 100% S3 compatible object store is being used by backend library server
+	OptionS3Compliant = "s3compliant"
 )
 
 // UploadCallback defines an interface used to perform a call-out to
@@ -305,15 +308,21 @@ func (c *Client) postFileV2Multipart(ctx context.Context, r io.ReadSeeker, fileS
 		return err
 	}
 
-	c.Logger.Logf("Multi-part upload: ID=[%s] totalParts=[%d] partSize=[%d]", response.UploadID, response.TotalParts, fileSize)
+	c.Logger.Logf("Multi-part upload: ID=[%s] totalParts=[%d] partSize=[%d]", response.Data.UploadID, response.Data.TotalParts, fileSize)
+
+	// Enable S3 compliancy mode by default
+	val := response.Data.Options[OptionS3Compliant]
+	s3Compliant := val == "" || val == "true"
+
+	c.Logger.Logf("S3 compliant option: %v", s3Compliant)
 
 	// maintain list of completed parts which will be passed to the completion function
 	completedParts := []CompletedPart{}
 
 	bytesRemaining := fileSize
 
-	for nPart := 1; nPart <= response.TotalParts; nPart++ {
-		partSize := getPartSize(bytesRemaining, response.PartSize)
+	for nPart := 1; nPart <= response.Data.TotalParts; nPart++ {
+		partSize := getPartSize(bytesRemaining, response.Data.PartSize)
 
 		c.Logger.Logf("Uploading part %d (%d bytes)", nPart, partSize)
 
@@ -321,10 +330,11 @@ func (c *Client) postFileV2Multipart(ctx context.Context, r io.ReadSeeker, fileS
 			Source:   r,
 			Size:     partSize,
 			ImageID:  imageID,
-			UploadID: response.UploadID,
+			UploadID: response.Data.UploadID,
 		}
 
-		etag, err := c.multipartUploadPart(ctx, nPart, mgr, callback)
+		// include "X-Amz-Content-Sha256" header only if object store is 100% S3 compatible
+		etag, err := c.multipartUploadPart(ctx, nPart, mgr, callback, s3Compliant)
 		if err != nil {
 			// error uploading part
 			c.Logger.Logf("Error uploading part %d: %v", nPart, err)
@@ -342,11 +352,11 @@ func (c *Client) postFileV2Multipart(ctx context.Context, r io.ReadSeeker, fileS
 		bytesRemaining -= partSize
 	}
 
-	c.Logger.Logf("Uploaded %d parts", response.TotalParts)
+	c.Logger.Logf("Uploaded %d parts", response.Data.TotalParts)
 
 	return c.completeMultipartUpload(ctx, &completedParts, &uploadManager{
 		ImageID:  imageID,
-		UploadID: response.UploadID,
+		UploadID: response.Data.UploadID,
 	})
 }
 
@@ -359,7 +369,7 @@ func getPartSize(bytesRemaining int64, partSize int64) int64 {
 	return bytesRemaining
 }
 
-func (c *Client) startMultipartUpload(ctx context.Context, fileSize int64, imageID string) (MultipartUpload, error) {
+func (c *Client) startMultipartUpload(ctx context.Context, fileSize int64, imageID string) (res MultipartUploadStartResponse, err error) {
 	// attempt to initiate multipart upload
 	postURL := fmt.Sprintf("v2/imagefile/%s/_multipart", imageID)
 
@@ -371,14 +381,13 @@ func (c *Client) startMultipartUpload(ctx context.Context, fileSize int64, image
 
 	objJSON, err := c.apiCreate(ctx, postURL, body)
 	if err != nil {
-		return MultipartUpload{}, err
+		return MultipartUploadStartResponse{}, err
 	}
 
-	var res MultipartUploadStartResponse
 	if err := json.Unmarshal(objJSON, &res); err != nil {
-		return MultipartUpload{}, err
+		return MultipartUploadStartResponse{}, err
 	}
-	return res.Data, nil
+	return
 }
 
 // remoteSHA256ChecksumSupport parses the 'X-Amz-SignedHeaders' from the
@@ -473,18 +482,23 @@ func getPartSHA256Sum(r io.Reader, size int64) (string, error) {
 	return chunkHash, err
 }
 
-func (c *Client) multipartUploadPart(ctx context.Context, partNumber int, m *uploadManager, callback UploadCallback) (string, error) {
-	// calculate sha256sum of part being uploaded
-	chunkHash, err := getPartSHA256Sum(m.Source, int64(m.Size))
-	if err != nil {
-		c.Logger.Logf("Error calculating SHA256 checksum: %v", err)
-		return "", err
-	}
+func (c *Client) multipartUploadPart(ctx context.Context, partNumber int, m *uploadManager, callback UploadCallback, includeSHA256ChecksumHeader bool) (string, error) {
+	var chunkHash string
+	var err error
 
-	// rollback file pointer to beginning of part
-	if _, err := m.Source.Seek(-(int64(m.Size)), io.SeekCurrent); err != nil {
-		c.Logger.Logf("Error repositioning file pointer: %v", err)
-		return "", err
+	if includeSHA256ChecksumHeader {
+		// calculate sha256sum of part being uploaded
+		chunkHash, err = getPartSHA256Sum(m.Source, int64(m.Size))
+		if err != nil {
+			c.Logger.Logf("Error calculating SHA256 checksum: %v", err)
+			return "", err
+		}
+
+		// rollback file pointer to beginning of part
+		if _, err := m.Source.Seek(-(int64(m.Size)), io.SeekCurrent); err != nil {
+			c.Logger.Logf("Error repositioning file pointer: %v", err)
+			return "", err
+		}
 	}
 
 	// send request to cloud-library for presigned PUT url
@@ -515,7 +529,9 @@ func (c *Client) multipartUploadPart(ctx context.Context, partNumber int, m *upl
 
 	// add headers to be signed
 	req.ContentLength = m.Size
-	req.Header.Add("x-amz-content-sha256", chunkHash)
+	if includeSHA256ChecksumHeader {
+		req.Header.Add("x-amz-content-sha256", chunkHash)
+	}
 
 	resp, err := http.DefaultClient.Do(req.WithContext(ctx))
 	if err != nil {
