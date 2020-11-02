@@ -18,6 +18,12 @@ import (
 	jsonresp "github.com/sylabs/json-resp"
 )
 
+const (
+	testQuotaUsageBytes int64 = 64 * 1024 * 1024
+	testQuotaTotalBytes int64 = 1024 * 1024 * 1024
+	testContainerURL          = "/library/entity/collection/container"
+)
+
 func Test_postFile(t *testing.T) {
 
 	tests := []struct {
@@ -86,7 +92,7 @@ func Test_postFile(t *testing.T) {
 
 			callback := &defaultUploadCallback{r: f}
 
-			err = c.postFile(context.Background(), fileSize, tt.imageRef, callback)
+			_, err = c.postFile(context.Background(), fileSize, tt.imageRef, callback)
 
 			if err != nil && !tt.expectError {
 				t.Errorf("Unexpected error: %v", err)
@@ -155,7 +161,18 @@ func (m *v2ImageUploadMockService) MockS3PresignedURLPUTEndpoint(w http.Response
 }
 
 func (m *v2ImageUploadMockService) MockImageFileCompleteEndpoint(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusOK)
+	response := UploadImageComplete{
+		Quota: QuotaResponse{
+			QuotaTotalBytes: testQuotaTotalBytes,
+			QuotaUsageBytes: testQuotaUsageBytes,
+		},
+		ContainerURL: testContainerURL,
+	}
+
+	if err := jsonresp.WriteResponse(w, &response, http.StatusOK); err != nil {
+		fmt.Printf("error: %v\n", err)
+	}
+
 	m.completeCalled = true
 }
 
@@ -206,10 +223,14 @@ func Test_legacyPostFileV2(t *testing.T) {
 			callback := &defaultUploadCallback{r: f}
 
 			// include sha256 checksum in metadata
-			err = c.legacyPostFileV2(context.Background(), fileSize, tt.imageRef, callback, map[string]string{
+			resp, err := c.legacyPostFileV2(context.Background(), fileSize, tt.imageRef, callback, map[string]string{
 				"sha256sum": sha256checksum,
 			})
 			assert.NoErrorf(t, err, "unexpected error")
+
+			assert.Equal(t, testQuotaUsageBytes, resp.Quota.QuotaUsageBytes)
+			assert.Equal(t, testQuotaTotalBytes, resp.Quota.QuotaTotalBytes)
+			assert.Equal(t, testContainerURL, resp.ContainerURL)
 
 			assert.True(t, m.initCalled, "init image upload request was not made")
 			assert.True(t, m.putCalled, "file PUT request was not made")
