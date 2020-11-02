@@ -36,6 +36,8 @@ type UploadCallback interface {
 	InitUpload(int64, io.Reader)
 	// (optionally) can return a proxied Reader
 	GetReader() io.Reader
+	// TerminateUpload is called if the upload operation is interrupted before completion
+	Terminate()
 	// called when the upload operation is complete
 	Finish()
 }
@@ -51,6 +53,9 @@ func (c *defaultUploadCallback) InitUpload(s int64, r io.Reader) {
 
 func (c *defaultUploadCallback) GetReader() io.Reader {
 	return c.r
+}
+
+func (c *defaultUploadCallback) Terminate() {
 }
 
 func (c *defaultUploadCallback) Finish() {
@@ -215,9 +220,10 @@ func (c *Client) UploadImage(ctx context.Context, r io.ReadSeeker, path, arch st
 }
 
 func (c *Client) postFileWrapper(ctx context.Context, r io.ReadSeeker, fileSize int64, imageID string, callback UploadCallback, metadata map[string]string) error {
+	var err error
+
 	// use callback to set up source file reader
 	callback.InitUpload(fileSize, r)
-	defer callback.Finish()
 
 	c.Logger.Log("Now uploading to the library")
 
@@ -226,16 +232,25 @@ func (c *Client) postFileWrapper(ctx context.Context, r io.ReadSeeker, fileSize 
 		// remote does not support sha256, it will be ignored and fallback
 		// to md5. If the remote is aware of sha256, will be used and md5
 		// will be ignored.
-		if err := c.postFileV2(ctx, r, fileSize, imageID, callback, metadata); err != nil {
-			return err
-		}
-	} else if err := c.postFile(ctx, fileSize, imageID, callback); err != nil {
+		err = c.postFileV2(ctx, r, fileSize, imageID, callback, metadata)
+	} else {
+		// fallback to legacy upload
+		err = c.postFile(ctx, fileSize, imageID, callback)
+	}
+
+	if err != nil {
+		callback.Terminate()
+
+		c.Logger.Log("Upload terminated due to error")
+
 		return err
 	}
 
-	c.Logger.Logf("Upload completed OK")
+	callback.Finish()
 
-	return nil
+	c.Logger.Log("Upload completed OK")
+
+	return err
 }
 
 func (c *Client) postFile(ctx context.Context, fileSize int64, imageID string, callback UploadCallback) error {
