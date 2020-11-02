@@ -113,13 +113,7 @@ type UploadImagePartResponse struct {
 	Error *jsonresp.Error `json:"error,omitempty"`
 }
 
-// CompleteMultipartUpload - (Currently empty) data for multipart image upload complete request
-type CompleteMultipartUpload struct {
-	Quota        QuotaResponse `json:"quota"`
-	ContainerURL string        `json:"containerUrl"`
-}
-
-// CompleteMultipartUploadResponse - Response from the API for a multipart image upload complet request
+// CompleteMultipartUploadResponse - Response from the API for a multipart image upload complete request
 type CompleteMultipartUploadResponse struct {
 	Data  UploadImageComplete `json:"data"`
 	Error *jsonresp.Error     `json:"error,omitempty"`
