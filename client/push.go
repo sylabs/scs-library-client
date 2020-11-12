@@ -502,8 +502,12 @@ func (c *Client) legacyPostFileV2(ctx context.Context, fileSize int64, imageID s
 		return nil, fmt.Errorf("error sending upload complete request: %v", err)
 	}
 
-	var uploadResp UploadImageCompleteResponse
+	if len(objJSON) == 0 {
+		// success w/o detailed upload complete response
+		return nil, nil
+	}
 
+	var uploadResp UploadImageCompleteResponse
 	if err := json.Unmarshal(objJSON, &uploadResp); err != nil {
 		return nil, fmt.Errorf("error decoding upload response: %v", err)
 	}
@@ -611,6 +615,12 @@ func (c *Client) completeMultipartUpload(ctx context.Context, completedParts *[]
 		c.Logger.Logf("Error decoding complete multipart upload request: %v", err)
 		return nil, err
 	}
+
+	if res.Data.ContainerURL == "" {
+		// success w/o detailed upload complete response
+		return nil, nil
+	}
+
 	return &res.Data, nil
 }
 
