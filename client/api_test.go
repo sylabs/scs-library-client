@@ -254,7 +254,7 @@ func Test_getEntity(t *testing.T) {
 				t.Errorf("Error initializing client: %v", err)
 			}
 
-			entity, err := c.getEntity(context.Background(), tt.entityRef)
+			entity, err := c.GetEntity(context.Background(), tt.entityRef)
 
 			if err != nil && !tt.expectError {
 				t.Errorf("Unexpected error: %v", err)
@@ -336,7 +336,7 @@ func Test_getCollection(t *testing.T) {
 				t.Errorf("Error initializing client: %v", err)
 			}
 
-			collection, err := c.getCollection(context.Background(), tt.collectionRef)
+			collection, err := c.GetCollection(context.Background(), tt.collectionRef)
 
 			if err != nil && !tt.expectError {
 				t.Errorf("Unexpected error: %v", err)
@@ -418,7 +418,7 @@ func Test_getContainer(t *testing.T) {
 				t.Errorf("Error initializing client: %v", err)
 			}
 
-			container, err := c.getContainer(context.Background(), tt.containerRef)
+			container, err := c.GetContainer(context.Background(), tt.containerRef)
 
 			if err != nil && !tt.expectError {
 				t.Errorf("Unexpected error: %v", err)
@@ -571,7 +571,7 @@ func Test_createEntity(t *testing.T) {
 				t.Errorf("Error initializing client: %v", err)
 			}
 
-			entity, err := c.createEntity(context.Background(), tt.entityRef)
+			entity, err := c.CreateEntity(context.Background(), tt.entityRef)
 
 			if err != nil && !tt.expectError {
 				t.Errorf("Unexpected error: %v", err)
@@ -627,7 +627,7 @@ func Test_createCollection(t *testing.T) {
 				t.Errorf("Error initializing client: %v", err)
 			}
 
-			collection, err := c.createCollection(context.Background(), tt.collectionRef, "5cb9c34d7d960d82f5f5bc50")
+			collection, err := c.CreateCollection(context.Background(), tt.collectionRef, "5cb9c34d7d960d82f5f5bc50")
 
 			if err != nil && !tt.expectError {
 				t.Errorf("Unexpected error: %v", err)
@@ -683,7 +683,7 @@ func Test_createContainer(t *testing.T) {
 				t.Errorf("Error initializing client: %v", err)
 			}
 
-			container, err := c.createContainer(context.Background(), tt.containerRef, "5cb9c34d7d960d82f5f5bc51")
+			container, err := c.CreateContainer(context.Background(), tt.containerRef, "5cb9c34d7d960d82f5f5bc51")
 
 			if err != nil && !tt.expectError {
 				t.Errorf("Unexpected error: %v", err)
@@ -747,7 +747,7 @@ func Test_createImage(t *testing.T) {
 				t.Errorf("Error initializing client: %v", err)
 			}
 
-			image, err := c.createImage(context.Background(), tt.imageRef, "5cb9c34d7d960d82f5f5bc52", "No Description")
+			image, err := c.CreateImage(context.Background(), tt.imageRef, "5cb9c34d7d960d82f5f5bc52", "No Description")
 
 			if err != nil && !tt.expectError {
 				t.Errorf("Unexpected error: %v", err)
@@ -810,7 +810,7 @@ func Test_setTags(t *testing.T) {
 				t.Errorf("Error initializing client: %v", err)
 			}
 
-			err = c.setTags(context.Background(), tt.containerRef, tt.imageRef, tt.tags)
+			err = c.SetTags(context.Background(), tt.containerRef, tt.imageRef, tt.tags)
 
 			if err != nil && !tt.expectError {
 				t.Errorf("Unexpected error: %v", err)
