@@ -12,6 +12,6 @@ func (c *Client) DeleteImage(ctx context.Context, imageRef, arch string) error {
 		return errors.New("imageRef and arch are required")
 	}
 
-	_, err := c.doDeleteRequest(ctx, "v1/images/"+imageRef+"?"+url.QueryEscape("arch="+arch))
+	_, err := c.doDeleteRequest(ctx, "v1/images/"+imageRef+"?arch="+url.QueryEscape(arch))
 	return err
 }
