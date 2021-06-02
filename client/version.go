@@ -14,8 +14,9 @@ import (
 )
 
 const (
-	// API version that supports extended image uploadfunctionality
-	APIVersionV2Upload   = "2.0.0-alpha.1"
+	// APIVersionV2Upload supports extended image upload functionality.
+	APIVersionV2Upload = "2.0.0-alpha.1"
+	// APIVersionV2ArchTags supports extended arch tags functionality.
 	APIVersionV2ArchTags = "2.0.0-alpha.2"
 )
 
