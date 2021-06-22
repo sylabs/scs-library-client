@@ -16,9 +16,9 @@ import (
 	jsonresp "github.com/sylabs/json-resp"
 )
 
-// getEntity returns the specified entity; returns ErrNotFound if entity is not
+// GetEntity returns the specified entity; returns ErrNotFound if entity is not
 // found, otherwise error
-func (c *Client) getEntity(ctx context.Context, entityRef string) (*Entity, error) {
+func (c *Client) GetEntity(ctx context.Context, entityRef string) (*Entity, error) {
 	entJSON, err := c.apiGet(ctx, "v1/entities/"+entityRef)
 	if err != nil {
 		return nil, err
@@ -30,9 +30,9 @@ func (c *Client) getEntity(ctx context.Context, entityRef string) (*Entity, erro
 	return &res.Data, nil
 }
 
-// getCollection returns the specified collection; returns ErrNotFound if
+// GetCollection returns the specified collection; returns ErrNotFound if
 // collection is not found, otherwise error.
-func (c *Client) getCollection(ctx context.Context, collectionRef string) (*Collection, error) {
+func (c *Client) GetCollection(ctx context.Context, collectionRef string) (*Collection, error) {
 	colJSON, err := c.apiGet(ctx, "v1/collections/"+collectionRef)
 	if err != nil {
 		return nil, err
@@ -44,9 +44,9 @@ func (c *Client) getCollection(ctx context.Context, collectionRef string) (*Coll
 	return &res.Data, nil
 }
 
-// getContainer returns container by ref id; returns ErrNotFound if container
+// GetContainer returns container by ref id; returns ErrNotFound if container
 // is not found, otherwise error.
-func (c *Client) getContainer(ctx context.Context, containerRef string) (*Container, error) {
+func (c *Client) GetContainer(ctx context.Context, containerRef string) (*Container, error) {
 	conJSON, err := c.apiGet(ctx, "v1/containers/"+containerRef)
 	if err != nil {
 		return nil, err
@@ -58,8 +58,8 @@ func (c *Client) getContainer(ctx context.Context, containerRef string) (*Contai
 	return &res.Data, nil
 }
 
-// createEntity creates an entity (must be authorized)
-func (c *Client) createEntity(ctx context.Context, name string) (*Entity, error) {
+// CreateEntity creates an entity (must be authorized)
+func (c *Client) CreateEntity(ctx context.Context, name string) (*Entity, error) {
 	e := Entity{
 		Name:        name,
 		Description: "No description",
@@ -75,8 +75,8 @@ func (c *Client) createEntity(ctx context.Context, name string) (*Entity, error)
 	return &res.Data, nil
 }
 
-// createCollection creates a new collection
-func (c *Client) createCollection(ctx context.Context, name string, entityID string) (*Collection, error) {
+// CreateCollection creates a new collection
+func (c *Client) CreateCollection(ctx context.Context, name string, entityID string) (*Collection, error) {
 	newCollection := Collection{
 		Name:        name,
 		Description: "No description",
@@ -93,8 +93,8 @@ func (c *Client) createCollection(ctx context.Context, name string, entityID str
 	return &res.Data, nil
 }
 
-// createContainer creates a container in the specified collection
-func (c *Client) createContainer(ctx context.Context, name string, collectionID string) (*Container, error) {
+// CreateContainer creates a container in the specified collection
+func (c *Client) CreateContainer(ctx context.Context, name string, collectionID string) (*Container, error) {
 	newContainer := Container{
 		Name:        name,
 		Description: "No description",
@@ -111,8 +111,8 @@ func (c *Client) createContainer(ctx context.Context, name string, collectionID 
 	return &res.Data, nil
 }
 
-// createImage creates a new image
-func (c *Client) createImage(ctx context.Context, hash string, containerID string, description string) (*Image, error) {
+// CreateImage creates a new image
+func (c *Client) CreateImage(ctx context.Context, hash string, containerID string, description string) (*Image, error) {
 	i := Image{
 		Hash:        hash,
 		Description: description,
@@ -129,10 +129,10 @@ func (c *Client) createImage(ctx context.Context, hash string, containerID strin
 	return &res.Data, nil
 }
 
-// setTags applies tags to the specified container
-func (c *Client) setTags(ctx context.Context, containerID, imageID string, tags []string) error {
+// SetTags applies tags to the specified container
+func (c *Client) SetTags(ctx context.Context, containerID, imageID string, tags []string) error {
 	// Get existing tags, so we know which will be replaced
-	existingTags, err := c.getTags(ctx, containerID)
+	existingTags, err := c.GetTags(ctx, containerID)
 	if err != nil {
 		return err
 	}
@@ -156,8 +156,8 @@ func (c *Client) setTags(ctx context.Context, containerID, imageID string, tags 
 	return nil
 }
 
-// getTags returns a tag map for the specified containerID
-func (c *Client) getTags(ctx context.Context, containerID string) (TagMap, error) {
+// GetTags returns a tag map for the specified containerID
+func (c *Client) GetTags(ctx context.Context, containerID string) (TagMap, error) {
 	url := fmt.Sprintf("v1/tags/%s", containerID)
 	c.Logger.Logf("getTags calling %s", url)
 	req, err := c.newRequest(http.MethodGet, url, "", nil)

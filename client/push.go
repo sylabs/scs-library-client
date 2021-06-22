@@ -129,13 +129,13 @@ func (c *Client) UploadImage(ctx context.Context, r io.ReadSeeker, path, arch st
 	c.Logger.Logf("Image hash computed as %s", imageHash)
 
 	// Find or create entity
-	entity, err := c.getEntity(ctx, entityName)
+	entity, err := c.GetEntity(ctx, entityName)
 	if err != nil {
 		if err != ErrNotFound {
 			return nil, err
 		}
 		c.Logger.Logf("Entity %s does not exist in library - creating it.", entityName)
-		entity, err = c.createEntity(ctx, entityName)
+		entity, err = c.CreateEntity(ctx, entityName)
 		if err != nil {
 			return nil, err
 		}
@@ -143,14 +143,14 @@ func (c *Client) UploadImage(ctx context.Context, r io.ReadSeeker, path, arch st
 
 	// Find or create collection
 	qualifiedCollectionName := fmt.Sprintf("%s/%s", entityName, collectionName)
-	collection, err := c.getCollection(ctx, qualifiedCollectionName)
+	collection, err := c.GetCollection(ctx, qualifiedCollectionName)
 	if err != nil {
 		if err != ErrNotFound {
 			return nil, err
 		}
 		// create collection
 		c.Logger.Logf("Collection %s does not exist in library - creating it.", collectionName)
-		collection, err = c.createCollection(ctx, collectionName, entity.ID)
+		collection, err = c.CreateCollection(ctx, collectionName, entity.ID)
 		if err != nil {
 			return nil, err
 		}
@@ -158,14 +158,14 @@ func (c *Client) UploadImage(ctx context.Context, r io.ReadSeeker, path, arch st
 
 	// Find or create container
 	computedName := fmt.Sprintf("%s/%s", qualifiedCollectionName, containerName)
-	container, err := c.getContainer(ctx, computedName)
+	container, err := c.GetContainer(ctx, computedName)
 	if err != nil {
 		if err != ErrNotFound {
 			return nil, err
 		}
 		// Create container
 		c.Logger.Logf("Container %s does not exist in library - creating it.", containerName)
-		container, err = c.createContainer(ctx, containerName, collection.ID)
+		container, err = c.CreateContainer(ctx, containerName, collection.ID)
 		if err != nil {
 			return nil, err
 		}
@@ -179,7 +179,7 @@ func (c *Client) UploadImage(ctx context.Context, r io.ReadSeeker, path, arch st
 		}
 		// Create image
 		c.Logger.Logf("Image %s does not exist in library - creating it.", imageHash)
-		image, err = c.createImage(ctx, "sha256."+imageHash, container.ID, description)
+		image, err = c.CreateImage(ctx, "sha256."+imageHash, container.ID, description)
 		if err != nil {
 			return nil, err
 		}
@@ -222,7 +222,7 @@ func (c *Client) UploadImage(ctx context.Context, r io.ReadSeeker, path, arch st
 
 	c.Logger.Logf("This tag will replace any already uploaded with the same name.")
 
-	if err := c.setTags(ctx, container.ID, image.ID, append(tags, parsedTags...)); err != nil {
+	if err := c.SetTags(ctx, container.ID, image.ID, append(tags, parsedTags...)); err != nil {
 		return nil, err
 	}
 	return res, nil
