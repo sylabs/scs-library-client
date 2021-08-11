@@ -11,7 +11,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -59,7 +58,7 @@ func (m *mockRawService) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func Test_DownloadImage(t *testing.T) {
-	f, err := ioutil.TempFile("", "test")
+	f, err := os.CreateTemp("", "test")
 	if err != nil {
 		t.Fatalf("Error creating a temporary file for testing")
 	}
@@ -119,11 +118,11 @@ func Test_DownloadImage(t *testing.T) {
 			}
 
 			if tt.checkContent {
-				fileContent, err := ioutil.ReadFile(tt.outFile)
+				fileContent, err := os.ReadFile(tt.outFile)
 				if err != nil {
 					t.Errorf("Error reading test output file: %v", err)
 				}
-				testContent, err := ioutil.ReadFile(tt.testFile)
+				testContent, err := os.ReadFile(tt.testFile)
 				if err != nil {
 					t.Errorf("Error reading test file: %v", err)
 				}

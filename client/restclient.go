@@ -12,7 +12,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 
@@ -93,7 +92,7 @@ func (c *Client) commonRequestHandler(ctx context.Context, method string, path s
 		}
 		return []byte{}, fmt.Errorf("request did not succeed: http status code: %d", res.StatusCode)
 	}
-	objJSON, err = ioutil.ReadAll(res.Body)
+	objJSON, err = io.ReadAll(res.Body)
 	if err != nil {
 		return []byte{}, fmt.Errorf("error reading response from server:\n\t%v", err)
 	}
