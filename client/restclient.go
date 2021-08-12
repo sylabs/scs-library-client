@@ -19,10 +19,8 @@ import (
 	jsonresp "github.com/sylabs/json-resp"
 )
 
-var (
-	// ErrNotFound is returned by when a resource is not found (http status 404)
-	ErrNotFound = errors.New("not found")
-)
+// ErrNotFound is returned by when a resource is not found (http status 404)
+var ErrNotFound = errors.New("not found")
 
 func (c *Client) apiGet(ctx context.Context, path string) (objJSON []byte, err error) {
 	c.Logger.Logf("apiGet calling %s", path)

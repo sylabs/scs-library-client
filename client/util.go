@@ -55,7 +55,6 @@ func IsImageHash(refPart string) bool {
 }
 
 func ParseLibraryPath(libraryRef string) (entity string, collection string, container string, tags []string) {
-
 	libraryRef = strings.TrimPrefix(libraryRef, "library://")
 
 	refParts := strings.Split(libraryRef, "/")
@@ -106,7 +105,6 @@ func IDInSlice(a string, list []string) bool {
 
 // SliceWithoutID returns slice with specified ID removed
 func SliceWithoutID(list []string, a string) []string {
-
 	var newList []string
 
 	for _, b := range list {

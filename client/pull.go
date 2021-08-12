@@ -21,7 +21,6 @@ import (
 // within the context. It is recommended to use a large value (ie. 1800 seconds)
 // to prevent timeout when downloading large images.
 func (c *Client) DownloadImage(ctx context.Context, w io.Writer, arch, path, tag string, callback func(int64, io.Reader, io.Writer) error) error {
-
 	if arch != "" && !c.apiAtLeast(ctx, APIVersionV2ArchTags) {
 		c.Logger.Logf("This library does not support architecture specific tags")
 		c.Logger.Logf("The image returned may not be the requested architecture")
@@ -78,5 +77,4 @@ func (c *Client) DownloadImage(ctx context.Context, w io.Writer, arch, path, tag
 	c.Logger.Logf("Download complete")
 
 	return nil
-
 }

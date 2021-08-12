@@ -150,8 +150,10 @@ var (
 		Entities:    []Entity{testEntity},
 		Collections: []Collection{testCollection},
 		Containers:  []Container{testContainer},
-		Images: []Image{testImage, testImage2, testImage3, testImage4,
-			testImage5, testImage6, testImage7},
+		Images: []Image{
+			testImage, testImage2, testImage3, testImage4,
+			testImage5, testImage6, testImage7,
+		},
 	}
 )
 
@@ -179,7 +181,6 @@ func (m *mockService) Stop() {
 }
 
 func (m *mockService) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-
 	if m.reqCallback != nil {
 		m.reqCallback(r, m.t)
 	}
@@ -191,7 +192,6 @@ func (m *mockService) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func Test_getEntity(t *testing.T) {
-
 	tests := []struct {
 		description  string
 		code         int
@@ -237,7 +237,6 @@ func Test_getEntity(t *testing.T) {
 	// Loop over test cases
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-
 			m := mockService{
 				t:           t,
 				code:        tt.code,
@@ -273,7 +272,6 @@ func Test_getEntity(t *testing.T) {
 }
 
 func Test_getCollection(t *testing.T) {
-
 	tests := []struct {
 		description      string
 		code             int
@@ -319,7 +317,6 @@ func Test_getCollection(t *testing.T) {
 	// Loop over test cases
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-
 			m := mockService{
 				t:           t,
 				code:        tt.code,
@@ -355,7 +352,6 @@ func Test_getCollection(t *testing.T) {
 }
 
 func Test_getContainer(t *testing.T) {
-
 	tests := []struct {
 		description     string
 		code            int
@@ -401,7 +397,6 @@ func Test_getContainer(t *testing.T) {
 	// Loop over test cases
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-
 			m := mockService{
 				t:           t,
 				code:        tt.code,
@@ -437,7 +432,6 @@ func Test_getContainer(t *testing.T) {
 }
 
 func Test_getImage(t *testing.T) {
-
 	tests := []struct {
 		description string
 		code        int
@@ -487,7 +481,6 @@ func Test_getImage(t *testing.T) {
 	// Loop over test cases
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-
 			m := mockService{
 				t:           t,
 				code:        tt.code,
@@ -523,7 +516,6 @@ func Test_getImage(t *testing.T) {
 }
 
 func Test_createEntity(t *testing.T) {
-
 	tests := []struct {
 		description  string
 		code         int
@@ -554,7 +546,6 @@ func Test_createEntity(t *testing.T) {
 	// Loop over test cases
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-
 			m := mockService{
 				t:           t,
 				code:        tt.code,
@@ -587,7 +578,6 @@ func Test_createEntity(t *testing.T) {
 }
 
 func Test_createCollection(t *testing.T) {
-
 	tests := []struct {
 		description      string
 		code             int
@@ -610,7 +600,6 @@ func Test_createCollection(t *testing.T) {
 	// Loop over test cases
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-
 			m := mockService{
 				t:           t,
 				code:        tt.code,
@@ -643,7 +632,6 @@ func Test_createCollection(t *testing.T) {
 }
 
 func Test_createContainer(t *testing.T) {
-
 	tests := []struct {
 		description     string
 		code            int
@@ -666,7 +654,6 @@ func Test_createContainer(t *testing.T) {
 	// Loop over test cases
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-
 			m := mockService{
 				t:           t,
 				code:        tt.code,
@@ -699,7 +686,6 @@ func Test_createContainer(t *testing.T) {
 }
 
 func Test_createImage(t *testing.T) {
-
 	tests := []struct {
 		description string
 		code        int
@@ -730,7 +716,6 @@ func Test_createImage(t *testing.T) {
 	// Loop over test cases
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-
 			m := mockService{
 				t:           t,
 				code:        tt.code,
@@ -763,7 +748,6 @@ func Test_createImage(t *testing.T) {
 }
 
 func Test_setTags(t *testing.T) {
-
 	tests := []struct {
 		description  string
 		code         int
@@ -794,7 +778,6 @@ func Test_setTags(t *testing.T) {
 	// Loop over test cases
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-
 			m := mockService{
 				t:           t,
 				code:        tt.code,
@@ -823,7 +806,6 @@ func Test_setTags(t *testing.T) {
 }
 
 func Test_setTagsV2(t *testing.T) {
-
 	tests := []struct {
 		description  string
 		code         int
@@ -857,7 +839,6 @@ func Test_setTagsV2(t *testing.T) {
 	// Loop over test cases
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-
 			m := mockService{
 				t:           t,
 				code:        tt.code,
