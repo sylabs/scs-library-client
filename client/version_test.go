@@ -66,7 +66,6 @@ func Test_apiAtLeast(t *testing.T) {
 			if !result && tt.isV2APIArchTags {
 				t.Errorf("Unexpected false for API version supporting V2 ArchTags.")
 			}
-
 		})
 	}
 }

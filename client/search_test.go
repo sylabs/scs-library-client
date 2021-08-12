@@ -69,7 +69,6 @@ func Test_Search(t *testing.T) {
 	// Loop over test cases
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-
 			m := mockService{
 				t:           t,
 				code:        tt.code,

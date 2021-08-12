@@ -42,7 +42,6 @@ func (m *mockRawService) Stop() {
 }
 
 func (m *mockRawService) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-
 	if m.reqCallback != nil {
 		m.reqCallback(r, m.t)
 	}
@@ -57,11 +56,9 @@ func (m *mockRawService) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		m.t.Errorf("Test HTTP server unable to output file: %v", err)
 	}
-
 }
 
 func Test_DownloadImage(t *testing.T) {
-
 	f, err := ioutil.TempFile("", "test")
 	if err != nil {
 		t.Fatalf("Error creating a temporary file for testing")
@@ -90,7 +87,6 @@ func Test_DownloadImage(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-
 			m := mockRawService{
 				t:        t,
 				code:     tt.code,
@@ -106,7 +102,7 @@ func Test_DownloadImage(t *testing.T) {
 				t.Errorf("Error initializing client: %v", err)
 			}
 
-			out, err := os.OpenFile(tt.outFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0777)
+			out, err := os.OpenFile(tt.outFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o777)
 			if err != nil {
 				t.Errorf("Error opening file %s for writing: %v", tt.outFile, err)
 			}

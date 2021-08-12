@@ -158,7 +158,6 @@ func Test_ParseLibraryPath(t *testing.T) {
 }
 
 func TestIdInSlice(t *testing.T) {
-
 	trueID := "5cb9c34d7d960d82f5f5bc58"
 
 	slice := []string{trueID, "5cb9c34d7d960d82f5f5bc59", "5cb9c34d7d960d82f5f5bc5a", "5cb9c34d7d960d82f5f5bc5b"}
@@ -180,11 +179,9 @@ func TestIdInSlice(t *testing.T) {
 	if IDInSlice(falseID, slice) {
 		t.Errorf("should not find %v in %v", trueID, slice)
 	}
-
 }
 
 func TestSliceWithoutID(t *testing.T) {
-
 	a := "5cb9c34d7d960d82f5f5bc63"
 	b := "5cb9c34d7d960d82f5f5bc64"
 	c := "5cb9c34d7d960d82f5f5bc65"
@@ -211,7 +208,6 @@ func TestSliceWithoutID(t *testing.T) {
 }
 
 func TestStringInSlice(t *testing.T) {
-
 	trueID := "5cb9c34d7d960d82f5f5bc68"
 
 	slice := []string{trueID, "5cb9c34d7d960d82f5f5bc69", "5cb9c34d7d960d82f5f5bc6a", "5cb9c34d7d960d82f5f5bc6b"}
@@ -233,11 +229,9 @@ func TestStringInSlice(t *testing.T) {
 	if StringInSlice(falseID, slice) {
 		t.Errorf("should not find %v in %v", trueID, slice)
 	}
-
 }
 
 func Test_imageHash(t *testing.T) {
-
 	expectedSha256 := "sha256.d7d356079af905c04e5ae10711ecf3f5b34385e9b143c5d9ddbf740665ce2fb7"
 
 	_, err := ImageHash("no_such_file.txt")
@@ -255,7 +249,6 @@ func Test_imageHash(t *testing.T) {
 }
 
 func Test_sha256sum(t *testing.T) {
-
 	expectedSha256 := "d7d356079af905c04e5ae10711ecf3f5b34385e9b143c5d9ddbf740665ce2fb7"
 
 	const filename = "test_data/test_sha256"

@@ -14,8 +14,7 @@ type UploadImageRequest struct {
 
 // UploadImageCompleteRequest is sent to complete V2 image upload; it is
 // currently unused.
-type UploadImageCompleteRequest struct {
-}
+type UploadImageCompleteRequest struct{}
 
 // MultipartUploadStartRequest is sent to initiate V2 multipart image upload
 type MultipartUploadStartRequest struct {
