@@ -69,7 +69,7 @@ type Entity struct {
 	Collections []string `json:"collections"`
 	Size        int64    `json:"size"`
 	Quota       int64    `json:"quota"`
-	// DefaultPrivate set true will make any new Collections in ths entity
+	// DefaultPrivate set true will make any new Collections in this entity
 	// private at the time of creation.
 	DefaultPrivate bool `json:"defaultPrivate"`
 	// CustomData can hold a user-provided string for integration purposes

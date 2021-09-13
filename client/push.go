@@ -22,7 +22,7 @@ const (
 	// minimumPartSize is the minimum size of a part in a multipart upload;
 	// this liberty is taken by defining this value on the client-side to
 	// prevent a round-trip to the server. The server will return HTTP status
-	// 400 if the requsted multipart upload size is less than 5MiB.
+	// 400 if the requested multipart upload size is less than 5MiB.
 	minimumPartSize = 64 * 1024 * 1024
 
 	// OptionS3Compliant indicates a 100% S3 compatible object store is being used by backend library server
@@ -337,7 +337,7 @@ func (c *Client) postFileV2Multipart(ctx context.Context, r io.ReadSeeker, fileS
 
 	c.Logger.Logf("Multi-part upload: ID=[%s] totalParts=[%d] partSize=[%d]", response.UploadID, response.TotalParts, fileSize)
 
-	// Enable S3 compliancy mode by default
+	// Enable S3 compliance mode by default
 	val := response.Options[OptionS3Compliant]
 	s3Compliant := val == "" || val == "true"
 
