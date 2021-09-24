@@ -94,8 +94,10 @@ type partSpec struct {
 type Downloader struct {
 	// Concurrency defines concurrency for multi-part downloads.
 	Concurrency uint
+
 	// PartSize specifies size of part for multi-part downloads. Default is 5 MiB.
 	PartSize int64
+
 	// BufferSize specifies buffer size used for multi-part downloader routine.
 	// Default is 32 KiB.
 	BufferSize int64
@@ -201,9 +203,14 @@ type ProgressBar interface {
 	Wait()
 }
 
-// ConcurrentDownloadImage implements a multi-part (concurrent) downloader for Cloud Library
-// images. spec is used to define transfer parameters. pb is an optional progress bar interface.
-// If pb is nil, NoopProgressBar is used.
+// ConcurrentDownloadImage implements a multi-part (concurrent) downloader for
+// Cloud Library images. spec is used to define transfer parameters. pb is an
+// optional progress bar interface.  If pb is nil, NoopProgressBar is used.
+//
+// The downloader will handle source files of all sizes and is not limited to
+// only files larger than Downloader.PartSize. It will automatically adjust the
+// concurrency for source files that do not meet minimum size for multi-part
+// downloads.
 func (c *Client) ConcurrentDownloadImage(ctx context.Context, dst *os.File, arch, path, tag string, spec *Downloader, pb ProgressBar) error {
 	if arch != "" && !c.apiAtLeast(ctx, APIVersionV2ArchTags) {
 		c.Logger.Logf("This library does not support architecture specific tags")
