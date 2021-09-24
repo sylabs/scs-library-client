@@ -321,6 +321,10 @@ func (c *Client) ConcurrentDownloadImage(ctx context.Context, dst *os.File, arch
 
 	// wait on errgroup
 	err = g.Wait()
+	if err != nil {
+		// cancel/remove progress bar on error
+		pb.Abort(true)
+	}
 
 	// wait on progress bar
 	pb.Wait()
