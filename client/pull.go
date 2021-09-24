@@ -83,16 +83,22 @@ func (c *Client) DownloadImage(ctx context.Context, w io.Writer, arch, path, tag
 	return nil
 }
 
-// bufferSpec defines one chunk of chunked download.
-type bufferSpec struct {
-	Begin int64
-	End   int64
+// partSpec defines one part of multi-part (concurrent) download.
+type partSpec struct {
+	Start      int64
+	End        int64
+	BufferSize int64
 }
 
-// DownloadSpec defines # of requests and chunk size for download operation.
-type DownloadSpec struct {
-	Requests  int
-	ChunkSize int64
+// Downloader defines concurrency (# of requests) and part size for download operation.
+type Downloader struct {
+	// Concurrency defines concurrency for multi-part downloads.
+	Concurrency uint
+	// PartSize specifies size of part for multi-part downloads. Default is 5 MiB.
+	PartSize int64
+	// BufferSize specifies buffer size used for multi-part downloader routine.
+	// Default is 32 KiB.
+	BufferSize int64
 }
 
 // httpGetRangeRequest performs HTTP GET range request to URL specified by 'u' in range start-end.
@@ -107,36 +113,32 @@ func httpGetRangeRequest(ctx context.Context, url string, start, end int64) (*ht
 	return http.DefaultClient.Do(req)
 }
 
-const (
-	_        = iota
-	kilobyte = 1 << (10 * iota)
-)
-
-// downloadFileChunk writes range to file fp as specified in bufferSpec.
-func downloadFileChunk(ctx context.Context, dst *os.File, url string, rangeStart, rangeEnd int64, bar ProgressBarInterface) error {
-	resp, err := httpGetRangeRequest(ctx, url, rangeStart, rangeEnd)
+// downloadFilePart writes range to dst as specified in bufferSpec.
+func downloadFilePart(ctx context.Context, dst *os.File, url string, ps *partSpec, pb ProgressBar) error {
+	resp, err := httpGetRangeRequest(ctx, url, ps.Start, ps.End)
 	if err != nil {
 		return err
 	}
 	defer resp.Body.Close()
 
-	// use 32KiB buffer to read source
-	buf := make([]byte, 32*kilobyte)
+	// allocate transfer buffer for part
+	buf := make([]byte, ps.BufferSize)
 
-	for bytesRead := int64(0); bytesRead < rangeEnd-rangeStart+1; {
+	for bytesRead := int64(0); bytesRead < ps.End-ps.Start+1; {
 		n, err := io.ReadFull(resp.Body, buf)
 
 		// EOF and unexpected EOF shouldn't be handled as errors since short
-		// reads are expected if the chunk size is less than buffer size.
+		// reads are expected if the part size is less than buffer size e.g.
+		// the last part if part isn't on size boundary.
 		if err != nil && n == 0 {
 			return err
 		}
 
-		bar.IncrBy(n)
+		pb.IncrBy(n)
 
 		// WriteAt() is a wrapper around pwrite() which is an atomic
 		// seek-and-write operation.
-		if _, err := dst.WriteAt(buf[:n], rangeStart+bytesRead); err != nil {
+		if _, err := dst.WriteAt(buf[:n], ps.Start+bytesRead); err != nil {
 			return err
 		}
 		bytesRead += int64(n)
@@ -145,10 +147,10 @@ func downloadFileChunk(ctx context.Context, dst *os.File, url string, rangeStart
 }
 
 // downloadWorker is a worker func for processing jobs in stripes channel.
-func downloadWorker(ctx context.Context, fp *os.File, url string, stripes <-chan bufferSpec, bar ProgressBarInterface) func() error {
+func downloadWorker(ctx context.Context, dst *os.File, url string, parts <-chan partSpec, pb ProgressBar) func() error {
 	return func() error {
-		for bs := range stripes {
-			if err := downloadFileChunk(ctx, fp, url, bs.Begin, bs.End, bar); err != nil {
+		for ps := range parts {
+			if err := downloadFilePart(ctx, dst, url, &ps, pb); err != nil {
 				return err
 			}
 		}
@@ -157,7 +159,7 @@ func downloadWorker(ctx context.Context, fp *os.File, url string, stripes <-chan
 }
 
 func getContentLength(ctx context.Context, url string) (int64, error) {
-	// get first file chunk to determine total size.
+	// Perform short request to determine content length.
 	resp, err := httpGetRangeRequest(ctx, url, 0, 1024)
 	if err != nil {
 		return 0, err
@@ -175,19 +177,34 @@ func getContentLength(ctx context.Context, url string) (int64, error) {
 	return strconv.ParseInt(vals[1], 0, 64)
 }
 
+// NoopProgressBar implements ProgressBarInterface to allow disabling the progress bar
 type NoopProgressBar struct{}
 
+// Init is a no-op
 func (*NoopProgressBar) Init(int64) {}
-func (*NoopProgressBar) IncrBy(int) {}
-func (*NoopProgressBar) Wait()      {}
 
-type ProgressBarInterface interface {
+// IncrBy is a no-op
+func (*NoopProgressBar) IncrBy(int) {}
+
+// Wait is a no-op
+func (*NoopProgressBar) Wait() {}
+
+// ProgressBar provides a minimal interface for interacting with a progress bar.
+// Init is called prior to concurrent download operation.
+type ProgressBar interface {
+	// Initialize progress bar. Argument is size of file to set progress bar limit.
 	Init(int64)
+	// IncrBy increments the progress bar. It is called after each concurrent
+	// buffer transfer.
 	IncrBy(int)
+	// Wait waits for the progress bar to complete.
 	Wait()
 }
 
-func (c *Client) ConcurrentDownloadImage(ctx context.Context, fp *os.File, arch, path, tag string, spec *DownloadSpec, pb ProgressBarInterface) error {
+// ConcurrentDownloadImage implements a multi-part (concurrent) downloader for Cloud Library
+// images. spec is used to define transfer parameters. pb is an optional progress bar interface.
+// If pb is nil, NoopProgressBar is used.
+func (c *Client) ConcurrentDownloadImage(ctx context.Context, dst *os.File, arch, path, tag string, spec *Downloader, pb ProgressBar) error {
 	if arch != "" && !c.apiAtLeast(ctx, APIVersionV2ArchTags) {
 		c.Logger.Logf("This library does not support architecture specific tags")
 		c.Logger.Logf("The image returned may not be the requested architecture")
@@ -240,9 +257,13 @@ func (c *Client) ConcurrentDownloadImage(ctx context.Context, fp *os.File, arch,
 		return err
 	}
 
-	numParts := int(1 + (contentLength-1)/spec.ChunkSize)
+	numParts := uint(1 + (contentLength-1)/spec.PartSize)
 
-	jobs := make(chan bufferSpec, numParts)
+	c.Logger.Logf("size: %d, parts: %d, concurrency: %d, partsize: %d, bufsize: %d",
+		contentLength, numParts, spec.Concurrency, spec.PartSize, spec.BufferSize,
+	)
+
+	jobs := make(chan partSpec, numParts)
 
 	g, ctx := errgroup.WithContext(ctx)
 
@@ -253,22 +274,32 @@ func (c *Client) ConcurrentDownloadImage(ctx context.Context, fp *os.File, arch,
 	// initialize progress bar
 	pb.Init(contentLength)
 
+	// if spec.Requests is greater than number of parts for requested file,
+	// set concurrency to number of parts
+	concurrency := spec.Concurrency
+	if numParts < spec.Concurrency {
+		concurrency = numParts
+	}
+
 	// start workers to manage concurrent HTTP requests
-	for workerID := 0; workerID <= spec.Requests; workerID++ {
-		g.Go(downloadWorker(ctx, fp, url, jobs, pb))
+	for workerID := uint(0); workerID <= concurrency; workerID++ {
+		g.Go(downloadWorker(ctx, dst, url, jobs, pb))
 	}
 
 	// iterate over parts, adding to job queue
-	for part := 0; part < numParts; part++ {
-		chunkSize := spec.ChunkSize
+	for part := uint(0); part < numParts; part++ {
+		partSize := spec.PartSize
 		if part == numParts-1 {
-			chunkSize = contentLength - int64(numParts-1)*spec.ChunkSize
+			partSize = contentLength - int64(numParts-1)*spec.PartSize
 		}
 
-		b := bufferSpec{Begin: int64(part) * spec.ChunkSize}
-		b.End = b.Begin + chunkSize - 1
+		ps := partSpec{
+			Start:      int64(part) * spec.PartSize,
+			End:        int64(part)*spec.PartSize + partSize - 1,
+			BufferSize: spec.BufferSize,
+		}
 
-		jobs <- b
+		jobs <- ps
 	}
 
 	close(jobs)
