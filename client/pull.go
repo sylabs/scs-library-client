@@ -188,6 +188,9 @@ func (*NoopProgressBar) Init(int64) {}
 // IncrBy is a no-op
 func (*NoopProgressBar) IncrBy(int) {}
 
+// Abort is a no-op
+func (*NoopProgressBar) Abort(bool) {}
+
 // Wait is a no-op
 func (*NoopProgressBar) Wait() {}
 
@@ -196,9 +199,14 @@ func (*NoopProgressBar) Wait() {}
 type ProgressBar interface {
 	// Initialize progress bar. Argument is size of file to set progress bar limit.
 	Init(int64)
+
 	// IncrBy increments the progress bar. It is called after each concurrent
 	// buffer transfer.
 	IncrBy(int)
+
+	// Abort terminates the progress bar.
+	Abort(bool)
+
 	// Wait waits for the progress bar to complete.
 	Wait()
 }
