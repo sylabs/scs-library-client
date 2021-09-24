@@ -162,13 +162,13 @@ func getContentLength(ctx context.Context, url string) (int64, error) {
 	if err != nil {
 		return 0, err
 	}
+	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusPartialContent {
 		if resp.StatusCode == http.StatusNotFound {
 			return 0, fmt.Errorf("requested image was not found in the library")
-		} else {
-			return 0, fmt.Errorf("unexpected HTTP status: %d", resp.StatusCode)
 		}
+		return 0, fmt.Errorf("unexpected HTTP status: %d", resp.StatusCode)
 	}
 
 	vals := strings.Split(resp.Header.Get("Content-Range"), "/")
