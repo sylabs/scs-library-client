@@ -185,6 +185,9 @@ type NoopProgressBar struct{}
 // Init is a no-op
 func (*NoopProgressBar) Init(int64) {}
 
+// ProxyReader is a no-op
+func (*NoopProgressBar) ProxyReader(r io.Reader) io.ReadCloser { return io.NopCloser(r) }
+
 // IncrBy is a no-op
 func (*NoopProgressBar) IncrBy(int) {}
 
@@ -199,6 +202,10 @@ func (*NoopProgressBar) Wait() {}
 type ProgressBar interface {
 	// Initialize progress bar. Argument is size of file to set progress bar limit.
 	Init(int64)
+
+	// ProxyReader wraps r with metrics required for progress tracking. Only useful for
+	// single stream downloads.
+	ProxyReader(io.Reader) io.ReadCloser
 
 	// IncrBy increments the progress bar. It is called after each concurrent
 	// buffer transfer.
@@ -220,6 +227,10 @@ type ProgressBar interface {
 // concurrency for source files that do not meet minimum size for multi-part
 // downloads.
 func (c *Client) ConcurrentDownloadImage(ctx context.Context, dst *os.File, arch, path, tag string, spec *Downloader, pb ProgressBar) error {
+	if pb == nil {
+		pb = &NoopProgressBar{}
+	}
+
 	if arch != "" && !c.apiAtLeast(ctx, APIVersionV2ArchTags) {
 		c.Logger.Logf("This library does not support architecture specific tags")
 		c.Logger.Logf("The image returned may not be the requested architecture")
@@ -261,6 +272,13 @@ func (c *Client) ConcurrentDownloadImage(ctx context.Context, dst *os.File, arch
 		return fmt.Errorf("requested image was not found in the library")
 	}
 
+	if res.StatusCode == http.StatusOK {
+		// Library endpoint does not provide HTTP redirection response, treat as single stream, direct download
+		c.Logger.Logf("Library endpoint does not support concurrent downloads; reverting to single stream")
+
+		return c.singleStreamDownload(ctx, dst, res, pb)
+	}
+
 	if res.StatusCode != http.StatusSeeOther {
 		return fmt.Errorf("unexpected HTTP status %d: %v", res.StatusCode, err)
 	}
@@ -281,10 +299,6 @@ func (c *Client) ConcurrentDownloadImage(ctx context.Context, dst *os.File, arch
 	jobs := make(chan partSpec, numParts)
 
 	g, ctx := errgroup.WithContext(ctx)
-
-	if pb == nil {
-		pb = &NoopProgressBar{}
-	}
 
 	// initialize progress bar
 	pb.Init(contentLength)
@@ -330,4 +344,24 @@ func (c *Client) ConcurrentDownloadImage(ctx context.Context, dst *os.File, arch
 	pb.Wait()
 
 	return err
+}
+
+func (c *Client) singleStreamDownload(ctx context.Context, fp *os.File, res *http.Response, pb ProgressBar) error {
+	contentLength := int64(-1)
+	val := res.Header.Get("Content-Length")
+	if val != "" {
+		var err error
+		if contentLength, err = strconv.ParseInt(val, 0, 64); err != nil {
+			return err
+		}
+	}
+	pb.Init(contentLength)
+
+	proxyReader := pb.ProxyReader(res.Body)
+	defer proxyReader.Close()
+
+	if _, err := io.Copy(fp, proxyReader); err != nil {
+		return err
+	}
+	return nil
 }
