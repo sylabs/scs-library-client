@@ -1,7 +1,9 @@
 linters:
   disable-all: true
   enable:
+    - bidichk
     - bodyclose
+    - contextcheck
     - deadcode
     - depguard
     - dogsled
@@ -16,6 +18,7 @@ linters:
     - gosimple
     - govet
     - ineffassign
+    - ireturn
     - misspell
     - nakedret
     - prealloc
@@ -24,6 +27,7 @@ linters:
     - staticcheck
     - structcheck
     - stylecheck
+    - tenv
     - typecheck
     - unused
     - varcheck
