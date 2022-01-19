@@ -14,7 +14,6 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"time"
 
 	jsonresp "github.com/sylabs/json-resp"
 	"golang.org/x/sync/errgroup"
@@ -254,7 +253,6 @@ func (c *Client) ConcurrentDownloadImage(ctx context.Context, dst *os.File, arch
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			return http.ErrUseLastResponse
 		},
-		Timeout: 10 * time.Second,
 	}
 
 	req, err := c.newRequest(http.MethodGet, apiPath, q.Encode(), nil)
