@@ -282,6 +282,10 @@ func (c *Client) ConcurrentDownloadImage(ctx context.Context, dst *os.File, arch
 	}
 
 	url := res.Header.Get("Location")
+	// If URL is not absolute, add it to our client BaseURL
+	if !strings.HasPrefix(url, "http://") && !strings.HasPrefix(url, "https://") {
+		url = c.BaseURL.String() + url
+	}
 
 	contentLength, err := getContentLength(ctx, url)
 	if err != nil {
