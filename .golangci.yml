@@ -3,11 +3,14 @@ linters:
   enable:
     - bidichk
     - bodyclose
+    - containedctx
     - contextcheck
     - deadcode
+    - decorder
     - depguard
     - dogsled
     - errcheck
+    - errchkjson
     - gochecknoinits
     - goconst
     - gocritic
@@ -17,8 +20,10 @@ linters:
     - goprintffuncname
     - gosimple
     - govet
+    - grouper
     - ineffassign
     - ireturn
+    - maintidx
     - misspell
     - nakedret
     - prealloc

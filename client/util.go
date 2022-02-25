@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020, Sylabs Inc. All rights reserved.
+// Copyright (c) 2018-2022, Sylabs Inc. All rights reserved.
 // This software is licensed under a 3-clause BSD license. Please consult the
 // LICENSE.md file distributed with the sources of this project regarding your
 // rights to use or distribute this software.
@@ -127,8 +127,9 @@ func StringInSlice(a string, list []string) bool {
 
 // PrettyPrint - Debug helper, print nice json for any interface
 func PrettyPrint(v interface{}) {
-	b, _ := json.MarshalIndent(v, "", "  ")
-	println(string(b))
+	if b, err := json.MarshalIndent(v, "", "  "); err == nil {
+		println(string(b))
+	}
 }
 
 // ImageHash returns the appropriate hash for a provided image file
