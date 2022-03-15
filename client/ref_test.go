@@ -1,4 +1,4 @@
-// Copyright (c) 2018, Sylabs Inc. All rights reserved.
+// Copyright (c) 2018-2022, Sylabs Inc. All rights reserved.
 // This software is licensed under a 3-clause BSD license. Please consult the
 // LICENSE.md file distributed with the sources of this project regarding your
 // rights to use or distribute this software.
@@ -107,38 +107,26 @@ func TestParse(t *testing.T) {
 		// Test valid abbreviated paths (project).
 		{"AbbreviatedPath", "library:project", false, nil, "", "project", nil},
 		{"AbbreviatedPathAndTag", "library:project:tag", false, nil, "", "project", []string{"tag"}},
-		{"AbbreviatedPathAndSlash", "library:/project", false, nil, "", "/project", nil},
-		{"AbbreviatedPathAndSlashAndTag", "library:/project:tag", false, nil, "", "/project", []string{"tag"}},
-		{"AbbreviatedPathAndSlashes", "library:///project", false, nil, "", "/project", nil},
-		{"AbbreviatedPathAndSlashesAndTag", "library:///project:tag", false, nil, "", "/project", []string{"tag"}},
-		{"AbbreviatedPathAndHost", "library://host/project", false, nil, "host", "/project", nil},
-		{"AbbreviatedPathAndHostAndTag", "library://host/project:tag", false, nil, "host", "/project", []string{"tag"}},
-		{"AbbreviatedPathAndHostPort", "library://host:443/project", false, nil, "host:443", "/project", nil},
-		{"AbbreviatedPathAndHostPortAndTag", "library://host:443/project:tag", false, nil, "host:443", "/project", []string{"tag"}},
+		{"AbbreviatedPathAndSlash", "library:/project", false, nil, "", "project", nil},
+		{"AbbreviatedPathAndSlashAndTag", "library:/project:tag", false, nil, "", "project", []string{"tag"}},
+		{"AbbreviatedPathAndSlashes", "library:///project", false, nil, "", "project", nil},
+		{"AbbreviatedPathAndSlashesAndTag", "library:///project:tag", false, nil, "", "project", []string{"tag"}},
+		{"AbbreviatedPathAndHost", "library://host/project", false, nil, "host", "project", nil},
+		{"AbbreviatedPathAndHostAndTag", "library://host/project:tag", false, nil, "host", "project", []string{"tag"}},
+		{"AbbreviatedPathAndHostPort", "library://host:443/project", false, nil, "host:443", "project", nil},
+		{"AbbreviatedPathAndHostPortAndTag", "library://host:443/project:tag", false, nil, "host:443", "project", []string{"tag"}},
 
-		// Test valid paths (entity/project).
-		{"Path", "library:entity/project", false, nil, "", "entity/project", nil},
-		{"PathAndTag", "library:entity/project:tag", false, nil, "", "entity/project", []string{"tag"}},
-		{"PathAndSlash", "library:/entity/project", false, nil, "", "/entity/project", nil},
-		{"PathAndSlashAndTag", "library:/entity/project:tag", false, nil, "", "/entity/project", []string{"tag"}},
-		{"PathAndSlashes", "library:///entity/project", false, nil, "", "/entity/project", nil},
-		{"PathAndSlashesAndTag", "library:///entity/project:tag", false, nil, "", "/entity/project", []string{"tag"}},
-		{"PathAndHost", "library://host/entity/project", false, nil, "host", "/entity/project", nil},
-		{"PathAndHostAndTag", "library://host/entity/project:tag", false, nil, "host", "/entity/project", []string{"tag"}},
-		{"PathAndHostPort", "library://host:443/entity/project", false, nil, "host:443", "/entity/project", nil},
-		{"PathAndHostPortAndTag", "library://host:443/entity/project:tag", false, nil, "host:443", "/entity/project", []string{"tag"}},
-
-		// Test legacy paths (entity/collection/container).
+		// Test valid paths (entity/collection/container).
 		{"LegacyPath", "library:entity/collection/container", false, nil, "", "entity/collection/container", nil},
 		{"LegacyPathAndTag", "library:entity/collection/container:tag", false, nil, "", "entity/collection/container", []string{"tag"}},
-		{"LegacyPathAndSlash", "library:/entity/collection/container", false, nil, "", "/entity/collection/container", nil},
-		{"LegacyPathAndSlashAndTag", "library:/entity/collection/container:tag", false, nil, "", "/entity/collection/container", []string{"tag"}},
-		{"LegacyPathAndSlashes", "library:///entity/collection/container", false, nil, "", "/entity/collection/container", nil},
-		{"LegacyPathAndSlashesAndTag", "library:///entity/collection/container:tag", false, nil, "", "/entity/collection/container", []string{"tag"}},
-		{"LegacyPathAndHost", "library://host/entity/collection/container", false, nil, "host", "/entity/collection/container", nil},
-		{"LegacyPathAndHostAndTag", "library://host/entity/collection/container:tag", false, nil, "host", "/entity/collection/container", []string{"tag"}},
-		{"LegacyPathAndHostPort", "library://host:443/entity/collection/container", false, nil, "host:443", "/entity/collection/container", nil},
-		{"LegacyPathAndHostPortAndTag", "library://host:443/entity/collection/container:tag", false, nil, "host:443", "/entity/collection/container", []string{"tag"}},
+		{"LegacyPathAndSlash", "library:/entity/collection/container", false, nil, "", "entity/collection/container", nil},
+		{"LegacyPathAndSlashAndTag", "library:/entity/collection/container:tag", false, nil, "", "entity/collection/container", []string{"tag"}},
+		{"LegacyPathAndSlashes", "library:///entity/collection/container", false, nil, "", "entity/collection/container", nil},
+		{"LegacyPathAndSlashesAndTag", "library:///entity/collection/container:tag", false, nil, "", "entity/collection/container", []string{"tag"}},
+		{"LegacyPathAndHost", "library://host/entity/collection/container", false, nil, "host", "entity/collection/container", nil},
+		{"LegacyPathAndHostAndTag", "library://host/entity/collection/container:tag", false, nil, "host", "entity/collection/container", []string{"tag"}},
+		{"LegacyPathAndHostPort", "library://host:443/entity/collection/container", false, nil, "host:443", "entity/collection/container", nil},
+		{"LegacyPathAndHostPortAndTag", "library://host:443/entity/collection/container:tag", false, nil, "host:443", "entity/collection/container", []string{"tag"}},
 
 		// Test with a different number of tags.
 		{"TagsNone", "library:project", false, nil, "", "project", nil},
@@ -147,12 +135,12 @@ func TestParse(t *testing.T) {
 		{"TagsThree", "library:project:tag1,tag2,tag3", false, nil, "", "project", []string{"tag1", "tag2", "tag3"}},
 
 		// Test with IP addresses.
-		{"IPv4Host", "library://127.0.0.1/project", false, nil, "127.0.0.1", "/project", nil},
-		{"IPv4HostPort", "library://127.0.0.1:443/project", false, nil, "127.0.0.1:443", "/project", nil},
-		{"IPv6Host", "library://[fe80::1ff:fe23:4567:890a]/project", false, nil, "[fe80::1ff:fe23:4567:890a]", "/project", nil},
-		{"IPv6HostPort", "library://[fe80::1ff:fe23:4567:890a]:443/project", false, nil, "[fe80::1ff:fe23:4567:890a]:443", "/project", nil},
-		{"IPv6HostZone", "library://[fe80::1ff:fe23:4567:890a%25eth1]/project", false, nil, "[fe80::1ff:fe23:4567:890a%eth1]", "/project", nil},
-		{"IPv6HostZonePort", "library://[fe80::1ff:fe23:4567:890a%25eth1]:443/project", false, nil, "[fe80::1ff:fe23:4567:890a%eth1]:443", "/project", nil},
+		{"IPv4Host", "library://127.0.0.1/project", false, nil, "127.0.0.1", "project", nil},
+		{"IPv4HostPort", "library://127.0.0.1:443/project", false, nil, "127.0.0.1:443", "project", nil},
+		{"IPv6Host", "library://[fe80::1ff:fe23:4567:890a]/project", false, nil, "[fe80::1ff:fe23:4567:890a]", "project", nil},
+		{"IPv6HostPort", "library://[fe80::1ff:fe23:4567:890a]:443/project", false, nil, "[fe80::1ff:fe23:4567:890a]:443", "project", nil},
+		{"IPv6HostZone", "library://[fe80::1ff:fe23:4567:890a%25eth1]/project", false, nil, "[fe80::1ff:fe23:4567:890a%eth1]", "project", nil},
+		{"IPv6HostZonePort", "library://[fe80::1ff:fe23:4567:890a%25eth1]:443/project", false, nil, "[fe80::1ff:fe23:4567:890a%eth1]:443", "project", nil},
 	}
 
 	for _, tt := range tests {
@@ -193,32 +181,22 @@ func TestString(t *testing.T) {
 		// Test valid abbreviated paths (project).
 		{"AbbreviatedPath", "", "project", nil, "library:project"},
 		{"AbbreviatedPathAndTag", "", "project", []string{"tag"}, "library:project:tag"},
-		{"AbbreviatedPathAndSlash", "", "/project", nil, "library:///project"},
-		{"AbbreviatedPathAndSlashAndTag", "", "/project", []string{"tag"}, "library:///project:tag"},
-		{"AbbreviatedPathAndHost", "host", "/project", nil, "library://host/project"},
-		{"AbbreviatedPathAndHostAndTag", "host", "/project", []string{"tag"}, "library://host/project:tag"},
-		{"AbbreviatedPathAndHostPort", "host:443", "/project", nil, "library://host:443/project"},
-		{"AbbreviatedPathAndHostPortAndTag", "host:443", "/project", []string{"tag"}, "library://host:443/project:tag"},
+		{"AbbreviatedPathAndSlash", "", "project", nil, "library:project"},
+		{"AbbreviatedPathAndSlashAndTag", "", "project", []string{"tag"}, "library:project:tag"},
+		{"AbbreviatedPathAndHost", "host", "project", nil, "library://host/project"},
+		{"AbbreviatedPathAndHostAndTag", "host", "project", []string{"tag"}, "library://host/project:tag"},
+		{"AbbreviatedPathAndHostPort", "host:443", "project", nil, "library://host:443/project"},
+		{"AbbreviatedPathAndHostPortAndTag", "host:443", "project", []string{"tag"}, "library://host:443/project:tag"},
 
-		// Test valid paths (entity/project).
-		{"Path", "", "entity/project", nil, "library:entity/project"},
-		{"PathAndTag", "", "entity/project", []string{"tag"}, "library:entity/project:tag"},
-		{"PathAndSlash", "", "/entity/project", nil, "library:///entity/project"},
-		{"PathAndSlashAndTag", "", "/entity/project", []string{"tag"}, "library:///entity/project:tag"},
-		{"PathAndHost", "host", "/entity/project", nil, "library://host/entity/project"},
-		{"PathAndHostAndTag", "host", "/entity/project", []string{"tag"}, "library://host/entity/project:tag"},
-		{"PathAndHostPort", "host:443", "/entity/project", nil, "library://host:443/entity/project"},
-		{"PathAndHostPortAndTag", "host:443", "/entity/project", []string{"tag"}, "library://host:443/entity/project:tag"},
-
-		// Test legacy paths (entity/collection/container).
+		// Test valid paths (entity/collection/container).
 		{"LegacyPath", "", "entity/collection/container", nil, "library:entity/collection/container"},
 		{"LegacyPathAndTag", "", "entity/collection/container", []string{"tag"}, "library:entity/collection/container:tag"},
-		{"LegacyPathAndSlash", "", "/entity/collection/container", nil, "library:///entity/collection/container"},
-		{"LegacyPathAndSlashAndTag", "", "/entity/collection/container", []string{"tag"}, "library:///entity/collection/container:tag"},
-		{"LegacyPathAndHost", "host", "/entity/collection/container", nil, "library://host/entity/collection/container"},
-		{"LegacyPathAndHostAndTag", "host", "/entity/collection/container", []string{"tag"}, "library://host/entity/collection/container:tag"},
-		{"LegacyPathAndHostPort", "host:443", "/entity/collection/container", nil, "library://host:443/entity/collection/container"},
-		{"LegacyPathAndHostPortAndTag", "host:443", "/entity/collection/container", []string{"tag"}, "library://host:443/entity/collection/container:tag"},
+		{"LegacyPathAndSlash", "", "entity/collection/container", nil, "library:entity/collection/container"},
+		{"LegacyPathAndSlashAndTag", "", "entity/collection/container", []string{"tag"}, "library:entity/collection/container:tag"},
+		{"LegacyPathAndHost", "host", "entity/collection/container", nil, "library://host/entity/collection/container"},
+		{"LegacyPathAndHostAndTag", "host", "entity/collection/container", []string{"tag"}, "library://host/entity/collection/container:tag"},
+		{"LegacyPathAndHostPort", "host:443", "entity/collection/container", nil, "library://host:443/entity/collection/container"},
+		{"LegacyPathAndHostPortAndTag", "host:443", "entity/collection/container", []string{"tag"}, "library://host:443/entity/collection/container:tag"},
 
 		// Test with a different number of tags.
 		{"TagsNone", "", "project", nil, "library:project"},
@@ -227,12 +205,12 @@ func TestString(t *testing.T) {
 		{"TagsThree", "", "project", []string{"tag1", "tag2", "tag3"}, "library:project:tag1,tag2,tag3"},
 
 		// Test with IP addresses.
-		{"IPv4Host", "127.0.0.1", "/project", nil, "library://127.0.0.1/project"},
-		{"IPv4HostPort", "127.0.0.1:443", "/project", nil, "library://127.0.0.1:443/project"},
-		{"IPv6Host", "[fe80::1ff:fe23:4567:890a]", "/project", nil, "library://[fe80::1ff:fe23:4567:890a]/project"},
-		{"IPv6HostPort", "[fe80::1ff:fe23:4567:890a]:443", "/project", nil, "library://[fe80::1ff:fe23:4567:890a]:443/project"},
-		{"IPv6HostZone", "[fe80::1ff:fe23:4567:890a%eth1]", "/project", nil, "library://[fe80::1ff:fe23:4567:890a%25eth1]/project"},
-		{"IPv6HostZonePort", "[fe80::1ff:fe23:4567:890a%eth1]:443", "/project", nil, "library://[fe80::1ff:fe23:4567:890a%25eth1]:443/project"},
+		{"IPv4Host", "127.0.0.1", "project", nil, "library://127.0.0.1/project"},
+		{"IPv4HostPort", "127.0.0.1:443", "project", nil, "library://127.0.0.1:443/project"},
+		{"IPv6Host", "[fe80::1ff:fe23:4567:890a]", "project", nil, "library://[fe80::1ff:fe23:4567:890a]/project"},
+		{"IPv6HostPort", "[fe80::1ff:fe23:4567:890a]:443", "project", nil, "library://[fe80::1ff:fe23:4567:890a]:443/project"},
+		{"IPv6HostZone", "[fe80::1ff:fe23:4567:890a%eth1]", "project", nil, "library://[fe80::1ff:fe23:4567:890a%25eth1]/project"},
+		{"IPv6HostZonePort", "[fe80::1ff:fe23:4567:890a%eth1]:443", "project", nil, "library://[fe80::1ff:fe23:4567:890a%25eth1]:443/project"},
 	}
 
 	for _, tt := range tests {
