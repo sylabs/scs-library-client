@@ -1,4 +1,4 @@
-// Copyright (c) 2018, Sylabs Inc. All rights reserved.
+// Copyright (c) 2018-2022, Sylabs Inc. All rights reserved.
 // This software is licensed under a 3-clause BSD license. Please consult the
 // LICENSE.md file distributed with the sources of this project regarding your
 // rights to use or distribute this software.
@@ -76,8 +76,8 @@ func parsePath(rawPath string) (path string, tags []string, err error) {
 
 	// TODO: not sure we should modify the path here...
 	// Name can optionally start with a leading "/".
-	path = parts[0]
-	if len(strings.TrimPrefix(path, "/")) == 0 {
+	path = strings.TrimPrefix(parts[0], "/")
+	if len(path) == 0 {
 		return "", nil, ErrRefPathNotValid
 	}
 
@@ -134,8 +134,7 @@ func Parse(rawRef string) (r *Ref, err error) {
 //	scheme:path[:tags]
 //	scheme://host/path[:tags]
 //
-// If path does not start with a /, String uses the first form; otherwise it uses the second form.
-// In the second form, if u.Host is empty, host is omitted.
+// If u.Host is empty, String uses the first form; otherwise it uses the second form.
 func (r *Ref) String() string {
 	u := url.URL{
 		Scheme: Scheme,
@@ -147,7 +146,7 @@ func (r *Ref) String() string {
 		rawPath += ":" + strings.Join(r.Tags, ",")
 	}
 
-	if strings.HasPrefix(rawPath, "/") {
+	if u.Host != "" {
 		u.Path = rawPath
 	} else {
 		u.Opaque = rawPath
