@@ -92,12 +92,32 @@ func parsePath(rawPath string) (path string, tags []string, err error) {
 	return path, tags, nil
 }
 
-// Parse parses a raw Library reference.
-func Parse(rawRef string) (r *Ref, err error) {
-	u, err := url.Parse(rawRef)
-	if err != nil {
-		return nil, err
+// parse parses a raw Library reference, optionally taking into account ambiguity that exists
+// within Singularity Library references.
+func parse(rawRef string, ambiguous bool) (*Ref, error) {
+	var u *url.URL
+
+	if ambiguous && strings.HasPrefix(rawRef, "library://") && !strings.HasPrefix(rawRef, "library:///") {
+		// Parse as if there's no host component.
+		uri, err := url.Parse(strings.Replace(rawRef, "library://", "library:///", 1))
+		if err != nil {
+			return nil, err
+		}
+
+		// If the path contains one or three parts, there was no host component. Otherwise, fall
+		// through to the normal logic.
+		if n := len(strings.Split(uri.Path[1:], "/")); n == 1 || n == 3 {
+			u = uri
+		}
 	}
+
+	if u == nil {
+		var err error
+		if u, err = url.Parse(rawRef); err != nil {
+			return nil, err
+		}
+	}
+
 	if u.Scheme != Scheme {
 		return nil, ErrRefSchemeNotValid
 	}
@@ -121,12 +141,29 @@ func Parse(rawRef string) (r *Ref, err error) {
 		return nil, err
 	}
 
-	r = &Ref{
+	r := &Ref{
 		Host: u.Host,
 		Path: path,
 		Tags: tags,
 	}
 	return r, nil
+}
+
+// Parse parses a raw Library reference.
+func Parse(rawRef string) (*Ref, error) {
+	return parse(rawRef, false)
+}
+
+// ParseAmbiguous behaves like Parse, but takes into account ambiguity that exists within
+// Singularity Library references that begin with the prefix "library://".
+//
+// In particular, Singularity supports hostless Library references in the form of "library://path".
+// This creates ambiguity in whether or not a host is present in the path or not. To account for
+// this, ParseAmbiguous treats library references beginning with "library://" followed by one or
+// three path components (ex. "library://a", "library://a/b/c") as hostless. All other references
+// are treated the same as Parse.
+func ParseAmbiguous(rawRef string) (*Ref, error) {
+	return parse(rawRef, true)
 }
 
 // String reassembles the ref into a valid URI string. The general form of the result is one of:
