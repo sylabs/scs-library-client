@@ -251,7 +251,14 @@ func (c *Client) ConcurrentDownloadImage(ctx context.Context, dst *os.File, arch
 
 	customHTTPClient := &http.Client{
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
-			return http.ErrUseLastResponse
+			if req.Response.StatusCode == http.StatusSeeOther {
+				return http.ErrUseLastResponse
+			}
+			maxRedir := 10
+			if len(via) >= maxRedir {
+				return fmt.Errorf("stopped after %d redirects", maxRedir)
+			}
+			return nil
 		},
 	}
 
