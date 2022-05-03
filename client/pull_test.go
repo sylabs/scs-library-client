@@ -13,6 +13,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"testing"
 )
@@ -129,6 +130,35 @@ func Test_DownloadImage(t *testing.T) {
 				if !bytes.Equal(fileContent, testContent) {
 					t.Errorf("File contains '%v' - expected '%v'", fileContent, testContent)
 				}
+			}
+		})
+	}
+}
+
+func TestIsSameDomain(t *testing.T) {
+	tests := []struct {
+		name        string
+		baseURL     string
+		redirectURL string
+		same        bool
+	}{
+		{"Equal", "https://library.domain.com", "https://library.domain.com", true},
+		{"SameSubdomain", "https://cloud.domain.com", "https://library.cloud.domain.com", true},
+		{"EqualWithDifferentPorts", "https://library.domain.com:1234", "https://library.domain.com:5678", true},
+		{"EqualOneWithPort", "https://library.domain.com", "https://library.domain.com:1234", true},
+		{"EqualOtherWithPort", "https://library.domain.com:1234", "https://library.domain.com", true},
+		{"NotEqual", "https://library.othersite.com", "https://library.domain.com", false},
+		{"NotEqualReversed", "https://library.domain.com", "https://library.othersite.com", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			u1, _ := url.Parse(tt.baseURL)
+			u2, _ := url.Parse(tt.redirectURL)
+
+			result := isSameDomain(u1, u2)
+			if result != tt.same {
+				t.Fatalf("Mismatch %v is not same/subdomain of %v", u2.String(), u1.String())
 			}
 		})
 	}
