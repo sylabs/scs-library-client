@@ -278,6 +278,7 @@ func (c *Client) ConcurrentDownloadImage(ctx context.Context, dst *os.File, arch
 	c.Logger.Logf("Pulling from URL: %s", apiPath)
 
 	customHTTPClient := &http.Client{
+		Transport: c.HTTPClient.Transport,
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			if req.Response.StatusCode == http.StatusSeeOther {
 				return http.ErrUseLastResponse
@@ -288,6 +289,8 @@ func (c *Client) ConcurrentDownloadImage(ctx context.Context, dst *os.File, arch
 			}
 			return nil
 		},
+		Jar:     c.HTTPClient.Jar,
+		Timeout: c.HTTPClient.Timeout,
 	}
 
 	req, err := c.newRequest(http.MethodGet, apiPath, q.Encode(), nil)
