@@ -102,42 +102,14 @@ type Downloader struct {
 	BufferSize int64
 }
 
-func isSameDomain(urlBase, urlRedirect *url.URL) bool {
-	// Ignore port (":xxx") from host name
-	t1 := strings.SplitN(urlBase.Host, ":", 2)
-	baseHostName := t1[0]
-
-	t2 := strings.SplitN(urlRedirect.Host, ":", 2)
-	redirectHostName := t2[0]
-
-	if baseHostName == redirectHostName {
-		return true
-	}
-
-	if len(redirectHostName) < len(baseHostName) {
-		return false
-	}
-
-	return redirectHostName[len(redirectHostName)-len(baseHostName)-1] == '.'
-}
-
 // httpGetRangeRequest performs HTTP GET range request to URL specified by 'u' in range start-end.
-func (c *Client) httpGetRangeRequest(ctx context.Context, u string, start, end int64) (*http.Response, error) {
-	req, err := c.newRequestWithURL(ctx, http.MethodGet, u, nil)
+func (c *Client) httpGetRangeRequest(ctx context.Context, url string, start, end int64) (*http.Response, error) {
+	req, err := c.newRequestWithURL(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
 	}
 
 	req.Header.Add("Range", fmt.Sprintf("bytes=%d-%d", start, end))
-
-	parsedURL, err := url.Parse(u)
-	if err != nil {
-		return nil, err
-	}
-
-	if c.AuthToken != "" && isSameDomain(c.BaseURL, parsedURL) {
-		req.Header.Add("Authorization", fmt.Sprintf("BEARER %v", c.AuthToken))
-	}
 
 	return c.HTTPClient.Do(req)
 }
