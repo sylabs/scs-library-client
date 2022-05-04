@@ -160,11 +160,11 @@ func (c *Client) setTags(ctx context.Context, containerID, imageID string, tags 
 func (c *Client) getTags(ctx context.Context, containerID string) (TagMap, error) {
 	url := fmt.Sprintf("v1/tags/%s", containerID)
 	c.Logger.Logf("getTags calling %s", url)
-	req, err := c.newRequest(http.MethodGet, url, "", nil)
+	req, err := c.newRequest(ctx, http.MethodGet, url, "", nil)
 	if err != nil {
 		return nil, fmt.Errorf("error creating request to server:\n\t%v", err)
 	}
-	res, err := c.HTTPClient.Do(req.WithContext(ctx))
+	res, err := c.HTTPClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("error making request to server:\n\t%v", err)
 	}
@@ -192,11 +192,11 @@ func (c *Client) setTag(ctx context.Context, containerID string, t ImageTag) err
 	if err != nil {
 		return fmt.Errorf("error encoding object to JSON:\n\t%v", err)
 	}
-	req, err := c.newRequest("POST", url, "", bytes.NewBuffer(s))
+	req, err := c.newRequest(ctx, http.MethodPost, url, "", bytes.NewBuffer(s))
 	if err != nil {
 		return fmt.Errorf("error creating POST request:\n\t%v", err)
 	}
-	res, err := c.HTTPClient.Do(req.WithContext(ctx))
+	res, err := c.HTTPClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("error making request to server:\n\t%v", err)
 	}
@@ -243,11 +243,11 @@ func (c *Client) setTagsV2(ctx context.Context, containerID, arch string, imageI
 func (c *Client) getTagsV2(ctx context.Context, containerID string) (ArchTagMap, error) {
 	url := fmt.Sprintf("v2/tags/%s", containerID)
 	c.Logger.Logf("getTagsV2 calling %s", url)
-	req, err := c.newRequest(http.MethodGet, url, "", nil)
+	req, err := c.newRequest(ctx, http.MethodGet, url, "", nil)
 	if err != nil {
 		return nil, fmt.Errorf("error creating request to server:\n\t%v", err)
 	}
-	res, err := c.HTTPClient.Do(req.WithContext(ctx))
+	res, err := c.HTTPClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("error making request to server:\n\t%v", err)
 	}
@@ -275,11 +275,11 @@ func (c *Client) setTagV2(ctx context.Context, containerID string, t ArchImageTa
 	if err != nil {
 		return fmt.Errorf("error encoding object to JSON:\n\t%v", err)
 	}
-	req, err := c.newRequest("POST", url, "", bytes.NewBuffer(s))
+	req, err := c.newRequest(ctx, http.MethodPost, url, "", bytes.NewBuffer(s))
 	if err != nil {
 		return fmt.Errorf("error creating POST request:\n\t%v", err)
 	}
-	res, err := c.HTTPClient.Do(req.WithContext(ctx))
+	res, err := c.HTTPClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("error making request to server:\n\t%v", err)
 	}

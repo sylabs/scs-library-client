@@ -43,12 +43,12 @@ func (c *Client) DownloadImage(ctx context.Context, w io.Writer, arch, path, tag
 
 	c.Logger.Logf("Pulling from URL: %s", apiPath)
 
-	req, err := c.newRequest(http.MethodGet, apiPath, q.Encode(), nil)
+	req, err := c.newRequest(ctx, http.MethodGet, apiPath, q.Encode(), nil)
 	if err != nil {
 		return err
 	}
 
-	res, err := c.HTTPClient.Do(req.WithContext(ctx))
+	res, err := c.HTTPClient.Do(req)
 	if err != nil {
 		return err
 	}
@@ -103,20 +103,20 @@ type Downloader struct {
 }
 
 // httpGetRangeRequest performs HTTP GET range request to URL specified by 'u' in range start-end.
-func httpGetRangeRequest(ctx context.Context, url string, start, end int64) (*http.Response, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+func (c *Client) httpGetRangeRequest(ctx context.Context, url string, start, end int64) (*http.Response, error) {
+	req, err := c.newRequestWithURL(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
 	}
 
 	req.Header.Add("Range", fmt.Sprintf("bytes=%d-%d", start, end))
 
-	return http.DefaultClient.Do(req)
+	return c.HTTPClient.Do(req)
 }
 
 // downloadFilePart writes range to dst as specified in bufferSpec.
-func downloadFilePart(ctx context.Context, dst *os.File, url string, ps *partSpec, pb ProgressBar) error {
-	resp, err := httpGetRangeRequest(ctx, url, ps.Start, ps.End)
+func (c *Client) downloadFilePart(ctx context.Context, dst *os.File, url string, ps *partSpec, pb ProgressBar) error {
+	resp, err := c.httpGetRangeRequest(ctx, url, ps.Start, ps.End)
 	if err != nil {
 		return err
 	}
@@ -148,10 +148,10 @@ func downloadFilePart(ctx context.Context, dst *os.File, url string, ps *partSpe
 }
 
 // downloadWorker is a worker func for processing jobs in stripes channel.
-func downloadWorker(ctx context.Context, dst *os.File, url string, parts <-chan partSpec, pb ProgressBar) func() error {
+func (c *Client) downloadWorker(ctx context.Context, dst *os.File, url string, parts <-chan partSpec, pb ProgressBar) func() error {
 	return func() error {
 		for ps := range parts {
-			if err := downloadFilePart(ctx, dst, url, &ps, pb); err != nil {
+			if err := c.downloadFilePart(ctx, dst, url, &ps, pb); err != nil {
 				return err
 			}
 		}
@@ -159,9 +159,9 @@ func downloadWorker(ctx context.Context, dst *os.File, url string, parts <-chan 
 	}
 }
 
-func getContentLength(ctx context.Context, url string) (int64, error) {
+func (c *Client) getContentLength(ctx context.Context, url string) (int64, error) {
 	// Perform short request to determine content length.
-	resp, err := httpGetRangeRequest(ctx, url, 0, 1024)
+	resp, err := c.httpGetRangeRequest(ctx, url, 0, 1024)
 	if err != nil {
 		return 0, err
 	}
@@ -250,6 +250,7 @@ func (c *Client) ConcurrentDownloadImage(ctx context.Context, dst *os.File, arch
 	c.Logger.Logf("Pulling from URL: %s", apiPath)
 
 	customHTTPClient := &http.Client{
+		Transport: c.HTTPClient.Transport,
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			if req.Response.StatusCode == http.StatusSeeOther {
 				return http.ErrUseLastResponse
@@ -260,14 +261,16 @@ func (c *Client) ConcurrentDownloadImage(ctx context.Context, dst *os.File, arch
 			}
 			return nil
 		},
+		Jar:     c.HTTPClient.Jar,
+		Timeout: c.HTTPClient.Timeout,
 	}
 
-	req, err := c.newRequest(http.MethodGet, apiPath, q.Encode(), nil)
+	req, err := c.newRequest(ctx, http.MethodGet, apiPath, q.Encode(), nil)
 	if err != nil {
 		return err
 	}
 
-	res, err := customHTTPClient.Do(req.WithContext(ctx))
+	res, err := customHTTPClient.Do(req)
 	if err != nil {
 		return err
 	}
@@ -290,7 +293,7 @@ func (c *Client) ConcurrentDownloadImage(ctx context.Context, dst *os.File, arch
 
 	url := res.Header.Get("Location")
 
-	contentLength, err := getContentLength(ctx, url)
+	contentLength, err := c.getContentLength(ctx, url)
 	if err != nil {
 		return err
 	}
@@ -317,7 +320,7 @@ func (c *Client) ConcurrentDownloadImage(ctx context.Context, dst *os.File, arch
 
 	// start workers to manage concurrent HTTP requests
 	for workerID := uint(0); workerID <= concurrency; workerID++ {
-		g.Go(downloadWorker(ctx, dst, url, jobs, pb))
+		g.Go(c.downloadWorker(ctx, dst, url, jobs, pb))
 	}
 
 	// iterate over parts, adding to job queue

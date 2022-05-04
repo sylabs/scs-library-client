@@ -29,12 +29,12 @@ type VersionInfo struct {
 // GetVersion gets version information from the Cloud-Library Service. The context controls the lifetime of
 // the request.
 func (c *Client) GetVersion(ctx context.Context) (vi VersionInfo, err error) {
-	req, err := c.newRequest(http.MethodGet, "version", "", nil)
+	req, err := c.newRequest(ctx, http.MethodGet, "version", "", nil)
 	if err != nil {
 		return VersionInfo{}, err
 	}
 
-	res, err := c.HTTPClient.Do(req.WithContext(ctx))
+	res, err := c.HTTPClient.Do(req)
 	if err != nil {
 		return VersionInfo{}, err
 	}
