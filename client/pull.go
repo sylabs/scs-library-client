@@ -43,12 +43,12 @@ func (c *Client) DownloadImage(ctx context.Context, w io.Writer, arch, path, tag
 
 	c.Logger.Logf("Pulling from URL: %s", apiPath)
 
-	req, err := c.newRequest(http.MethodGet, apiPath, q.Encode(), nil)
+	req, err := c.newRequest(ctx, http.MethodGet, apiPath, q.Encode(), nil)
 	if err != nil {
 		return err
 	}
 
-	res, err := c.HTTPClient.Do(req.WithContext(ctx))
+	res, err := c.HTTPClient.Do(req)
 	if err != nil {
 		return err
 	}
@@ -122,15 +122,15 @@ func isSameDomain(urlBase, urlRedirect *url.URL) bool {
 }
 
 // httpGetRangeRequest performs HTTP GET range request to URL specified by 'u' in range start-end.
-func (c *Client) httpGetRangeRequest(ctx context.Context, endpoint string, start, end int64) (*http.Response, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
+func (c *Client) httpGetRangeRequest(ctx context.Context, u string, start, end int64) (*http.Response, error) {
+	req, err := c.newRequestWithURL(ctx, http.MethodGet, u, nil)
 	if err != nil {
 		return nil, err
 	}
 
 	req.Header.Add("Range", fmt.Sprintf("bytes=%d-%d", start, end))
 
-	parsedURL, err := url.Parse(endpoint)
+	parsedURL, err := url.Parse(u)
 	if err != nil {
 		return nil, err
 	}
@@ -293,12 +293,12 @@ func (c *Client) ConcurrentDownloadImage(ctx context.Context, dst *os.File, arch
 		Timeout: c.HTTPClient.Timeout,
 	}
 
-	req, err := c.newRequest(http.MethodGet, apiPath, q.Encode(), nil)
+	req, err := c.newRequest(ctx, http.MethodGet, apiPath, q.Encode(), nil)
 	if err != nil {
 		return err
 	}
 
-	res, err := customHTTPClient.Do(req.WithContext(ctx))
+	res, err := customHTTPClient.Do(req)
 	if err != nil {
 		return err
 	}

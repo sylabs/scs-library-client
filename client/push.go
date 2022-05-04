@@ -268,10 +268,10 @@ func (c *Client) postFile(ctx context.Context, fileSize int64, imageID string, c
 	c.Logger.Logf("postFile calling %s", postURL)
 
 	// Make an upload request
-	req, _ := c.newRequest(http.MethodPost, postURL, "", callback.GetReader())
+	req, _ := c.newRequest(ctx, http.MethodPost, postURL, "", callback.GetReader())
 	// Content length is required by the API
 	req.ContentLength = fileSize
-	res, err := c.HTTPClient.Do(req.WithContext(ctx))
+	res, err := c.HTTPClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("error uploading file to server: %s", err.Error())
 	}

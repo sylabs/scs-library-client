@@ -70,12 +70,12 @@ func (c *Client) commonRequestHandler(ctx context.Context, method string, path s
 		return []byte{}, fmt.Errorf("error parsing url:\n\t%v", err)
 	}
 
-	req, err := c.newRequest(method, u.Path, u.RawQuery, payload)
+	req, err := c.newRequest(ctx, method, u.Path, u.RawQuery, payload)
 	if err != nil {
 		return []byte{}, fmt.Errorf("error creating %s request:\n\t%v", method, err)
 	}
 
-	res, err := c.HTTPClient.Do(req.WithContext(ctx))
+	res, err := c.HTTPClient.Do(req)
 	if err != nil {
 		return []byte{}, fmt.Errorf("error making request to server:\n\t%v", err)
 	}
