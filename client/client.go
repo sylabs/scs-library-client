@@ -98,7 +98,7 @@ func NewClient(cfg *Config) (*Client, error) {
 	return c, nil
 }
 
-// newRequest returns a new Request given a method, path, rawQuery, and (optional) body.
+// newRequestWithURL returns a new Request given a method, url, and (optional) body.
 func (c *Client) newRequestWithURL(ctx context.Context, method, url string, body io.Reader) (*http.Request, error) {
 	r, err := http.NewRequestWithContext(ctx, method, url, body)
 	if err != nil {
