@@ -2,7 +2,7 @@
 
 [![PkgGoDev](https://pkg.go.dev/badge/github.com/sylabs/scs-library-client)](https://pkg.go.dev/github.com/sylabs/scs-library-client/client)
 [![Build Status](https://circleci.com/gh/sylabs/scs-library-client.svg?style=shield)](https://circleci.com/gh/sylabs/workflows/scs-library-client)
-[![Code Coverage](https://codecov.io/gh/sylabs/scs-library-client/branch/master/graph/badge.svg)](https://codecov.io/gh/sylabs/scs-library-client)
+[![Code Coverage](https://codecov.io/gh/sylabs/scs-library-client/branch/main/graph/badge.svg)](https://codecov.io/gh/sylabs/scs-library-client)
 [![Go Report Card](https://goreportcard.com/badge/github.com/sylabs/scs-library-client)](https://goreportcard.com/report/github.com/sylabs/scs-library-client)
 
 This project provides a Go client for the Singularity Container Services (SCS) Library Service.

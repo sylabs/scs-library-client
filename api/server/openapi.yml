@@ -8,8 +8,8 @@ info:
   contact:
     email: "cloud@sylabs.io"
   license:
-    name: Copyright (c) 2018-2021, Sylabs Inc. All rights reserved.
-    url: "https://github.com/sylabs/scs-library-client/blob/master/LICENSE.md"
+    name: Copyright (c) 2018-2022, Sylabs Inc. All rights reserved.
+    url: "https://github.com/sylabs/scs-library-client/blob/main/LICENSE.md"
 
 host: "library.sylabs.io"
 schemes:
