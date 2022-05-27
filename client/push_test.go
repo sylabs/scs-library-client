@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020, Sylabs Inc. All rights reserved.
+// Copyright (c) 2018-2022, Sylabs Inc. All rights reserved.
 // This software is licensed under a 3-clause BSD license. Please consult the
 // LICENSE.md file distributed with the sources of this project regarding your
 // rights to use or distribute this software.
@@ -14,7 +14,6 @@ import (
 	"os"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	jsonresp "github.com/sylabs/json-resp"
 )
 
@@ -139,7 +138,9 @@ func (m *v2ImageUploadMockService) MockImageFileEndpoint(w http.ResponseWriter, 
 	// request. There is no actual validation of the sha256 checksum of the
 	// payload in the PUT request.
 	const expectedSha256 = "d7d356079af905c04e5ae10711ecf3f5b34385e9b143c5d9ddbf740665ce2fb7"
-	assert.Equal(m.t, expectedSha256, uploadImageRequest.SHA256Checksum)
+	if got, want := uploadImageRequest.SHA256Checksum, expectedSha256; got != want {
+		m.t.Errorf("got checksum %v, want %v", got, want)
+	}
 
 	response := UploadImage{
 		UploadURL: m.baseURI + "/fake/s3/endpoint?key=value",
@@ -214,9 +215,14 @@ func Test_legacyPostFileV2(t *testing.T) {
 
 			// calculate sha256 checksum
 			sha256checksum, _, err := sha256sum(f)
-			assert.NoError(t, err, "error calculating sha256 checksum")
+			if err != nil {
+				t.Fatalf("error calculating sha256 checksum: %v", err)
+			}
+
 			_, err = f.Seek(0, 0)
-			assert.NoError(t, err, "unexpected error seeking in sample data file")
+			if err != nil {
+				t.Fatalf("unexpected error seeking in sample data file: %v", err)
+			}
 
 			callback := &defaultUploadCallback{r: f}
 
@@ -224,15 +230,33 @@ func Test_legacyPostFileV2(t *testing.T) {
 			resp, err := c.legacyPostFileV2(context.Background(), fileSize, tt.imageRef, callback, map[string]string{
 				"sha256sum": sha256checksum,
 			})
-			assert.NoErrorf(t, err, "unexpected error")
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
 
-			assert.Equal(t, testQuotaUsageBytes, resp.Quota.QuotaUsageBytes)
-			assert.Equal(t, testQuotaTotalBytes, resp.Quota.QuotaTotalBytes)
-			assert.Equal(t, testContainerURL, resp.ContainerURL)
+			if got, want := resp.Quota.QuotaUsageBytes, testQuotaUsageBytes; got != want {
+				t.Errorf("got quota usage %v, want %v", got, want)
+			}
 
-			assert.True(t, m.initCalled, "init image upload request was not made")
-			assert.True(t, m.putCalled, "file PUT request was not made")
-			assert.True(t, m.completeCalled, "image upload complete request was not made")
+			if got, want := resp.Quota.QuotaTotalBytes, testQuotaTotalBytes; got != want {
+				t.Errorf("got quota total %v, want %v", got, want)
+			}
+
+			if got, want := resp.ContainerURL, testContainerURL; got != want {
+				t.Errorf("got container URL %v, want %v", got, want)
+			}
+
+			if !m.initCalled {
+				t.Errorf("init image upload request was not made")
+			}
+
+			if !m.putCalled {
+				t.Errorf("file PUT request was not made")
+			}
+
+			if !m.completeCalled {
+				t.Errorf("image upload complete request was not made")
+			}
 		})
 	}
 }
