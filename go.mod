@@ -7,7 +7,7 @@ require (
 	github.com/go-log/log v0.2.0
 	github.com/stretchr/testify v1.7.1
 	github.com/sylabs/json-resp v0.8.1
-	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
+	golang.org/x/sync v0.0.0-20220513210516-0976fa681c29
 )
 
 require (
