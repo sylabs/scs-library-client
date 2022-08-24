@@ -133,7 +133,8 @@ func PrettyPrint(v interface{}) {
 }
 
 // ImageHash returns the appropriate hash for a provided image file
-//   e.g. sif.<uuid> or sha256.<sha256>
+//
+//	e.g. sif.<uuid> or sha256.<sha256>
 func ImageHash(filePath string) (result string, err error) {
 	// Currently using sha256 always
 	// TODO - use sif uuid for sif files!
