@@ -26,14 +26,14 @@ import (
 //
 // Match all collections with name "thename":
 //
-//     c.Search(ctx, map[string]string{"value": "thename"})
+//	c.Search(ctx, map[string]string{"value": "thename"})
 //
 // Match all images with name "imagename" and arch "amd64"
 //
-//     c.Search(ctx, map[string]string{
-//         "value": "imagename",
-//         "arch": "amd64"
-//     })
+//	c.Search(ctx, map[string]string{
+//	    "value": "imagename",
+//	    "arch": "amd64"
+//	})
 //
 // Note: if 'arch' and/or 'signed' are specified, the search is limited in
 // scope only to the "Image" collection.
