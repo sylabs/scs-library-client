@@ -23,6 +23,8 @@ func TestOciRegistryAuth(t *testing.T) {
 		tt := tt
 
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			testShimSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				if !tt.directOciDownloadSupported {
 					w.WriteHeader(http.StatusNotFound)
@@ -51,12 +53,16 @@ func TestOciRegistryAuth(t *testing.T) {
 			}))
 			defer testShimSrv.Close()
 
-			c, err := NewClient(&Config{BaseURL: testShimSrv.URL, Logger: &stdLogger{}, UserAgent: "scs-library-client-unit-tests/1.0"})
+			c, err := NewClient(&Config{
+				BaseURL:   testShimSrv.URL,
+				Logger:    &stdLogger{},
+				UserAgent: "scs-library-client-unit-tests/1.0",
+			})
 			if err != nil {
 				t.Fatalf("error initializing client: %v", err)
 			}
 
-			u, creds, err := c.ociRegistryAuth(context.Background(), "testproject/testrepo", "latest", "amd64", []accessType{accessTypePull})
+			u, creds, err := c.ociRegistryAuth(context.Background(), "testproject/testrepo", []accessType{accessTypePull})
 			if tt.directOciDownloadSupported && err != nil {
 				t.Fatalf("error getting OCI registry credentials: %v", err)
 			} else if !tt.directOciDownloadSupported && err == nil {

@@ -14,21 +14,27 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
+	"time"
 
+	"github.com/go-log/log"
 	"github.com/opencontainers/go-digest"
+	"github.com/opencontainers/image-spec/specs-go"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
+	"github.com/sylabs/sif/v2/pkg/sif"
 )
+
+const mediaTypeSIFLayer = "application/vnd.sylabs.sif.layer.v1.sif"
 
 // ociRegistryAuth uses Cloud Library endpoint to determine if artifact can be pulled
 // directly from OCI registry.
 //
 // Returns url and credentials (if applicable) for that url.
-func (c *Client) ociRegistryAuth(ctx context.Context, name, tag, arch string, accessTypes []accessType) (*url.URL, *bearerTokenCredentials, error) {
+func (c *Client) ociRegistryAuth(ctx context.Context, name string, accessTypes []accessType) (*url.URL, *bearerTokenCredentials, error) {
 	// Build raw query string to get token for specified namespace and access
 	v := url.Values{}
-	elems := strings.Split(name, "/")
-	v.Set("namespace", fmt.Sprintf("%v/%v", elems[0], elems[1]))
+	v.Set("namespace", name)
 
 	ats := make([]string, 0, len(accessTypes))
 	for _, at := range accessTypes {
@@ -112,7 +118,10 @@ func (c bearerTokenCredentials) ModifyRequest(r *http.Request, opts ...modifyReq
 
 type accessType string
 
-const accessTypePull accessType = "pull"
+const (
+	accessTypePull accessType = "pull"
+	accessTypePush accessType = "push"
+)
 
 type accessOptions struct {
 	namespace   string
@@ -123,6 +132,7 @@ type ociRegistry struct {
 	baseURL    *url.URL
 	httpClient *http.Client
 	userAgent  string
+	logger     log.Logger
 }
 
 var errArchNotSpecified = errors.New("architecture not specified")
@@ -154,8 +164,8 @@ func (r *ociRegistry) getManifestFromIndex(idx v1.Index, arch string) (digest.Di
 	return "", fmt.Errorf("no matching OS/architecture (%v) found", arch)
 }
 
-func (r *ociRegistry) getImageManifest(ctx context.Context, c credentials, name, tag, arch string) (digest.Digest, v1.Manifest, error) {
-	if _, idx, err := r.DownloadV1Index(ctx, c, name, tag); err == nil {
+func (r *ociRegistry) getImageManifest(ctx context.Context, creds credentials, name, tag, arch string) (digest.Digest, v1.Manifest, error) {
+	if _, idx, err := r.DownloadV1Index(ctx, creds, name, tag); err == nil {
 		// Get manifest from index
 		d, err := r.getManifestFromIndex(idx, arch)
 		if err != nil {
@@ -165,11 +175,11 @@ func (r *ociRegistry) getImageManifest(ctx context.Context, c credentials, name,
 		tag = d.String()
 	}
 
-	return r.downloadV1Manifest(ctx, c, name, tag)
+	return r.downloadV1Manifest(ctx, creds, name, tag)
 }
 
-func (r *ociRegistry) getImageDetails(ctx context.Context, c credentials, name, tag, arch string) (v1.Descriptor, error) {
-	_, m, err := r.getImageManifest(ctx, c, name, tag, arch)
+func (r *ociRegistry) getImageDetails(ctx context.Context, creds credentials, name, tag, arch string) (v1.Descriptor, error) {
+	_, m, err := r.getImageManifest(ctx, creds, name, tag, arch)
 	if err != nil {
 		return v1.Descriptor{}, err
 	}
@@ -184,7 +194,7 @@ func (r *ociRegistry) getImageDetails(ctx context.Context, c credentials, name, 
 	}
 
 	// If architecture was supplied, ensure the image config matches.
-	ic, err := r.getImageConfig(ctx, c, name, m.Config.Digest)
+	ic, err := r.getImageConfig(ctx, creds, name, m.Config.Digest)
 	if err != nil {
 		return v1.Descriptor{}, err
 	}
@@ -197,15 +207,15 @@ func (r *ociRegistry) getImageDetails(ctx context.Context, c credentials, name, 
 	return m.Layers[0], nil
 }
 
-func (r *ociRegistry) DownloadV1Index(ctx context.Context, c credentials, name, tag string) (digest.Digest, v1.Index, error) {
+func (r *ociRegistry) DownloadV1Index(ctx context.Context, creds credentials, name, tag string) (digest.Digest, v1.Index, error) {
 	var idx v1.Index
-	d, err := r.downloadManifest(ctx, c, name, tag, &idx, v1.MediaTypeImageIndex)
+	d, err := r.downloadManifest(ctx, creds, name, tag, &idx, v1.MediaTypeImageIndex)
 	return d, idx, err
 }
 
-func (r *ociRegistry) downloadV1Manifest(ctx context.Context, c credentials, name, tag string) (digest.Digest, v1.Manifest, error) {
+func (r *ociRegistry) downloadV1Manifest(ctx context.Context, creds credentials, name, tag string) (digest.Digest, v1.Manifest, error) {
 	var m v1.Manifest
-	d, err := r.downloadManifest(ctx, c, name, tag, &m, v1.MediaTypeImageManifest)
+	d, err := r.downloadManifest(ctx, creds, name, tag, &m, v1.MediaTypeImageManifest)
 	return d, m, err
 }
 
@@ -405,14 +415,14 @@ func withHTTPClient(client *http.Client) modifyRequestOption {
 
 var errResetHTTPBody = errors.New("unable to reset HTTP request body")
 
-func (r *ociRegistry) doRequestWithCredentials(req *http.Request, c credentials, opts ...modifyRequestOption) (*http.Response, error) {
+func (r *ociRegistry) doRequestWithCredentials(req *http.Request, creds credentials, opts ...modifyRequestOption) (*http.Response, error) {
 	opts = append(opts,
 		withUserAgent(r.userAgent),
 		withHTTPClient(r.httpClient),
 	)
 
 	// Modify request to include credentials.
-	if err := c.ModifyRequest(req, opts...); err != nil {
+	if err := creds.ModifyRequest(req, opts...); err != nil {
 		return nil, err
 	}
 
@@ -430,7 +440,7 @@ func (r *ociRegistry) doRequestWithCredentials(req *http.Request, c credentials,
 	return res, nil
 }
 
-func (r *ociRegistry) retryRequestWithCredentials(req *http.Request, c credentials, opts ...modifyRequestOption) (*http.Response, error) {
+func (r *ociRegistry) retryRequestWithCredentials(req *http.Request, creds credentials, opts ...modifyRequestOption) (*http.Response, error) {
 	// If the original request contained a body, we need to reset it.
 	if req.Body != nil {
 		if req.GetBody == nil {
@@ -444,10 +454,10 @@ func (r *ociRegistry) retryRequestWithCredentials(req *http.Request, c credentia
 		req.Body = rc
 	}
 
-	return r.doRequestWithCredentials(req, c, opts...)
+	return r.doRequestWithCredentials(req, creds, opts...)
 }
 
-func (r *ociRegistry) doRequest(req *http.Request, c credentials, opts ...modifyRequestOption) (*http.Response, error) {
+func (r *ociRegistry) doRequest(req *http.Request, creds credentials, opts ...modifyRequestOption) (*http.Response, error) {
 	res, err := r.httpClient.Do(req)
 	if err != nil {
 		return nil, err
@@ -459,14 +469,14 @@ func (r *ociRegistry) doRequest(req *http.Request, c credentials, opts ...modify
 		// If authorization required, re-attempt request using credentials (if supplied) according
 		// to the contents of the "WWW-Authenticate" header (if present).
 		if code == http.StatusUnauthorized {
-			if c == nil {
+			if creds == nil {
 				// Unauthenticated requests to certain Harbor APIs require an Authorization header,
 				// even if it's set to "none". 🤦
-				c = none()
+				creds = none()
 			}
 
 			opts = append(opts, withAuthenticateHeader(res.Header.Get("WWW-Authenticate")))
-			return r.retryRequestWithCredentials(req, c, opts...)
+			return r.retryRequestWithCredentials(req, creds, opts...)
 		}
 
 		return nil, fmt.Errorf("unexpected http status %v", code)
@@ -499,14 +509,14 @@ func (e *unexpectedContentTypeError) Error() string {
 
 // downloadManifest downloads the manifest of type contentType associated with name/ref in the
 // registry, and unmarshals it to v.
-func (r *ociRegistry) downloadManifest(ctx context.Context, c credentials, name, tag string, v interface{}, contentType string) (digest.Digest, error) {
+func (r *ociRegistry) downloadManifest(ctx context.Context, creds credentials, name, tag string, v interface{}, contentType string) (digest.Digest, error) {
 	req, err := r.newRequest(ctx, http.MethodGet, &url.URL{Path: fmt.Sprintf("v2/%v/manifests/%v", name, tag)}, nil)
 	if err != nil {
 		return "", err
 	}
 	req.Header.Set("Accept", contentType)
 
-	res, err := r.doRequest(req, c, withNamespaceAccess(name, accessTypePull))
+	res, err := r.doRequest(req, creds, withNamespaceAccess(name, accessTypePull))
 	if err != nil {
 		return "", err
 	}
@@ -529,7 +539,7 @@ func (r *ociRegistry) downloadManifest(ctx context.Context, c credentials, name,
 	return d, nil
 }
 
-func (r *ociRegistry) downloadBlob(ctx context.Context, c credentials, name string, d digest.Digest, rangeValue string, w io.Writer) (int64, error) {
+func (r *ociRegistry) downloadBlob(ctx context.Context, creds credentials, name string, d digest.Digest, rangeValue string, w io.Writer) (int64, error) {
 	if err := d.Validate(); err != nil {
 		return 0, err
 	}
@@ -544,7 +554,7 @@ func (r *ociRegistry) downloadBlob(ctx context.Context, c credentials, name stri
 		req.Header.Set("Range", rangeValue)
 	}
 
-	res, err := r.doRequest(req, c, withNamespaceAccess(name, accessTypePull))
+	res, err := r.doRequest(req, creds, withNamespaceAccess(name, accessTypePull))
 	if err != nil {
 		return 0, err
 	}
@@ -585,9 +595,9 @@ func (e *unexpectedArchitectureError) Is(target error) bool {
 
 var errDigestNotVerified = errors.New("digest not verified")
 
-func (r *ociRegistry) getImageConfig(ctx context.Context, c credentials, name string, d digest.Digest) (imageConfig, error) {
+func (r *ociRegistry) getImageConfig(ctx context.Context, creds credentials, name string, d digest.Digest) (imageConfig, error) {
 	var b bytes.Buffer
-	if _, err := r.downloadBlob(ctx, c, name, d, "", &b); err != nil {
+	if _, err := r.downloadBlob(ctx, creds, name, d, "", &b); err != nil {
 		return imageConfig{}, err
 	}
 
@@ -609,19 +619,23 @@ func (r *ociRegistry) getImageConfig(ctx context.Context, c credentials, name st
 
 var errOCIDownloadNotSupported = errors.New("not supported")
 
-func (c *Client) ociDownloadImage(ctx context.Context, arch, name, tag string, w io.WriterAt, spec *Downloader, pb ProgressBar) error {
+func (c *Client) newOCIRegistry(ctx context.Context, name string, accessTypes []accessType) (*ociRegistry, *bearerTokenCredentials, error) {
 	// Attempt to obtain (direct) OCI registry auth token
-	registryURI, creds, err := c.ociRegistryAuth(ctx, name, tag, arch, []accessType{accessTypePull})
+	registryURI, creds, err := c.ociRegistryAuth(ctx, name, accessTypes)
 	if err != nil {
-		return errOCIDownloadNotSupported
+		return nil, nil, errOCIDownloadNotSupported
 	}
 
 	// Download directly from OCI registry
 	c.Logger.Logf("Using OCI registry endpoint %v", registryURI)
 
-	reg := &ociRegistry{
-		baseURL:    registryURI,
-		httpClient: c.HTTPClient,
+	return &ociRegistry{baseURL: registryURI, httpClient: c.HTTPClient, logger: c.Logger}, creds, nil
+}
+
+func (c *Client) ociDownloadImage(ctx context.Context, arch, name, tag string, w io.WriterAt, spec *Downloader, pb ProgressBar) error {
+	reg, creds, err := c.newOCIRegistry(ctx, name, []accessType{accessTypePull})
+	if err != nil {
+		return err
 	}
 
 	// Fetch image manifest to get image details
@@ -630,7 +644,416 @@ func (c *Client) ociDownloadImage(ctx context.Context, arch, name, tag string, w
 		return fmt.Errorf("error getting image details: %w", err)
 	}
 
-	imageURI := registryURI.ResolveReference(&url.URL{Path: fmt.Sprintf("v2/%v/blobs/%v", name, id.Digest)}).String()
+	imageURI := reg.baseURL.ResolveReference(&url.URL{Path: fmt.Sprintf("v2/%v/blobs/%v", name, id.Digest)}).String()
 
 	return c.multipartDownload(ctx, imageURI, creds, w, id.Size, spec, pb)
+}
+
+const sifHeaderSize = 32768
+
+type unexpectedImageDigest struct {
+	got  digest.Digest
+	want digest.Digest
+}
+
+func (e *unexpectedImageDigest) Error() string {
+	return fmt.Sprintf("unexpected image digest: %v != %v", e.got, e.want)
+}
+
+func (c *Client) ociUploadImage(ctx context.Context, r io.Reader, size int64, name, arch string, tags []string, description, hash string, callback UploadCallback) error {
+	reg, creds, err := c.newOCIRegistry(ctx, name, []accessType{accessTypePull, accessTypePush})
+	if err != nil {
+		return err
+	}
+
+	sifHeader := bytes.NewBuffer(make([]byte, 0, sifHeaderSize))
+
+	// Convert SIF hash to OCI digest.
+	imageDigest := digest.Digest(strings.ReplaceAll(hash, ".", ":"))
+	if err := imageDigest.Validate(); err != nil {
+		return fmt.Errorf("invalid image hash '%v': %w", hash, err)
+	}
+
+	// Check if image exists, 'ok' is set correctly if this returns an error.
+	ok, _ := reg.existingImageBlob(ctx, creds, name, imageDigest)
+
+	var id digest.Digest
+
+	if !ok {
+		// Construct a reader that tees off a copy of the SIF header into a buffer as the blob is uploaded.
+		r = io.MultiReader(
+			io.TeeReader(io.LimitReader(r, sifHeaderSize), sifHeader),
+			r,
+		)
+
+		if callback != nil {
+			callback.InitUpload(size, r)
+
+			r = callback.GetReader()
+		}
+
+		var err error
+		id, _, err = reg.uploadImageBlob(ctx, creds, name, size, r)
+		if err != nil {
+			if callback != nil {
+				callback.Terminate()
+			}
+
+			return fmt.Errorf("upload image blob failed: %w", err)
+		}
+
+		if callback != nil {
+			callback.Finish()
+		}
+
+		// Verify image blob matches had expected digest.
+		if got, want := id, imageDigest; got != want {
+			return &unexpectedImageDigest{got, want}
+		}
+
+	} else {
+		c.Logger.Logf("Skipping image blob upload (matching hash exists)")
+
+		id = imageDigest
+
+		if _, err := io.Copy(sifHeader, io.LimitReader(r, sifHeaderSize)); err != nil {
+			return fmt.Errorf("error reading local SIF file header: %v", err)
+		}
+	}
+
+	// Populate image configuration.
+	ic, err := reg.processImageHeader(id, description, sifHeader.Bytes())
+	if err != nil {
+		return fmt.Errorf("process image failed: %w", err)
+	}
+
+	cs, cd, err := reg.uploadimageConfig(ctx, creds, name, ic)
+	if err != nil {
+		return fmt.Errorf("upload image config failed: %w", err)
+	}
+
+	md, err := reg.uploadImageManifest(ctx, creds, name, hash, cd, id, cs, size)
+	if err != nil {
+		return fmt.Errorf("upload image manifest failed: %w", err)
+	}
+
+	idx := v1.Index{
+		Versioned: specs.Versioned{SchemaVersion: 2},
+	}
+
+	idx.Manifests = append(idx.Manifests, v1.Descriptor{
+		MediaType: v1.MediaTypeImageManifest,
+		Digest:    md,
+		Platform: &v1.Platform{
+			Architecture: ic.Architecture,
+			OS:           ic.OS,
+		},
+	})
+
+	// Add tags
+	for _, ref := range tags {
+		c.Logger.Logf("Tag: %v", ref)
+
+		if _, err := reg.uploadManifest(ctx, creds, name, ref, idx, v1.MediaTypeImageIndex); err != nil {
+			return fmt.Errorf("error uploading index")
+		}
+	}
+
+	return nil
+}
+
+func (r *ociRegistry) existingImageBlob(ctx context.Context, creds credentials, name string, d digest.Digest) (bool, error) {
+	u := r.baseURL.ResolveReference(&url.URL{Path: fmt.Sprintf("v2/%v/blobs/%v", name, d.String())})
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodHead, u.String(), nil)
+	if err != nil {
+		return false, fmt.Errorf("error checking for existing layer: %v", err)
+	}
+
+	res, err := r.doRequest(req, creds)
+	if err != nil {
+		return false, err
+	}
+	defer res.Body.Close()
+
+	// TODO: should we validate 'Content-Length' here?
+	return res.StatusCode == http.StatusOK && d.String() == res.Header.Get("Docker-Content-Digest"), nil
+}
+
+// uploadimageConfig uploads ic into namespace name of the registry, using credentials c.
+//
+// On success, the config size and digest are returned.
+func (r *ociRegistry) uploadimageConfig(ctx context.Context, creds credentials, name string, ic imageConfig) (size int64, d digest.Digest, err error) {
+	b, err := json.Marshal(ic)
+	if err != nil {
+		return 0, "", err
+	}
+
+	log.Logf("Starting image config upload: name=[%v], size=[%v]", name, len(b))
+	defer func(t time.Time) {
+		log.Logf("Finished image config upload: took=[%v] digest=[%v] err=[%v]", time.Since(t), d.String(), err)
+	}(time.Now())
+
+	d, _, err = r.uploadBlob(ctx, creds, name, int64(len(b)), bytes.NewReader(b))
+	if err != nil {
+		return 0, "", err
+	}
+
+	return int64(len(b)), d, err
+}
+
+// uploadImageManifest uploads an image manifest to the registry, naming it name:ref. The
+// corresponding config blob has digest configDigest of size configSize. The corresponding image
+// blob has digest imageDigest of size imageSize.
+//
+// On success, the manifest digest is returned.
+func (r *ociRegistry) uploadImageManifest(ctx context.Context, creds credentials, name, ref string, configDigest, imageDigest digest.Digest, configSize, imageSize int64) (d digest.Digest, err error) {
+	r.logger.Logf("Starting image manifest upload: name=[%v], ref=[%v]", name, ref)
+	defer func(t time.Time) {
+		r.logger.Logf("Finished image manifest upload: took=[%v] digest=[%v], err=[%v]", time.Since(t), d.String(), err)
+	}(time.Now())
+
+	m := v1.Manifest{
+		Versioned: specs.Versioned{SchemaVersion: 2},
+		Config: v1.Descriptor{
+			MediaType: mediaTypeSIFConfig,
+			Digest:    configDigest,
+			Size:      configSize,
+		},
+		Layers: []v1.Descriptor{
+			{
+				MediaType: mediaTypeSIFLayer,
+				Digest:    imageDigest,
+				Size:      imageSize,
+			},
+		},
+	}
+	return r.uploadV1Manifest(ctx, creds, name, ref, m)
+}
+
+func (r *ociRegistry) uploadImageBlob(ctx context.Context, creds credentials, name string, size int64, rd io.Reader) (digest.Digest, int64, error) {
+	return r.uploadBlob(ctx, creds, name, size, rd)
+}
+
+const maxChunkSize int64 = 5 * 1024 * 1024
+
+func (r *ociRegistry) uploadBlob(ctx context.Context, creds credentials, name string, size int64, rd io.Reader) (digest.Digest, int64, error) {
+	u, creds, err := r.openUploadBlobSession(ctx, creds, name)
+	if err != nil {
+		return "", 0, err
+	}
+
+	// Accumulate digest as we upload chunks.
+	h := digest.Canonical.Hash()
+	tee := io.TeeReader(rd, h)
+
+	var totalBytesUploaded int64
+
+	// Send chunks.
+	for offset := int64(0); offset < size; offset += maxChunkSize {
+		chunkSize := maxChunkSize
+		if offset+chunkSize > size {
+			chunkSize = size - offset // last chunk
+		}
+
+		if u, err = r.uploadBlobPart(ctx, creds, u, tee, chunkSize, offset); err != nil {
+			return "", 0, err
+		}
+
+		totalBytesUploaded += chunkSize
+	}
+
+	d := digest.NewDigest(digest.Canonical, h)
+
+	if err := r.closeUploadBlobSession(ctx, creds, u, d); err != nil {
+		return "", 0, err
+	}
+
+	return d, totalBytesUploaded, nil
+}
+
+func (r *ociRegistry) openUploadBlobSession(ctx context.Context, creds credentials, name string) (*url.URL, *bearerTokenCredentials, error) {
+	u := &url.URL{Path: fmt.Sprintf("v2/%v/blobs/uploads/", name)}
+
+	req, err := r.newRequest(ctx, http.MethodPost, u, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	res, err := r.doRequest(req, creds, withNamespaceAccess(name, accessTypePush))
+	if err != nil {
+		return nil, nil, err
+	}
+	defer res.Body.Close()
+
+	if u, err = getRelativeLocation(res); err != nil {
+		return nil, nil, err
+	}
+
+	// Strip prefix from Authorization header
+	parts := strings.SplitN(req.Header.Get("Authorization"), " ", 2)
+	if len(parts) != 2 {
+		return nil, nil, fmt.Errorf("malformed Authorization header (%v)", req.Header.Get("Authorization"))
+	}
+
+	return u, &bearerTokenCredentials{authToken: parts[1]}, nil
+}
+
+// closeUploadBlobSession closes a blob upload session using relative URL u, including digest d.
+func (r *ociRegistry) closeUploadBlobSession(ctx context.Context, creds credentials, u *url.URL, d digest.Digest) error {
+	q := u.Query()
+	q.Set("digest", d.String())
+	u.RawQuery = q.Encode()
+
+	req, err := r.newRequest(ctx, http.MethodPut, u, nil)
+	if err != nil {
+		return err
+	}
+
+	res, err := r.doRequestWithCredentials(req, creds)
+	if err != nil {
+		return err
+	}
+	defer res.Body.Close()
+
+	return nil
+}
+
+// uploadBlobPart uploads a chunk of a blob read from rd using relative URL u. The chunk is located
+// at offset and is of size chunkSize.
+func (r *ociRegistry) uploadBlobPart(ctx context.Context, creds credentials, u *url.URL, rd io.Reader, chunkSize, offset int64) (*url.URL, error) {
+	req, err := r.newRequest(ctx, http.MethodPatch, u, io.LimitReader(rd, chunkSize))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/octet-stream")
+	req.Header.Set("Content-Range", fmt.Sprintf("%v-%v", offset, offset+chunkSize-1))
+	req.Header.Set("Content-Length", strconv.FormatInt(chunkSize, 10))
+
+	res, err := r.doRequestWithCredentials(req, creds)
+	if err != nil {
+		return nil, err
+	}
+	defer res.Body.Close()
+
+	return getRelativeLocation(res)
+}
+
+// getRelativeLocation returns the relative URL contained in the `Location` header of res.
+func getRelativeLocation(res *http.Response) (*url.URL, error) {
+	u, err := url.Parse(res.Header.Get("Location"))
+	if err != nil {
+		return nil, err
+	}
+
+	u.Path = strings.TrimPrefix(u.Path, "/")
+
+	return u, nil
+}
+
+func getSigned(f *sif.FileImage) (bool, error) {
+	sigs, err := f.GetDescriptors(sif.WithDataType(sif.DataSignature))
+	if err != nil {
+		return false, err
+	}
+	return len(sigs) > 0, nil
+}
+
+// getEncrypted returns a boolean indicating whether the primary system partition in f is
+// encrypted.
+func getEncrypted(f *sif.FileImage) (bool, error) {
+	od, err := f.GetDescriptor(sif.WithPartitionType(sif.PartPrimSys))
+	if err != nil {
+		return false, err
+	}
+
+	t, _, _, err := od.PartitionMetadata()
+	if err != nil {
+		return false, err
+	}
+
+	return (t == sif.FsEncryptedSquashfs), nil
+}
+
+// processImageHeader creates an imageConfig using the supplied hash, description, and SIF header
+// contained in b.
+func (r *ociRegistry) processImageHeader(rootFS digest.Digest, description string, b []byte) (imageConfig, error) {
+	f, err := sif.LoadContainer(sif.NewBuffer(b))
+	if err != nil {
+		return imageConfig{}, err
+	}
+	defer func() {
+		if err := f.UnloadContainer(); err != nil {
+			r.logger.Logf("Failed to unload container: %v", err)
+		}
+	}()
+
+	signed, err := getSigned(f)
+	if err != nil {
+		return imageConfig{}, err
+	}
+
+	encrypted, err := getEncrypted(f)
+	if err != nil {
+		return imageConfig{}, err
+	}
+
+	ic := imageConfig{
+		Architecture: f.PrimaryArch(),
+		OS:           "linux",
+		RootFS:       rootFS,
+		Description:  description,
+		Signed:       signed,
+		Encrypted:    encrypted,
+	}
+
+	return ic, nil
+}
+
+// manifestURL returns the relative URL associated with name/ref.
+func manifestURL(name, ref string) *url.URL {
+	return &url.URL{
+		Path: fmt.Sprintf("v2/%v/manifests/%v", name, ref),
+	}
+}
+
+// uploadManifest uploads manifest v of type contentType to the registry, and associates it with
+// name/ref. If ref is empty, the manifest digest is used.
+func (r *ociRegistry) uploadManifest(ctx context.Context, creds credentials, name, ref string, v interface{}, contentType string) (digest.Digest, error) {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return "", err
+	}
+
+	d := digest.FromBytes(b)
+
+	if ref == "" {
+		ref = d.String()
+	}
+
+	req, err := r.newRequest(ctx, http.MethodPut, manifestURL(name, ref), bytes.NewReader(b))
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("Content-Type", contentType)
+
+	res, err := r.doRequest(req, creds, withNamespaceAccess(name, accessTypePush))
+	if err != nil {
+		return "", err
+	}
+	defer res.Body.Close()
+
+	return d, nil
+}
+
+// UploadV1Index uploads image index idx to the registry, and associates it with name/ref. If ref
+// is empty, the image index digest is used.
+func (r *ociRegistry) UploadV1Index(ctx context.Context, creds credentials, name, ref string, idx v1.Index) (digest.Digest, error) {
+	return r.uploadManifest(ctx, creds, name, ref, idx, v1.MediaTypeImageIndex)
+}
+
+// uploadV1Manifest uploads manifest m to the registry, and associates it with name/ref. If ref is
+// empty, the manifest digest is used.
+func (r *ociRegistry) uploadV1Manifest(ctx context.Context, creds credentials, name, ref string, m v1.Manifest) (digest.Digest, error) {
+	return r.uploadManifest(ctx, creds, name, ref, m, v1.MediaTypeImageManifest)
 }
