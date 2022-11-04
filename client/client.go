@@ -1,4 +1,4 @@
-// Copyright (c) 2019, Sylabs Inc. All rights reserved.
+// Copyright (c) 2019-2022, Sylabs Inc. All rights reserved.
 // This software is licensed under a 3-clause BSD license. Please consult the LICENSE.md file
 // distributed with the sources of this project regarding your rights to use or distribute this
 // software.
@@ -104,9 +104,13 @@ func (c *Client) newRequestWithURL(ctx context.Context, method, url string, body
 	if err != nil {
 		return nil, err
 	}
+
 	if v := c.AuthToken; v != "" {
-		r.Header.Set("Authorization", fmt.Sprintf("BEARER %s", v))
+		if err := (bearerTokenCredentials{authToken: v}).ModifyRequest(r); err != nil {
+			return nil, err
+		}
 	}
+
 	if v := c.UserAgent; v != "" {
 		r.Header.Set("User-Agent", v)
 	}
