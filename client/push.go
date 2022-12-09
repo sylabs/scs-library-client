@@ -8,6 +8,7 @@ package client
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -127,6 +128,15 @@ func (c *Client) UploadImage(ctx context.Context, r io.ReadSeeker, path, arch st
 	}
 
 	c.Logger.Logf("Image hash computed as %s", imageHash)
+
+	if err := c.ociUploadImage(ctx, r, fileSize, strings.TrimPrefix(path, "library://"), arch, tags, description, "sha256."+imageHash, callback); err == nil {
+		return nil, nil
+	} else if !errors.Is(err, errOCIDownloadNotSupported) {
+		// Return OCI upload error or fallback to legacy download
+		return nil, err
+	}
+
+	c.Logger.Log("Fallback to (legacy) library upload")
 
 	// Find or create entity
 	entity, err := c.getEntity(ctx, entityName)
