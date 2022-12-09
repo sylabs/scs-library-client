@@ -1,4 +1,4 @@
-// Copyright (c) 2019, Sylabs Inc. All rights reserved.
+// Copyright (c) 2019-2022, Sylabs Inc. All rights reserved.
 // This software is licensed under a 3-clause BSD license. Please consult the LICENSE.md file
 // distributed with the sources of this project regarding your rights to use or distribute this
 // software.
@@ -161,7 +161,7 @@ func TestNewRequest(t *testing.T) {
 					if got, want := len(authBearer), 1; got != want {
 						t.Fatalf("got %v auth bearer(s), want %v", got, want)
 					}
-					if got, want := authBearer[0], tt.wantAuthBearer; got != want {
+					if got, want := authBearer[0], tt.wantAuthBearer; !strings.EqualFold(got, want) {
 						t.Errorf("got auth bearer %v, want %v", got, want)
 					}
 				}
