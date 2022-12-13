@@ -108,8 +108,11 @@ func (c *Client) ociDownloadBlobPart(ctx context.Context, creds credentials, u s
 	if err != nil {
 		return 0, err
 	}
-	if err := creds.ModifyRequest(req); err != nil {
-		return 0, err
+
+	if creds != nil {
+		if err := creds.ModifyRequest(req); err != nil {
+			return 0, err
+		}
 	}
 
 	req.Header.Add("Range", fmt.Sprintf("bytes=%d-%d", ps.start, ps.end))

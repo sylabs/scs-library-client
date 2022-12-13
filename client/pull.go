@@ -236,8 +236,13 @@ func (c *Client) legacyDownloadImage(ctx context.Context, arch, name, tag string
 		return err
 	}
 
+	var creds credentials
+	if c.AuthToken != "" {
+		creds = bearerTokenCredentials{authToken: c.AuthToken}
+	}
+
 	// Use uri from Location header to download artifact
-	return c.multipartDownload(ctx, res.Header.Get("Location"), bearerTokenCredentials{authToken: c.AuthToken}, dst, img.Size, spec, pb)
+	return c.multipartDownload(ctx, res.Header.Get("Location"), creds, dst, img.Size, spec, pb)
 }
 
 func parseContentLengthHeader(val string) (int64, error) {

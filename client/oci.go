@@ -112,7 +112,9 @@ type bearerTokenCredentials struct {
 }
 
 func (c bearerTokenCredentials) ModifyRequest(r *http.Request, opts ...modifyRequestOption) error {
-	r.Header.Set("Authorization", fmt.Sprintf("Bearer %v", c.authToken))
+	if c.authToken != "" {
+		r.Header.Set("Authorization", fmt.Sprintf("Bearer %v", c.authToken))
+	}
 	return nil
 }
 
