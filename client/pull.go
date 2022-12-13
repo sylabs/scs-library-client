@@ -104,9 +104,13 @@ type Downloader struct {
 
 // httpGetRangeRequest performs HTTP GET range request to URL specified by 'u' in range start-end.
 func (c *Client) httpGetRangeRequest(ctx context.Context, url string, start, end int64) (*http.Response, error) {
-	req, err := c.newRequestWithURL(ctx, http.MethodGet, url, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
+	}
+
+	if v := c.UserAgent; v != "" {
+		req.Header.Set("User-Agent", v)
 	}
 
 	req.Header.Add("Range", fmt.Sprintf("bytes=%d-%d", start, end))
