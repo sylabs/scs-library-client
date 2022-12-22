@@ -7,6 +7,7 @@ package client
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -102,9 +103,20 @@ type Downloader struct {
 	BufferSize int64
 }
 
+var errInvalidArguments = errors.New("invalid argument(s)")
+
 // httpGetRangeRequest performs HTTP GET range request to URL specified by 'u' in range start-end.
-func (c *Client) httpGetRangeRequest(ctx context.Context, url string, start, end int64) (*http.Response, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+func (c *Client) httpGetRangeRequest(ctx context.Context, u string, start, end int64) (*http.Response, error) {
+	if start >= end || start < 0 || end < 0 || (end-start+1) < 0 {
+		return nil, errInvalidArguments
+	}
+
+	redirectURL, err := url.Parse(u)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -113,9 +125,22 @@ func (c *Client) httpGetRangeRequest(ctx context.Context, url string, start, end
 		req.Header.Set("User-Agent", v)
 	}
 
+	if c.AuthToken != "" && samehost(c.BaseURL, redirectURL) {
+		req.Header.Add("Authorization", fmt.Sprintf("Bearer %v", c.AuthToken))
+	}
+
 	req.Header.Add("Range", fmt.Sprintf("bytes=%d-%d", start, end))
 
 	return c.HTTPClient.Do(req)
+}
+
+// samehost returns true if host1 and host2 are, in fact, the same host by
+// comparing scheme (https == https) and host (which includes port).
+//
+// Hosts will be treated as dissimilar if one host includes domain suffix
+// and the other does not, even if the host names match.
+func samehost(host1, host2 *url.URL) bool {
+	return host1.Scheme == host2.Scheme && host1.Host == host2.Host
 }
 
 // downloadFilePart writes range to dst as specified in bufferSpec.
