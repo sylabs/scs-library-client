@@ -6,16 +6,16 @@ orbs:
 executors:
   node:
     docker:
-      - image: node:17-slim
+      - image: node:18-slim
   golangci-lint:
     docker:
-      - image: golangci/golangci-lint:v1.45-alpine
+      - image: golangci/golangci-lint:v1.50
   golang-previous:
     docker:
-      - image: golang:1.17
+      - image: golang:1.18
   golang-latest:
     docker:
-      - image: golang:1.18
+      - image: golang:1.19
 
 jobs:
   lint-markdown:

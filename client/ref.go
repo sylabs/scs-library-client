@@ -40,11 +40,11 @@ var (
 //
 // Examples of valid URIs:
 //
-//  library:path:tags
-//  library:/path:tags
-//  library:///path:tags
-//  library://host/path:tags
-//  library://host:port/path:tags
+//	library:path:tags
+//	library:/path:tags
+//	library:///path:tags
+//	library://host/path:tags
+//	library://host:port/path:tags
 //
 // The tags component is a comma-separated list of one or more tags.
 type Ref struct {
