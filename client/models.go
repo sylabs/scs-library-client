@@ -236,8 +236,9 @@ type ArchImageTag struct {
 
 // ArchTagMap is a mapping of a string architecture to a TagMap, and hence to
 // Images.
-// e.g. {
-//			"amd64":    { "latest": 507f1f77bcf86cd799439011 },
-//			"ppc64le":  { "latest": 507f1f77bcf86cd799439012 },
-//		}
+//
+//	e.g. {
+//				"amd64":    { "latest": 507f1f77bcf86cd799439011 },
+//				"ppc64le":  { "latest": 507f1f77bcf86cd799439012 },
+//			}
 type ArchTagMap map[string]TagMap
