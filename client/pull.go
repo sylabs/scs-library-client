@@ -188,6 +188,24 @@ func (c *Client) downloadWorker(ctx context.Context, dst *os.File, url string, p
 	}
 }
 
+// parseContentRangeHeader returns size returned in Content-Range response HTTP header; handles
+// unknown size if header value is empty or "*" by returning -1
+func parseContentRangeHeader(value string) (int64, error) {
+	if value == "" {
+		return -1, nil
+	}
+
+	vals := strings.Split(value, "/")
+	if len(vals) < 2 {
+		return 0, fmt.Errorf("malformed Content-Length header")
+	}
+	if vals[1] == "*" {
+		// Server reports size is unknown
+		return -1, nil
+	}
+	return strconv.ParseInt(vals[1], 0, 64)
+}
+
 func (c *Client) getContentLength(ctx context.Context, url string) (int64, error) {
 	// Perform short request to determine content length.
 	resp, err := c.httpGetRangeRequest(ctx, url, 0, 1024)
@@ -203,8 +221,8 @@ func (c *Client) getContentLength(ctx context.Context, url string) (int64, error
 		return 0, fmt.Errorf("unexpected HTTP status: %d", resp.StatusCode)
 	}
 
-	vals := strings.Split(resp.Header.Get("Content-Range"), "/")
-	return strconv.ParseInt(vals[1], 0, 64)
+	// Extract size from Content-Range header
+	return parseContentRangeHeader(resp.Header.Get("Content-Range"))
 }
 
 // NoopProgressBar implements ProgressBarInterface to allow disabling the progress bar
