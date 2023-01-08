@@ -20,7 +20,10 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-var errUnauthorized = errors.New("unauthorized")
+var (
+	errUnauthorized          = errors.New("unauthorized")
+	errMissingLocationHeader = errors.New("missing HTTP Location header")
+)
 
 // DownloadImage will retrieve an image from the Container Library, saving it
 // into the specified io.Writer. The timeout value for this operation is set
@@ -191,8 +194,10 @@ func (c *Client) downloadWorker(ctx context.Context, dst *os.File, endpoint, aut
 	}
 }
 
-// parseContentRangeHeader returns size returned in Content-Range response HTTP header; handles
-// unknown size if header value is empty or "*" by returning -1
+// errUnknownContentLength returned if size is unknown
+var errUnknownContentLength = errors.New("unknown content length")
+
+// parseContentRangeHeader returns size returned in Content-Range response HTTP header
 func parseContentRangeHeader(value string) (int64, error) {
 	if value == "" {
 		return -1, nil
@@ -200,11 +205,11 @@ func parseContentRangeHeader(value string) (int64, error) {
 
 	vals := strings.Split(value, "/")
 	if len(vals) < 2 {
-		return 0, fmt.Errorf("malformed Content-Length header")
+		return 0, errUnknownContentLength
 	}
 	if vals[1] == "*" {
 		// Server reports size is unknown
-		return -1, nil
+		return 0, fmt.Errorf("indeterminant size")
 	}
 	return strconv.ParseInt(vals[1], 0, 64)
 }
@@ -345,11 +350,14 @@ func (c *Client) ConcurrentDownloadImage(ctx context.Context, dst *os.File, arch
 		return fmt.Errorf("unexpected HTTP status %d: %v", res.StatusCode, err)
 	}
 
-	if location := res.Header.Get("Location"); location != "" {
-		u, err := url.Parse(location)
-		if err != nil {
-			return fmt.Errorf("parsing redirect URL %v: %v", location, err)
-		}
+	location := res.Header.Get("Location")
+	if location == "" {
+		return errMissingLocationHeader
+	}
+
+	u, err := url.Parse(location)
+	if err != nil {
+		return fmt.Errorf("parsing redirect URL %v: %v", location, err)
 	}
 
 	authToken := ""
