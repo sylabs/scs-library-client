@@ -9,14 +9,23 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/binary"
+	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 	"testing"
+
+	crypto_rand "crypto/rand"
+
+	math_rand "math/rand"
 )
 
 type mockRawService struct {
@@ -192,12 +201,6 @@ func parseAuthorizationHeader(t *testing.T, authorizationHeader, authToken strin
 	return true
 }
 
-func parseRangeHeader(t *testing.T, value string, expectedStart, expectedEnd int64) {
-	if got, want := strings.ToLower(value), fmt.Sprintf("bytes=%d-%d", expectedStart, expectedEnd); got != want {
-		t.Fatalf("unexpected Range header: got %v, want %v", got, want)
-	}
-}
-
 // testAuthToken doesn't need to be a valid token, just a non-empty string
 const testAuthToken = "xxxxx"
 
@@ -235,7 +238,18 @@ func TestHTTPGetRangeRequest(t *testing.T) {
 			cloudLibrarySrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusPartialContent)
 
-				parseRangeHeader(t, r.Header.Get("Range"), tt.rangeStart, tt.rangeEnd)
+				start, end, err := parseRangeHeader(t, r.Header.Get("Range"))
+				if err != nil {
+					t.Fatalf("Unexpected error: %v", err)
+				}
+
+				if got, want := start, tt.rangeStart; got != want {
+					t.Fatalf("Unexpected range start: got %d, want %d", got, want)
+				}
+
+				if got, want := end, tt.rangeEnd; got != want {
+					t.Fatalf("Unexpected range end: got %d, want %d", got, want)
+				}
 
 				authorizationHeaderPresent = parseAuthorizationHeader(t, r.Header.Get("Authorization"), tt.authToken)
 			}))
@@ -243,7 +257,18 @@ func TestHTTPGetRangeRequest(t *testing.T) {
 
 			// fileSrv mocks an alternate server than test cloud library server
 			fileSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				parseRangeHeader(t, r.Header.Get("Range"), tt.rangeStart, tt.rangeEnd)
+				start, end, err := parseRangeHeader(t, r.Header.Get("Range"))
+				if err != nil {
+					t.Fatalf("Unexpected error: %v", err)
+				}
+
+				if got, want := start, tt.rangeStart; got != want {
+					t.Fatalf("Unexpected range start: got %d, want %d", got, want)
+				}
+
+				if got, want := end, tt.rangeEnd; got != want {
+					t.Fatalf("Unexpected range end: got %d, want %d", got, want)
+				}
 
 				authorizationHeaderPresent = parseAuthorizationHeader(t, r.Header.Get("Authorization"), tt.authToken)
 
@@ -262,7 +287,7 @@ func TestHTTPGetRangeRequest(t *testing.T) {
 				t.Fatalf("Error initializing client: %v", err)
 			}
 
-			res, err := c.httpGetRangeRequest(context.Background(), endpoint, tt.rangeStart, tt.rangeEnd)
+			res, err := c.httpGetRangeRequest(context.Background(), endpoint, tt.authToken, tt.rangeStart, tt.rangeEnd)
 			if err != nil {
 				if !tt.expectError {
 					t.Fatalf("Unexpected error: %v", err)
@@ -280,4 +305,309 @@ func TestHTTPGetRangeRequest(t *testing.T) {
 			}
 		})
 	}
+}
+
+type debugLogger struct{}
+
+func (logger *debugLogger) Log(args ...interface{}) {
+	log.Print(args...)
+}
+
+func (logger *debugLogger) Logf(format string, args ...interface{}) {
+	log.Printf(format, args...)
+}
+
+func mockLibraryServer(t *testing.T, sampleData []byte, redirectHost string) *httptest.Server {
+	t.Helper()
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/version", func(w http.ResponseWriter, r *http.Request) {
+		result := map[string]map[string]string{
+			"data": {
+				// "apiVersion": "2.0.0-alpha.2",
+				"apiVersion": "1.0.0",
+				"version":    "v1.3.4+1-0-g20da0ec",
+			},
+		}
+
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+
+		if err := json.NewEncoder(w).Encode(result); err != nil {
+			t.Fatalf("writing /version response: %v", err)
+		}
+	})
+	mux.HandleFunc("/v1/imagefile/", func(w http.ResponseWriter, r *http.Request) {
+		var redirectURL *url.URL
+
+		if redirectHost == "" {
+			redirectURL = &url.URL{
+				Scheme:   "http",
+				Host:     r.Host,
+				Path:     "/v1/imagepart" + strings.TrimPrefix(r.URL.Path, "/v1/imagefile"),
+				RawQuery: r.URL.RawQuery,
+			}
+		} else {
+			// redirectURL = url.URL{Host: redirectHost, Scheme: "http", Path: "/filepath"}
+			u, err := url.Parse(redirectHost)
+			if err != nil {
+				t.Fatalf("parsing redirect URL %v: %v", redirectURL, err)
+			}
+
+			// u.Host = redirectHost
+			// u.Scheme = "http"
+			u.Path = "/filepath"
+
+			redirectURL = u
+		}
+
+		(&debugLogger{}).Logf("Redirect URL: %v", redirectURL.String())
+
+		http.Redirect(w, r, redirectURL.String(), http.StatusSeeOther)
+	})
+
+	mux.HandleFunc("/v1/imagepart/", func(w http.ResponseWriter, r *http.Request) {
+		imagePartHandler(t, sampleData, true, w, r)
+	})
+
+	return httptest.NewServer(mux)
+}
+
+func TestConcurrentDownloadImage(t *testing.T) {
+	logger := &debugLogger{}
+
+	sampleData := generateSampleData(t)
+	sampleDataChecksum := sha256.Sum256(sampleData)
+
+	logger.Logf("Using %d byte(s) of sample data", len(sampleData))
+
+	srv := mockLibraryServer(t, sampleData, "")
+	defer srv.Close()
+
+	c, err := NewClient(&Config{BaseURL: srv.URL, AuthToken: "xxxxx", Logger: logger})
+	if err != nil {
+		t.Fatalf("Error initializing client: %v", err)
+	}
+
+	fp, err := os.CreateTemp("", "download-unit-test-*")
+	if err != nil {
+		t.Fatalf("Error creating temporary file: %v", err)
+	}
+	defer func() {
+		fp.Close()
+
+		if err := os.Remove(fp.Name()); err != nil {
+			logger.Logf("Error removing temporary file %v: %v", fp.Name(), err)
+		}
+
+		logger.Logf("Temporary file %v removed", fp.Name())
+	}()
+
+	logger.Logf("Using temporary file %v", fp.Name())
+
+	if err := c.ConcurrentDownloadImage(
+		context.Background(),
+		fp,
+		"amd64",
+		"entity/collection/container",
+		"latest",
+		&Downloader{Concurrency: 4, PartSize: 1024 * 1024, BufferSize: 32768},
+		nil,
+	); err != nil {
+		t.Fatal(err.Error())
+	}
+
+	_ = fp.Close()
+
+	resultChecksum := getFileHash(t, fp.Name())
+
+	if !bytes.Equal(sampleDataChecksum[:], resultChecksum) {
+		t.Fatalf("sha256 checksum mismatch")
+	}
+}
+
+func getFileHash(t *testing.T, filename string) []byte {
+	t.Helper()
+
+	h := sha256.New()
+
+	fp, err := os.Open(filename)
+	if err != nil {
+		t.Fatalf("Error opening file %v for reading: %v", filename, err)
+	}
+	if _, err := io.Copy(h, fp); err != nil {
+		t.Fatalf("Error reading file %v: %v", filename, err)
+	}
+	defer func() {
+		_ = fp.Close()
+	}()
+
+	return h.Sum(nil)
+}
+
+func TestConcurrentDownloadImageExternalRedirect(t *testing.T) {
+	logger := &debugLogger{}
+
+	sampleData := generateSampleData(t)
+	sampleDataChecksum := sha256.Sum256(sampleData)
+
+	logger.Logf("Using %d byte(s) of sample data", len(sampleData))
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/filepath", func(w http.ResponseWriter, r *http.Request) {
+		imagePartHandler(t, sampleData, true, w, r)
+	})
+	fileSrv := httptest.NewServer(mux)
+
+	srv := mockLibraryServer(t, sampleData, fileSrv.URL)
+	defer srv.Close()
+
+	c, err := NewClient(&Config{BaseURL: srv.URL, Logger: logger})
+	if err != nil {
+		t.Fatalf("Error initializing client: %v", err)
+	}
+
+	fp, err := os.CreateTemp("", "download-unit-test")
+	if err != nil {
+		t.Fatalf("Error creating temporary file: %v", err)
+	}
+	defer func() {
+		_ = fp.Close()
+
+		if err := os.Remove(fp.Name()); err != nil {
+			logger.Logf("Error removing temporary file %v: %v", fp.Name(), err)
+		}
+
+		logger.Logf("Temporary file %v removed", fp.Name())
+	}()
+
+	logger.Logf("Using temporary file %v", fp.Name())
+
+	if err := c.ConcurrentDownloadImage(
+		context.Background(),
+		fp,
+		"amd64",
+		"entity/collection/container",
+		"latest",
+		&Downloader{Concurrency: 4, PartSize: 1 * 1024 * 1024, BufferSize: 32768},
+		nil,
+	); err != nil {
+		t.Fatal(err.Error())
+	}
+
+	resultChecksum := getFileHash(t, fp.Name())
+
+	if !bytes.Equal(sampleDataChecksum[:], resultChecksum) {
+		t.Fatalf("sha256 checksum mismatch")
+	}
+}
+
+func imagePartHandler(t *testing.T, sampleData []byte, rangeSupport bool, w http.ResponseWriter, r *http.Request) {
+	contentLength := int64(len(sampleData))
+
+	rangeStart, rangeEnd, err := parseRangeHeader(t, r.Header.Get("Range"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Default HTTP status is 200 (OK). This is the status code if the server does not support
+	// range requests.
+	code := http.StatusOK
+
+	if !rangeSupport {
+		// Range support is disabled
+		rangeStart, rangeEnd = 0, contentLength-1
+	} else {
+		if rangeEnd-rangeStart+1 > contentLength {
+			rangeEnd = contentLength - 1
+		}
+
+		if rangeStart > contentLength-1 || (rangeStart >= rangeEnd) || (rangeEnd-rangeStart+1 > contentLength) {
+			w.WriteHeader(http.StatusRequestedRangeNotSatisfiable)
+			return
+		}
+
+		w.Header().Set("Content-Range", fmt.Sprintf("bytes %d-%d/%d", rangeStart, rangeEnd, len(sampleData)))
+
+		code = http.StatusPartialContent
+	}
+
+	w.Header().Set("Content-Length", strconv.FormatInt(contentLength, 10))
+	w.Header().Set("Content-Type", "application/octet-stream")
+
+	w.WriteHeader(code)
+
+	if _, err := w.Write(sampleData[rangeStart : rangeEnd+1]); err != nil {
+		t.Fatalf("Error writing HTTP response: %v", err)
+	}
+}
+
+// parseRangeHeader parses simple "Range: bytes=<start>-<end>" HTTP header and returns start/end
+//
+// This parser function does NOT handle multiple ranges specified in request.
+func parseRangeHeader(t *testing.T, v string) (int64, int64, error) {
+	t.Helper()
+
+	if v == "" {
+		return -1, -1, nil
+	}
+
+	var rangeStart int64 = -1
+	var rangeEnd int64 = -1
+
+	for _, rangeElements := range strings.Split(v, ",") {
+		elements := strings.Split(rangeElements, "=")
+		if elements[0] != "bytes" {
+			return rangeStart, rangeEnd, fmt.Errorf("unsupported Range header arguments (\"%v\")", v)
+		}
+		byteRange := strings.SplitN(elements[1], "-", 2)
+
+		value, err := strconv.ParseInt(byteRange[0], 10, 64)
+		if err != nil {
+			return rangeStart, rangeEnd, fmt.Errorf("malformed Range header (\"%v\"): %v", v, err)
+		}
+		rangeStart = value
+
+		if len(byteRange) > 1 {
+			if byteRange[1] != "*" {
+				value, err := strconv.ParseInt(byteRange[1], 10, 64)
+				if err != nil {
+					return rangeStart, rangeEnd, fmt.Errorf("malformed Range header (\"%v\"): %v", v, err)
+				}
+				rangeEnd = value
+			}
+		}
+	}
+
+	return rangeStart, rangeEnd, nil
+}
+
+// generateSampleData generates between 0 and 16 MiB of random data
+func generateSampleData(t *testing.T) []byte {
+	t.Helper()
+
+	const maxSampleDataSize = 16 * 1024 * 1024 // 16 MiB
+
+	size := math_rand.Int63() % maxSampleDataSize
+
+	sampleBytes := make([]byte, size)
+
+	if _, err := crypto_rand.Read(sampleBytes); err != nil {
+		t.Fatalf("error generating random bytes: %v", err)
+	}
+
+	return sampleBytes
+}
+
+func seedRandomNumberGenerator() {
+	var b [8]byte
+	if _, err := crypto_rand.Read(b[:]); err != nil {
+		panic(fmt.Errorf("error seeding random number generator: %v", err))
+	}
+	math_rand.Seed(int64(binary.LittleEndian.Uint64(b[:])))
+}
+
+func TestMain(m *testing.M) {
+	seedRandomNumberGenerator()
+
+	os.Exit(m.Run())
 }

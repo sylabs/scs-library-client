@@ -20,6 +20,8 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
+var errUnauthorized = errors.New("unauthorized")
+
 // DownloadImage will retrieve an image from the Container Library, saving it
 // into the specified io.Writer. The timeout value for this operation is set
 // within the context. It is recommended to use a large value (ie. 1800 seconds)
@@ -105,18 +107,18 @@ type Downloader struct {
 
 var errInvalidArguments = errors.New("invalid argument(s)")
 
-// httpGetRangeRequest performs HTTP GET range request to URL specified by 'u' in range start-end.
-func (c *Client) httpGetRangeRequest(ctx context.Context, u string, start, end int64) (*http.Response, error) {
+// httpGetRangeRequest performs HTTP GET range request to URL 'u' in range start-end.
+func (c *Client) httpGetRangeRequest(ctx context.Context, endpoint, authToken string, start, end int64) (*http.Response, error) {
 	if start >= end || start < 0 || end < 0 || (end-start+1) < 0 {
 		return nil, errInvalidArguments
 	}
 
-	redirectURL, err := url.Parse(u)
+	u, err := url.Parse(endpoint)
 	if err != nil {
 		return nil, err
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -125,8 +127,9 @@ func (c *Client) httpGetRangeRequest(ctx context.Context, u string, start, end i
 		req.Header.Set("User-Agent", v)
 	}
 
-	if c.AuthToken != "" && samehost(c.BaseURL, redirectURL) {
-		req.Header.Add("Authorization", fmt.Sprintf("Bearer %v", c.AuthToken))
+	if authToken != "" && samehost(c.BaseURL, u) {
+		// Include authorization header if request being made to host specified by base URL
+		req.Header.Add("Authorization", fmt.Sprintf("Bearer %v", authToken))
 	}
 
 	req.Header.Add("Range", fmt.Sprintf("bytes=%d-%d", start, end))
@@ -144,8 +147,8 @@ func samehost(host1, host2 *url.URL) bool {
 }
 
 // downloadFilePart writes range to dst as specified in bufferSpec.
-func (c *Client) downloadFilePart(ctx context.Context, dst *os.File, url string, ps *partSpec, pb ProgressBar) error {
-	resp, err := c.httpGetRangeRequest(ctx, url, ps.Start, ps.End)
+func (c *Client) downloadFilePart(ctx context.Context, dst *os.File, endpoint, authToken string, ps *partSpec, pb ProgressBar) error {
+	resp, err := c.httpGetRangeRequest(ctx, endpoint, authToken, ps.Start, ps.End)
 	if err != nil {
 		return err
 	}
@@ -177,10 +180,10 @@ func (c *Client) downloadFilePart(ctx context.Context, dst *os.File, url string,
 }
 
 // downloadWorker is a worker func for processing jobs in stripes channel.
-func (c *Client) downloadWorker(ctx context.Context, dst *os.File, url string, parts <-chan partSpec, pb ProgressBar) func() error {
+func (c *Client) downloadWorker(ctx context.Context, dst *os.File, endpoint, authToken string, parts <-chan partSpec, pb ProgressBar) func() error {
 	return func() error {
 		for ps := range parts {
-			if err := c.downloadFilePart(ctx, dst, url, &ps, pb); err != nil {
+			if err := c.downloadFilePart(ctx, dst, endpoint, authToken, &ps, pb); err != nil {
 				return err
 			}
 		}
@@ -206,9 +209,9 @@ func parseContentRangeHeader(value string) (int64, error) {
 	return strconv.ParseInt(vals[1], 0, 64)
 }
 
-func (c *Client) getContentLength(ctx context.Context, url string) (int64, error) {
+func (c *Client) getContentLength(ctx context.Context, endpoint, authToken string) (int64, error) {
 	// Perform short request to determine content length.
-	resp, err := c.httpGetRangeRequest(ctx, url, 0, 1024)
+	resp, err := c.httpGetRangeRequest(ctx, endpoint, authToken, 0, 1024)
 	if err != nil {
 		return 0, err
 	}
@@ -335,12 +338,26 @@ func (c *Client) ConcurrentDownloadImage(ctx context.Context, dst *os.File, arch
 	}
 
 	if res.StatusCode != http.StatusSeeOther {
+		if res.StatusCode == http.StatusUnauthorized {
+			return errUnauthorized
+		}
+
 		return fmt.Errorf("unexpected HTTP status %d: %v", res.StatusCode, err)
 	}
 
-	url := res.Header.Get("Location")
+	if location := res.Header.Get("Location"); location != "" {
+		u, err := url.Parse(location)
+		if err != nil {
+			return fmt.Errorf("parsing redirect URL %v: %v", location, err)
+		}
+	}
 
-	contentLength, err := c.getContentLength(ctx, url)
+	authToken := ""
+	if samehost(c.BaseURL, u) {
+		authToken = c.AuthToken
+	}
+
+	contentLength, err := c.getContentLength(ctx, u.String(), authToken)
 	if err != nil {
 		return err
 	}
@@ -351,12 +368,13 @@ func (c *Client) ConcurrentDownloadImage(ctx context.Context, dst *os.File, arch
 		contentLength, numParts, spec.Concurrency, spec.PartSize, spec.BufferSize,
 	)
 
-	jobs := make(chan partSpec, numParts)
+	jobs := make(chan partSpec)
 
 	g, ctx := errgroup.WithContext(ctx)
 
 	// initialize progress bar
 	pb.Init(contentLength)
+	defer pb.Wait()
 
 	// if spec.Requests is greater than number of parts for requested file,
 	// set concurrency to number of parts
@@ -367,7 +385,7 @@ func (c *Client) ConcurrentDownloadImage(ctx context.Context, dst *os.File, arch
 
 	// start workers to manage concurrent HTTP requests
 	for workerID := uint(0); workerID <= concurrency; workerID++ {
-		g.Go(c.downloadWorker(ctx, dst, url, jobs, pb))
+		g.Go(c.downloadWorker(ctx, dst, u.String(), authToken, jobs, pb))
 	}
 
 	// iterate over parts, adding to job queue
@@ -389,16 +407,12 @@ func (c *Client) ConcurrentDownloadImage(ctx context.Context, dst *os.File, arch
 	close(jobs)
 
 	// wait on errgroup
-	err = g.Wait()
-	if err != nil {
+	if err := g.Wait(); err != nil {
 		// cancel/remove progress bar on error
 		pb.Abort(true)
+		return err
 	}
-
-	// wait on progress bar
-	pb.Wait()
-
-	return err
+	return nil
 }
 
 func (c *Client) singleStreamDownload(ctx context.Context, fp *os.File, res *http.Response, pb ProgressBar) error {
