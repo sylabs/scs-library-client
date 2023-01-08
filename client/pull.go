@@ -23,6 +23,8 @@ import (
 var (
 	errUnauthorized          = errors.New("unauthorized")
 	errMissingLocationHeader = errors.New("missing HTTP Location header")
+	errInvalidArguments      = errors.New("invalid argument(s)")
+	errUnknownContentLength  = errors.New("unknown content length")
 )
 
 // DownloadImage will retrieve an image from the Container Library, saving it
@@ -108,8 +110,6 @@ type Downloader struct {
 	BufferSize int64
 }
 
-var errInvalidArguments = errors.New("invalid argument(s)")
-
 // httpGetRangeRequest performs HTTP GET range request to URL 'u' in range start-end.
 func (c *Client) httpGetRangeRequest(ctx context.Context, endpoint, authToken string, start, end int64) (*http.Response, error) {
 	if start >= end || start < 0 || end < 0 || (end-start+1) < 0 {
@@ -193,9 +193,6 @@ func (c *Client) downloadWorker(ctx context.Context, dst *os.File, endpoint, aut
 		return nil
 	}
 }
-
-// errUnknownContentLength returned if size is unknown
-var errUnknownContentLength = errors.New("unknown content length")
 
 // parseContentRangeHeader returns size returned in Content-Range response HTTP header
 func parseContentRangeHeader(value string) (int64, error) {
