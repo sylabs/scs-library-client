@@ -1,4 +1,4 @@
-// Copyright (c) 2018, Sylabs Inc. All rights reserved.
+// Copyright (c) 2018-2023, Sylabs Inc. All rights reserved.
 // This software is licensed under a 3-clause BSD license. Please consult the
 // LICENSE.md file distributed with the sources of this project regarding your
 // rights to use or distribute this software.
@@ -11,7 +11,6 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/binary"
-	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -317,22 +316,22 @@ func (logger *debugLogger) Logf(format string, args ...interface{}) {
 	log.Printf(format, args...)
 }
 
-func mockLibraryServer(t *testing.T, sampleData []byte, redirectHost string) *httptest.Server {
+var (
+	// Version data from Enterprise library v1.x
+	entVersion1x = "{\"data\": {\"apiVersion\": \"2.0.0-alpha.2\", \"version\": \"v1.3.4+1-0-g20da0ec\"}}}"
+
+	// Version data from Enterprise library 2.x
+	entVersion2x = "{\"data\": {\"apiVersion\": \"1.0.0\", \"version\": \"v0.3.4+1-0-gbbc7c9c\"}}}"
+)
+
+func mockLibraryServer(t *testing.T, sampleData []byte, libraryVersion, redirectHost string) *httptest.Server {
 	t.Helper()
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/version", func(w http.ResponseWriter, r *http.Request) {
-		result := map[string]map[string]string{
-			"data": {
-				// "apiVersion": "2.0.0-alpha.2",
-				"apiVersion": "1.0.0",
-				"version":    "v1.3.4+1-0-g20da0ec",
-			},
-		}
-
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 
-		if err := json.NewEncoder(w).Encode(result); err != nil {
+		if _, err := w.Write([]byte(libraryVersion)); err != nil {
 			t.Fatalf("writing /version response: %v", err)
 		}
 	})
@@ -340,6 +339,7 @@ func mockLibraryServer(t *testing.T, sampleData []byte, redirectHost string) *ht
 		var redirectURL *url.URL
 
 		if redirectHost == "" {
+			// If redirectHost is undefined, redirect to same URL, different endpoint
 			redirectURL = &url.URL{
 				Scheme:   "http",
 				Host:     r.Host,
@@ -347,7 +347,7 @@ func mockLibraryServer(t *testing.T, sampleData []byte, redirectHost string) *ht
 				RawQuery: r.URL.RawQuery,
 			}
 		} else {
-			// redirectURL = url.URL{Host: redirectHost, Scheme: "http", Path: "/filepath"}
+			// Redirect to specified external URL
 			u, err := url.Parse(redirectHost)
 			if err != nil {
 				t.Fatalf("parsing redirect URL %v: %v", redirectURL, err)
@@ -370,56 +370,72 @@ func mockLibraryServer(t *testing.T, sampleData []byte, redirectHost string) *ht
 	return httptest.NewServer(mux)
 }
 
+// TestConcurrentDownloadImage tests concurrent download for library 1.x and 2.x to an "internal"
+// URL (same host as library server)
 func TestConcurrentDownloadImage(t *testing.T) {
 	logger := &debugLogger{}
 
-	sampleData := generateSampleData(t)
-	sampleDataChecksum := sha256.Sum256(sampleData)
-
-	logger.Logf("Using %d byte(s) of sample data", len(sampleData))
-
-	srv := mockLibraryServer(t, sampleData, "")
-	defer srv.Close()
-
-	c, err := NewClient(&Config{BaseURL: srv.URL, AuthToken: "xxxxx", Logger: logger})
-	if err != nil {
-		t.Fatalf("Error initializing client: %v", err)
+	tests := []struct {
+		name           string
+		libraryVersion string
+	}{
+		{"LibraryV1", entVersion1x},
+		{"LibraryV2", entVersion2x},
 	}
 
-	fp, err := os.CreateTemp("", "download-unit-test-*")
-	if err != nil {
-		t.Fatalf("Error creating temporary file: %v", err)
-	}
-	defer func() {
-		fp.Close()
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			sampleData := generateSampleData(t)
+			sampleDataChecksum := sha256.Sum256(sampleData)
 
-		if err := os.Remove(fp.Name()); err != nil {
-			logger.Logf("Error removing temporary file %v: %v", fp.Name(), err)
-		}
+			logger.Logf("Using %d byte(s) of sample data", len(sampleData))
 
-		logger.Logf("Temporary file %v removed", fp.Name())
-	}()
+			srv := mockLibraryServer(t, sampleData, tt.libraryVersion, "")
+			defer srv.Close()
 
-	logger.Logf("Using temporary file %v", fp.Name())
+			logger.Logf("Mock library URL: %v", srv.URL)
 
-	if err := c.ConcurrentDownloadImage(
-		context.Background(),
-		fp,
-		"amd64",
-		"entity/collection/container",
-		"latest",
-		&Downloader{Concurrency: 4, PartSize: 1024 * 1024, BufferSize: 32768},
-		nil,
-	); err != nil {
-		t.Fatal(err.Error())
-	}
+			c, err := NewClient(&Config{BaseURL: srv.URL, AuthToken: "xxxxx", Logger: logger})
+			if err != nil {
+				t.Fatalf("Error initializing client: %v", err)
+			}
 
-	_ = fp.Close()
+			fp, err := os.CreateTemp("", "download-unit-test-*")
+			if err != nil {
+				t.Fatalf("Error creating temporary file: %v", err)
+			}
+			defer func() {
+				fp.Close()
 
-	resultChecksum := getFileHash(t, fp.Name())
+				if err := os.Remove(fp.Name()); err != nil {
+					logger.Logf("Error removing temporary file %v: %v", fp.Name(), err)
+				}
 
-	if !bytes.Equal(sampleDataChecksum[:], resultChecksum) {
-		t.Fatalf("sha256 checksum mismatch")
+				logger.Logf("Temporary file %v removed", fp.Name())
+			}()
+
+			logger.Logf("Using temporary file %v", fp.Name())
+
+			if err := c.ConcurrentDownloadImage(
+				context.Background(),
+				fp,
+				"amd64",
+				"entity/collection/container",
+				"latest",
+				&Downloader{Concurrency: 4, PartSize: 1024 * 1024, BufferSize: 32768},
+				nil,
+			); err != nil {
+				t.Fatal(err.Error())
+			}
+
+			_ = fp.Close()
+
+			resultChecksum := getFileHash(t, fp.Name())
+
+			if !bytes.Equal(sampleDataChecksum[:], resultChecksum) {
+				t.Fatalf("sha256 checksum mismatch")
+			}
+		})
 	}
 }
 
@@ -442,60 +458,76 @@ func getFileHash(t *testing.T, filename string) []byte {
 	return h.Sum(nil)
 }
 
+// TestConcurrentDownloadImageExternalRedirect tests both library 1.x and 2.x with redirect to
+// an external URL
 func TestConcurrentDownloadImageExternalRedirect(t *testing.T) {
 	logger := &debugLogger{}
 
-	sampleData := generateSampleData(t)
-	sampleDataChecksum := sha256.Sum256(sampleData)
-
-	logger.Logf("Using %d byte(s) of sample data", len(sampleData))
-
-	mux := http.NewServeMux()
-	mux.HandleFunc("/filepath", func(w http.ResponseWriter, r *http.Request) {
-		imagePartHandler(t, sampleData, true, w, r)
-	})
-	fileSrv := httptest.NewServer(mux)
-
-	srv := mockLibraryServer(t, sampleData, fileSrv.URL)
-	defer srv.Close()
-
-	c, err := NewClient(&Config{BaseURL: srv.URL, Logger: logger})
-	if err != nil {
-		t.Fatalf("Error initializing client: %v", err)
+	tests := []struct {
+		name           string
+		libraryVersion string
+	}{
+		{"LibraryV1", entVersion1x},
+		{"LibraryV2", entVersion2x},
 	}
 
-	fp, err := os.CreateTemp("", "download-unit-test")
-	if err != nil {
-		t.Fatalf("Error creating temporary file: %v", err)
-	}
-	defer func() {
-		_ = fp.Close()
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			sampleData := generateSampleData(t)
+			sampleDataChecksum := sha256.Sum256(sampleData)
 
-		if err := os.Remove(fp.Name()); err != nil {
-			logger.Logf("Error removing temporary file %v: %v", fp.Name(), err)
-		}
+			logger.Logf("Using %d byte(s) of sample data", len(sampleData))
 
-		logger.Logf("Temporary file %v removed", fp.Name())
-	}()
+			mux := http.NewServeMux()
+			mux.HandleFunc("/filepath", func(w http.ResponseWriter, r *http.Request) {
+				imagePartHandler(t, sampleData, true, w, r)
+			})
+			fileSrv := httptest.NewServer(mux)
 
-	logger.Logf("Using temporary file %v", fp.Name())
+			srv := mockLibraryServer(t, sampleData, tt.libraryVersion, fileSrv.URL)
+			defer srv.Close()
 
-	if err := c.ConcurrentDownloadImage(
-		context.Background(),
-		fp,
-		"amd64",
-		"entity/collection/container",
-		"latest",
-		&Downloader{Concurrency: 4, PartSize: 1 * 1024 * 1024, BufferSize: 32768},
-		nil,
-	); err != nil {
-		t.Fatal(err.Error())
-	}
+			logger.Logf("Mock library URL: %v", srv.URL)
 
-	resultChecksum := getFileHash(t, fp.Name())
+			c, err := NewClient(&Config{BaseURL: srv.URL, Logger: logger})
+			if err != nil {
+				t.Fatalf("Error initializing client: %v", err)
+			}
 
-	if !bytes.Equal(sampleDataChecksum[:], resultChecksum) {
-		t.Fatalf("sha256 checksum mismatch")
+			fp, err := os.CreateTemp("", "download-unit-test")
+			if err != nil {
+				t.Fatalf("Error creating temporary file: %v", err)
+			}
+			defer func() {
+				_ = fp.Close()
+
+				if err := os.Remove(fp.Name()); err != nil {
+					logger.Logf("Error removing temporary file %v: %v", fp.Name(), err)
+				}
+
+				logger.Logf("Temporary file %v removed", fp.Name())
+			}()
+
+			logger.Logf("Using temporary file %v", fp.Name())
+
+			if err := c.ConcurrentDownloadImage(
+				context.Background(),
+				fp,
+				"amd64",
+				"entity/collection/container",
+				"latest",
+				&Downloader{Concurrency: 4, PartSize: 1 * 1024 * 1024, BufferSize: 32768},
+				nil,
+			); err != nil {
+				t.Fatal(err.Error())
+			}
+
+			resultChecksum := getFileHash(t, fp.Name())
+
+			if !bytes.Equal(sampleDataChecksum[:], resultChecksum) {
+				t.Fatalf("sha256 checksum mismatch")
+			}
+		})
 	}
 }
 
