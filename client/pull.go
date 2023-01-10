@@ -116,7 +116,7 @@ func (c *Client) httpGetRangeRequest(ctx context.Context, endpoint, authToken st
 }
 
 func (c *Client) httpRangeRequest(ctx context.Context, method, endpoint, authToken string, start, end int64) (*http.Response, error) {
-	if start >= end || start < 0 || end < 0 || (end-start+1) < 0 {
+	if start >= end || start < 0 || end < 0 {
 		return nil, errInvalidArguments
 	}
 
