@@ -353,8 +353,6 @@ func mockLibraryServer(t *testing.T, sampleData []byte, redirectHost string) *ht
 				t.Fatalf("parsing redirect URL %v: %v", redirectURL, err)
 			}
 
-			// u.Host = redirectHost
-			// u.Scheme = "http"
 			u.Path = "/filepath"
 
 			redirectURL = u
@@ -535,6 +533,11 @@ func imagePartHandler(t *testing.T, sampleData []byte, rangeSupport bool, w http
 	w.Header().Set("Content-Type", "application/octet-stream")
 
 	w.WriteHeader(code)
+
+	if r.Method == http.MethodHead {
+		// Don't send data on a HEAD request
+		return
+	}
 
 	if _, err := w.Write(sampleData[rangeStart : rangeEnd+1]); err != nil {
 		t.Fatalf("Error writing HTTP response: %v", err)

@@ -112,6 +112,10 @@ type Downloader struct {
 
 // httpGetRangeRequest performs HTTP GET range request to URL 'u' in range start-end.
 func (c *Client) httpGetRangeRequest(ctx context.Context, endpoint, authToken string, start, end int64) (*http.Response, error) {
+	return c.httpRangeRequest(ctx, http.MethodGet, endpoint, authToken, start, end)
+}
+
+func (c *Client) httpRangeRequest(ctx context.Context, method, endpoint, authToken string, start, end int64) (*http.Response, error) {
 	if start >= end || start < 0 || end < 0 || (end-start+1) < 0 {
 		return nil, errInvalidArguments
 	}
@@ -121,7 +125,7 @@ func (c *Client) httpGetRangeRequest(ctx context.Context, endpoint, authToken st
 		return nil, err
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
+	req, err := http.NewRequestWithContext(ctx, method, endpoint, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -213,7 +217,7 @@ func parseContentRangeHeader(value string) (int64, error) {
 
 func (c *Client) getContentLength(ctx context.Context, endpoint, authToken string) (int64, error) {
 	// Perform short request to determine content length.
-	resp, err := c.httpGetRangeRequest(ctx, endpoint, authToken, 0, 1024)
+	resp, err := c.httpRangeRequest(ctx, http.MethodHead, endpoint, authToken, 0, 1024)
 	if err != nil {
 		return 0, err
 	}
