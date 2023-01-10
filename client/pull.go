@@ -217,7 +217,7 @@ func parseContentRangeHeader(value string) (int64, error) {
 
 func (c *Client) getContentLength(ctx context.Context, endpoint, authToken string) (int64, error) {
 	// Perform short request to determine content length.
-	resp, err := c.httpRangeRequest(ctx, http.MethodHead, endpoint, authToken, 0, 1024)
+	resp, err := c.httpRangeRequest(ctx, http.MethodGet, endpoint, authToken, 0, 1024)
 	if err != nil {
 		return 0, err
 	}
