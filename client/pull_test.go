@@ -86,29 +86,28 @@ func generateSampleData(t *testing.T) []byte {
 // mockLibraryServer returns *httptest.Server that mocks Cloud Library server; in particular,
 // it has handlers for /version, /v1/images, /v1/imagefile, and /v1/imagepart
 func mockLibraryServer(t *testing.T, sampleBytes []byte, size int64, multistream bool) *httptest.Server {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if strings.HasPrefix(r.URL.Path, "/version") {
-			w.Header().Set("Content-Type", "application/json; charset=utf-8")
-			w.WriteHeader(http.StatusOK)
+	mux := http.NewServeMux()
 
-			if _, err := w.Write([]byte("{\"data\": {\"apiVersion\": \"1.0.0\"}}")); err != nil {
-				t.Fatalf("error writing /version response: %v", err)
-			}
-			return
+	mux.HandleFunc("/version", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(http.StatusOK)
+
+		if _, err := w.Write([]byte("{\"data\": {\"apiVersion\": \"1.0.0\"}}")); err != nil {
+			t.Fatalf("error writing /version response: %v", err)
 		}
+	}))
 
-		if multistream && strings.HasPrefix(r.URL.Path, "/v1/images/") {
+	if multistream {
+		mux.HandleFunc("/v1/images/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json; charset=utf-8")
 			w.WriteHeader(http.StatusOK)
 
 			if _, err := w.Write([]byte(fmt.Sprintf("{\"data\": {\"size\": %v}}", size))); err != nil {
 				t.Fatalf("error writing /v1/images response: %v", err)
 			}
+		}))
 
-			return
-		}
-
-		if multistream && strings.HasPrefix(r.URL.Path, "/v1/imagefile/") {
+		mux.HandleFunc("/v1/imagefile/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			redirectURL := &url.URL{
 				Scheme: "http",
 				Host:   r.Host,
@@ -116,30 +115,45 @@ func mockLibraryServer(t *testing.T, sampleBytes []byte, size int64, multistream
 			}
 			w.Header().Set("Location", redirectURL.String())
 			w.WriteHeader(http.StatusSeeOther)
-			return
-		}
+		}))
 
-		// Handle /v1/imagefile (single stream) or /v1/imagepart (multistream)
+		mux.HandleFunc("/v1/imagepart/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// Handle Range request for multipart downloads
+			var start, end int64
+			if val := r.Header.Get("Range"); val != "" {
+				start, end = parseRangeHeader(t, val)
+			} else {
+				t.Fatal("Missing HTTP Range header")
+			}
 
-		// Handle Range request for multipart downloads
-		var start, end int64
-		if val := r.Header.Get("Range"); val != "" {
-			start, end = parseRangeHeader(t, val)
-		} else {
-			start, end = 0, int64(size)-1
-		}
+			writeBlob(t, sampleBytes, start, end, http.StatusPartialContent, w)
+		}))
+	} else {
+		// single stream
+		mux.HandleFunc("/v1/imagefile/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			writeBlob(t, sampleBytes, 0, size-1, http.StatusOK, w)
+		}))
+	}
 
-		// Set up response headers
-		w.Header().Set("Content-Length", fmt.Sprintf("%v", end-start+1))
-		w.Header().Set("Content-Type", "application/octet-stream")
-		w.WriteHeader(http.StatusOK)
-
-		// Write image data
-		if _, err := w.Write(sampleBytes[start : end+1]); err != nil {
-			t.Fatalf("error writing response: %v", err)
-		}
+	mux.HandleFunc("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Fatalf("Unhandled HTTP request: method=[%v], path=[%v]", r.Method, r.URL.Path)
 	}))
-	return srv
+
+	return httptest.NewServer(mux)
+}
+
+func writeBlob(t *testing.T, sampleBytes []byte, start, end int64, code int, w http.ResponseWriter) {
+	t.Helper()
+
+	// Set up response headers
+	w.Header().Set("Content-Length", fmt.Sprintf("%v", end-start+1))
+	w.Header().Set("Content-Type", "application/octet-stream")
+	w.WriteHeader(code)
+
+	// Write image data
+	if _, err := w.Write(sampleBytes[start : end+1]); err != nil {
+		t.Fatalf("error writing response: %v", err)
+	}
 }
 
 // TestLegacyDownloadImage downloads random image data from mock library and compares hash to
