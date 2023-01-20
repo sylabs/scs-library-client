@@ -70,7 +70,7 @@ type ProgressBar interface {
 	Wait()
 }
 
-// ConcurrentDownloadImage implements a multi-part (concurrent) downloader for
+// DownloadImage implements a multi-part (concurrent) downloader for
 // Cloud Library images. spec is used to define transfer parameters. pb is an
 // optional progress bar interface.  If pb is nil, NoopProgressBar is used.
 //
@@ -78,7 +78,7 @@ type ProgressBar interface {
 // only files larger than Downloader.PartSize. It will automatically adjust the
 // concurrency for source files that do not meet minimum size for multi-part
 // downloads.
-func (c *Client) ConcurrentDownloadImage(ctx context.Context, dst *os.File, arch, path, tag string, spec *Downloader, pb ProgressBar) error {
+func (c *Client) DownloadImage(ctx context.Context, dst *os.File, arch, path, tag string, spec *Downloader, pb ProgressBar) error {
 	if pb == nil {
 		pb = &NoopProgressBar{}
 	}
