@@ -8,7 +8,6 @@ package client
 import (
 	"context"
 	"crypto/sha256"
-	"encoding/binary"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -84,16 +83,6 @@ func generateSampleData(t *testing.T) []byte {
 	return sampleBytes
 }
 
-func seedRandomNumberGenerator(t *testing.T) {
-	t.Helper()
-
-	var b [8]byte
-	if _, err := crypto_rand.Read(b[:]); err != nil {
-		t.Fatalf("error seeding random number generator: %v", err)
-	}
-	math_rand.Seed(int64(binary.LittleEndian.Uint64(b[:])))
-}
-
 // mockLibraryServer returns *httptest.Server that mocks Cloud Library server; in particular,
 // it has handlers for /version, /v1/images, /v1/imagefile, and /v1/imagepart
 func mockLibraryServer(t *testing.T, sampleBytes []byte, size int64, multistream bool) *httptest.Server {
@@ -163,9 +152,6 @@ func TestLegacyDownloadImage(t *testing.T) {
 		{"SingleStream", false},
 		{"MultiStream", true},
 	}
-
-	// Total overkill seeding the random number generator
-	seedRandomNumberGenerator(t)
 
 	for _, tt := range tests {
 		tt := tt

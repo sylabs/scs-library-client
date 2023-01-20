@@ -7,8 +7,13 @@ package client
 
 import (
 	"context"
+	crypto_rand "crypto/rand"
+	"encoding/binary"
 	"io"
+	"log"
+	math_rand "math/rand"
 	"net/http"
+	"os"
 	"strings"
 	"testing"
 )
@@ -181,4 +186,19 @@ func TestNewRequest(t *testing.T) {
 			}
 		})
 	}
+}
+
+func seedRandomNumberGenerator() {
+	var b [8]byte
+	if _, err := crypto_rand.Read(b[:]); err != nil {
+		log.Fatalf("error seeding random number generator: %v", err)
+	}
+	math_rand.Seed(int64(binary.LittleEndian.Uint64(b[:])))
+}
+
+func TestMain(m *testing.M) {
+	// Total overkill seeding the random number generator
+	seedRandomNumberGenerator()
+
+	os.Exit(m.Run())
 }
