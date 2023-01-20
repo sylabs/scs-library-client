@@ -67,7 +67,7 @@ func (c *Client) multipartDownload(ctx context.Context, u string, creds credenti
 
 	// Create download part workers
 	for n := uint(0); n < spec.Concurrency; n++ {
-		g.Go(c.ociDownloadWorker(ctx, u, creds, ch, pb))
+		g.Go(c.downloadWorker(ctx, u, creds, ch, pb))
 	}
 
 	// Add part download requests
@@ -84,11 +84,11 @@ func (c *Client) multipartDownload(ctx context.Context, u string, creds credenti
 	return g.Wait()
 }
 
-func (c *Client) ociDownloadWorker(ctx context.Context, u string, creds credentials, ch chan filePartDescriptor, pb ProgressBar) func() error {
+func (c *Client) downloadWorker(ctx context.Context, u string, creds credentials, ch chan filePartDescriptor, pb ProgressBar) func() error {
 	return func() error {
 		// Iterate on channel 'ch' to handle download part requests
 		for ps := range ch {
-			written, err := c.ociDownloadBlobPart(ctx, creds, u, &ps)
+			written, err := c.downloadBlobPart(ctx, creds, u, &ps)
 			if err != nil {
 				// Cleanly abort progress bar on error
 				pb.Abort(true)
@@ -103,7 +103,7 @@ func (c *Client) ociDownloadWorker(ctx context.Context, u string, creds credenti
 	}
 }
 
-func (c *Client) ociDownloadBlobPart(ctx context.Context, creds credentials, u string, ps *filePartDescriptor) (int64, error) {
+func (c *Client) downloadBlobPart(ctx context.Context, creds credentials, u string, ps *filePartDescriptor) (int64, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
 	if err != nil {
 		return 0, err
