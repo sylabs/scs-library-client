@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2022, Sylabs Inc. All rights reserved.
+// Copyright (c) 2018-2023, Sylabs Inc. All rights reserved.
 // This software is licensed under a 3-clause BSD license. Please consult the
 // LICENSE.md file distributed with the sources of this project regarding your
 // rights to use or distribute this software.
@@ -15,72 +15,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
-
-	jsonresp "github.com/sylabs/json-resp"
 )
-
-// DownloadImage will retrieve an image from the Container Library, saving it
-// into the specified io.Writer. The timeout value for this operation is set
-// within the context. It is recommended to use a large value (ie. 1800 seconds)
-// to prevent timeout when downloading large images.
-func (c *Client) DownloadImage(ctx context.Context, w io.Writer, arch, path, tag string, callback func(int64, io.Reader, io.Writer) error) error {
-	if arch != "" && !c.apiAtLeast(ctx, APIVersionV2ArchTags) {
-		c.Logger.Log("This library does not support architecture specific tags")
-		c.Logger.Log("The image returned may not be the requested architecture")
-	}
-
-	if strings.Contains(path, ":") {
-		return fmt.Errorf("malformed image path: %s", path)
-	}
-
-	if tag == "" {
-		tag = "latest"
-	}
-
-	apiPath := fmt.Sprintf("v1/imagefile/%s:%s", strings.TrimPrefix(path, "/"), tag)
-	q := url.Values{}
-	q.Add("arch", arch)
-
-	c.Logger.Logf("Pulling from URL: %s", apiPath)
-
-	req, err := c.newRequest(ctx, http.MethodGet, apiPath, q.Encode(), nil)
-	if err != nil {
-		return err
-	}
-
-	res, err := c.HTTPClient.Do(req)
-	if err != nil {
-		return err
-	}
-	defer res.Body.Close()
-
-	if res.StatusCode == http.StatusNotFound {
-		return fmt.Errorf("requested image was not found in the library")
-	}
-
-	if res.StatusCode != http.StatusOK {
-		err := jsonresp.ReadError(res.Body)
-		if err != nil {
-			return fmt.Errorf("download did not succeed: %v", err)
-		}
-		return fmt.Errorf("unexpected http status code: %d", res.StatusCode)
-	}
-
-	c.Logger.Logf("OK response received, beginning body download")
-
-	if callback != nil {
-		err = callback(res.ContentLength, res.Body, w)
-	} else {
-		_, err = io.Copy(w, res.Body)
-	}
-	if err != nil {
-		return err
-	}
-
-	c.Logger.Logf("Download complete")
-
-	return nil
-}
 
 // Downloader defines concurrency (# of requests) and part size for download operation.
 type Downloader struct {
