@@ -21,19 +21,6 @@ import (
 	math_rand "math/rand"
 )
 
-func TestParseContentRange(t *testing.T) {
-	const hdr = "bytes 0-1000/1000"
-
-	size, err := parseContentRange(hdr)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-
-	if got, want := size, int64(1000); got != want {
-		t.Fatalf("unexpected content length: got %v, want %v", got, want)
-	}
-}
-
 func TestParseContentLengthHeader(t *testing.T) {
 	t.Parallel()
 

@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2022, Sylabs Inc. All rights reserved.
+// Copyright (c) 2018-2023, Sylabs Inc. All rights reserved.
 // This software is licensed under a 3-clause BSD license. Please consult the
 // LICENSE.md file distributed with the sources of this project regarding your
 // rights to use or distribute this software.
@@ -17,6 +17,16 @@ import (
 	"strings"
 	"sync"
 	"testing"
+)
+
+const (
+	basicAuthUsername = "user"
+	basicAuthPassword = "password"
+)
+
+var (
+	testLogger = &stdLogger{}
+	creds      = &basicCredentials{username: basicAuthUsername, password: basicAuthPassword}
 )
 
 type inMemoryBuffer struct {
@@ -49,6 +59,19 @@ func (l *stdLogger) Logf(f string, v ...interface{}) {
 	log.Printf(f, v...)
 }
 
+func TestParseContentRange(t *testing.T) {
+	const hdr = "bytes 0-1000/1000"
+
+	size, err := parseContentRange(hdr)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if got, want := size, int64(1000); got != want {
+		t.Fatalf("unexpected content length: got %v, want %v", got, want)
+	}
+}
+
 func parseRangeHeader(t *testing.T, val string) (int64, int64) {
 	if val == "" {
 		return 0, 0
@@ -65,16 +88,6 @@ func parseRangeHeader(t *testing.T, val string) (int64, int64) {
 
 	return start, end
 }
-
-const (
-	basicAuthUsername = "user"
-	basicAuthPassword = "password"
-)
-
-var (
-	testLogger = &stdLogger{}
-	creds      = &basicCredentials{username: basicAuthUsername, password: basicAuthPassword}
-)
 
 func TestMultistreamDownloader(t *testing.T) {
 	const src = "123456789012345678901234567890"
