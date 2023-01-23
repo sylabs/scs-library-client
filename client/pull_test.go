@@ -72,7 +72,9 @@ func generateSampleData(t *testing.T) []byte {
 
 // mockLibraryServer returns *httptest.Server that mocks Cloud Library server; in particular,
 // it has handlers for /version, /v1/images, /v1/imagefile, and /v1/imagepart
-func mockLibraryServer(t *testing.T, sampleBytes []byte, size int64, multistream bool) *httptest.Server {
+func mockLibraryServer(t *testing.T, sampleBytes []byte, multistream bool) *httptest.Server {
+	size := int64(len(sampleBytes))
+
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/version", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -109,6 +111,11 @@ func mockLibraryServer(t *testing.T, sampleBytes []byte, size int64, multistream
 			var start, end int64
 			if val := r.Header.Get("Range"); val != "" {
 				start, end = parseRangeHeader(t, val)
+
+				if end < 0 || start < 0 || end-start+1 > size {
+					w.WriteHeader(http.StatusRequestedRangeNotSatisfiable)
+					return
+				}
 			} else {
 				t.Fatal("Missing HTTP Range header")
 			}
@@ -167,7 +174,7 @@ func TestLegacyDownloadImage(t *testing.T) {
 			hash := sha256.Sum256(sampleBytes)
 
 			// Create mock library server that responds to '/version' and '/v1/imagefile' only
-			srv := mockLibraryServer(t, sampleBytes, size, tt.multistreamDownload)
+			srv := mockLibraryServer(t, sampleBytes, tt.multistreamDownload)
 			defer srv.Close()
 
 			// Initialize scs-library-client
