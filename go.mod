@@ -1,4 +1,4 @@
-module github.com/sylabs/scs-library-client
+module github.com/sylabs/scs-library-client/v2
 
 go 1.18
 
