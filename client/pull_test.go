@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2022, Sylabs Inc. All rights reserved.
+// Copyright (c) 2018-2023, Sylabs Inc. All rights reserved.
 // This software is licensed under a 3-clause BSD license. Please consult the
 // LICENSE.md file distributed with the sources of this project regarding your
 // rights to use or distribute this software.
@@ -6,17 +6,12 @@
 package client
 
 import (
-	"bufio"
-	"bytes"
 	"context"
 	"crypto/sha256"
-	"encoding/binary"
 	"fmt"
-	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	"os"
 	"reflect"
 	"strings"
 	"testing"
@@ -25,136 +20,6 @@ import (
 
 	math_rand "math/rand"
 )
-
-type mockRawService struct {
-	t           *testing.T
-	code        int
-	testFile    string
-	reqCallback func(*http.Request, *testing.T)
-	httpAddr    string
-	httpPath    string
-	httpServer  *httptest.Server
-	baseURI     string
-}
-
-func (m *mockRawService) Run() {
-	mux := http.NewServeMux()
-	mux.HandleFunc(m.httpPath, m.ServeHTTP)
-	m.httpServer = httptest.NewServer(mux)
-	m.httpAddr = m.httpServer.Listener.Addr().String()
-	m.baseURI = "http://" + m.httpAddr
-}
-
-func (m *mockRawService) Stop() {
-	m.httpServer.Close()
-}
-
-func (m *mockRawService) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if m.reqCallback != nil {
-		m.reqCallback(r, m.t)
-	}
-	w.WriteHeader(m.code)
-	inFile, err := os.Open(m.testFile)
-	if err != nil {
-		m.t.Errorf("error opening file %v:", err)
-	}
-	defer inFile.Close()
-
-	_, err = io.Copy(w, bufio.NewReader(inFile))
-	if err != nil {
-		m.t.Errorf("Test HTTP server unable to output file: %v", err)
-	}
-}
-
-func Test_DownloadImage(t *testing.T) {
-	f, err := os.CreateTemp("", "test")
-	if err != nil {
-		t.Fatalf("Error creating a temporary file for testing")
-	}
-	tempFile := f.Name()
-	f.Close()
-	os.Remove(tempFile)
-
-	tests := []struct {
-		name         string
-		arch         string
-		path         string
-		tag          string
-		outFile      string
-		code         int
-		testFile     string
-		tokenFile    string
-		checkContent bool
-		expectError  bool
-	}{
-		{"Bad library ref", "amd64", "entity/collection/im,age", "tag", tempFile, http.StatusBadRequest, "test_data/test_sha256", "test_data/test_token", false, true},
-		{"Server error", "amd64", "entity/collection/image", "tag", tempFile, http.StatusInternalServerError, "test_data/test_sha256", "test_data/test_token", false, true},
-		{"Tags in path", "amd64", "entity/collection/image:tag", "anothertag", tempFile, http.StatusOK, "test_data/test_sha256", "test_data/test_token", false, true},
-		{"Good Download", "amd64", "entity/collection/image", "tag", tempFile, http.StatusOK, "test_data/test_sha256", "test_data/test_token", true, false},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			m := mockRawService{
-				t:        t,
-				code:     tt.code,
-				testFile: tt.testFile,
-				httpPath: fmt.Sprintf("/v1/imagefile/%s:%s", tt.path, tt.tag),
-			}
-
-			m.Run()
-			defer m.Stop()
-
-			c, err := NewClient(&Config{AuthToken: tt.tokenFile, BaseURL: m.baseURI})
-			if err != nil {
-				t.Errorf("Error initializing client: %v", err)
-			}
-
-			out, err := os.OpenFile(tt.outFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o777)
-			if err != nil {
-				t.Errorf("Error opening file %s for writing: %v", tt.outFile, err)
-			}
-
-			err = c.DownloadImage(context.Background(), out, tt.arch, tt.path, tt.tag, nil)
-
-			out.Close()
-
-			if err != nil && !tt.expectError {
-				t.Errorf("Unexpected error: %v", err)
-			}
-			if err == nil && tt.expectError {
-				t.Errorf("Unexpected success. Expected error.")
-			}
-
-			if tt.checkContent {
-				fileContent, err := os.ReadFile(tt.outFile)
-				if err != nil {
-					t.Errorf("Error reading test output file: %v", err)
-				}
-				testContent, err := os.ReadFile(tt.testFile)
-				if err != nil {
-					t.Errorf("Error reading test file: %v", err)
-				}
-				if !bytes.Equal(fileContent, testContent) {
-					t.Errorf("File contains '%v' - expected '%v'", fileContent, testContent)
-				}
-			}
-		})
-	}
-}
-
-func TestParseContentRange(t *testing.T) {
-	const hdr = "bytes 0-1000/1000"
-
-	size, err := parseContentRange(hdr)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-
-	if got, want := size, int64(1000); got != want {
-		t.Fatalf("unexpected content length: got %v, want %v", got, want)
-	}
-}
 
 func TestParseContentLengthHeader(t *testing.T) {
 	t.Parallel()
@@ -205,42 +70,33 @@ func generateSampleData(t *testing.T) []byte {
 	return sampleBytes
 }
 
-func seedRandomNumberGenerator(t *testing.T) {
-	t.Helper()
-
-	var b [8]byte
-	if _, err := crypto_rand.Read(b[:]); err != nil {
-		t.Fatalf("error seeding random number generator: %v", err)
-	}
-	math_rand.Seed(int64(binary.LittleEndian.Uint64(b[:])))
-}
-
 // mockLibraryServer returns *httptest.Server that mocks Cloud Library server; in particular,
 // it has handlers for /version, /v1/images, /v1/imagefile, and /v1/imagepart
-func mockLibraryServer(t *testing.T, sampleBytes []byte, size int64, multistream bool) *httptest.Server {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if strings.HasPrefix(r.URL.Path, "/version") {
-			w.Header().Set("Content-Type", "application/json; charset=utf-8")
-			w.WriteHeader(http.StatusOK)
+func mockLibraryServer(t *testing.T, sampleBytes []byte, multistream bool) *httptest.Server {
+	size := int64(len(sampleBytes))
 
-			if _, err := w.Write([]byte("{\"data\": {\"apiVersion\": \"1.0.0\"}}")); err != nil {
-				t.Fatalf("error writing /version response: %v", err)
-			}
-			return
+	mux := http.NewServeMux()
+
+	mux.HandleFunc("/version", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(http.StatusOK)
+
+		if _, err := w.Write([]byte("{\"data\": {\"apiVersion\": \"1.0.0\"}}")); err != nil {
+			t.Fatalf("error writing /version response: %v", err)
 		}
+	}))
 
-		if multistream && strings.HasPrefix(r.URL.Path, "/v1/images/") {
+	if multistream {
+		mux.HandleFunc("/v1/images/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json; charset=utf-8")
 			w.WriteHeader(http.StatusOK)
 
 			if _, err := w.Write([]byte(fmt.Sprintf("{\"data\": {\"size\": %v}}", size))); err != nil {
 				t.Fatalf("error writing /v1/images response: %v", err)
 			}
+		}))
 
-			return
-		}
-
-		if multistream && strings.HasPrefix(r.URL.Path, "/v1/imagefile/") {
+		mux.HandleFunc("/v1/imagefile/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			redirectURL := &url.URL{
 				Scheme: "http",
 				Host:   r.Host,
@@ -248,30 +104,50 @@ func mockLibraryServer(t *testing.T, sampleBytes []byte, size int64, multistream
 			}
 			w.Header().Set("Location", redirectURL.String())
 			w.WriteHeader(http.StatusSeeOther)
-			return
-		}
+		}))
 
-		// Handle /v1/imagefile (single stream) or /v1/imagepart (multistream)
+		mux.HandleFunc("/v1/imagepart/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// Handle Range request for multipart downloads
+			var start, end int64
+			if val := r.Header.Get("Range"); val != "" {
+				start, end = parseRangeHeader(t, val)
 
-		// Handle Range request for multipart downloads
-		var start, end int64
-		if val := r.Header.Get("Range"); val != "" {
-			start, end = parseRangeHeader(t, val)
-		} else {
-			start, end = 0, int64(size)-1
-		}
+				if end < 0 || start < 0 || end-start+1 > size {
+					w.WriteHeader(http.StatusRequestedRangeNotSatisfiable)
+					return
+				}
+			} else {
+				t.Fatal("Missing HTTP Range header")
+			}
 
-		// Set up response headers
-		w.Header().Set("Content-Length", fmt.Sprintf("%v", end-start+1))
-		w.Header().Set("Content-Type", "application/octet-stream")
-		w.WriteHeader(http.StatusOK)
+			writeBlob(t, sampleBytes, start, end, http.StatusPartialContent, w)
+		}))
+	} else {
+		// single stream
+		mux.HandleFunc("/v1/imagefile/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			writeBlob(t, sampleBytes, 0, size-1, http.StatusOK, w)
+		}))
+	}
 
-		// Write image data
-		if _, err := w.Write(sampleBytes[start : end+1]); err != nil {
-			t.Fatalf("error writing response: %v", err)
-		}
+	mux.HandleFunc("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Fatalf("Unhandled HTTP request: method=[%v], path=[%v]", r.Method, r.URL.Path)
 	}))
-	return srv
+
+	return httptest.NewServer(mux)
+}
+
+func writeBlob(t *testing.T, sampleBytes []byte, start, end int64, code int, w http.ResponseWriter) {
+	t.Helper()
+
+	// Set up response headers
+	w.Header().Set("Content-Length", fmt.Sprintf("%v", end-start+1))
+	w.Header().Set("Content-Type", "application/octet-stream")
+	w.WriteHeader(code)
+
+	// Write image data
+	if _, err := w.Write(sampleBytes[start : end+1]); err != nil {
+		t.Fatalf("error writing response: %v", err)
+	}
 }
 
 // TestLegacyDownloadImage downloads random image data from mock library and compares hash to
@@ -284,9 +160,6 @@ func TestLegacyDownloadImage(t *testing.T) {
 		{"SingleStream", false},
 		{"MultiStream", true},
 	}
-
-	// Total overkill seeding the random number generator
-	seedRandomNumberGenerator(t)
 
 	for _, tt := range tests {
 		tt := tt
@@ -301,7 +174,7 @@ func TestLegacyDownloadImage(t *testing.T) {
 			hash := sha256.Sum256(sampleBytes)
 
 			// Create mock library server that responds to '/version' and '/v1/imagefile' only
-			srv := mockLibraryServer(t, sampleBytes, size, tt.multistreamDownload)
+			srv := mockLibraryServer(t, sampleBytes, tt.multistreamDownload)
 			defer srv.Close()
 
 			// Initialize scs-library-client
