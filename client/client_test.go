@@ -193,7 +193,7 @@ func seedRandomNumberGenerator() {
 	if _, err := crypto_rand.Read(b[:]); err != nil {
 		log.Fatalf("error seeding random number generator: %v", err)
 	}
-	math_rand.Seed(int64(binary.LittleEndian.Uint64(b[:])))
+	math_rand.New(math_rand.NewSource(int64(binary.LittleEndian.Uint64(b[:]))))
 }
 
 func TestMain(m *testing.M) {
