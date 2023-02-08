@@ -55,12 +55,14 @@ func TestParseContentLengthHeader(t *testing.T) {
 	}
 }
 
-func generateSampleData(t *testing.T) []byte {
+func generateSampleData(t *testing.T, size int64) []byte {
 	t.Helper()
 
 	const maxSampleDataSize = 1 * 1024 * 1024 // 1 MiB
 
-	size := math_rand.Int63() % maxSampleDataSize
+	if size == -1 {
+		size = math_rand.Int63() % maxSampleDataSize
+	}
 
 	sampleBytes := make([]byte, size)
 
@@ -113,7 +115,7 @@ func mockLibraryServer(t *testing.T, data []byte, multistream bool) *httptest.Se
 			if val := r.Header.Get("Range"); val != "" {
 				start, end = parseRangeHeader(t, val)
 
-				if end < 0 || start < 0 || end-start+1 > size {
+				if end < 0 || start < 0 || start > end {
 					w.WriteHeader(http.StatusRequestedRangeNotSatisfiable)
 					return
 				}
@@ -121,12 +123,17 @@ func mockLibraryServer(t *testing.T, data []byte, multistream bool) *httptest.Se
 				t.Fatal("Missing HTTP Range header")
 			}
 
-			writeBlob(t, data, start, end, http.StatusPartialContent, w)
+			if end-start+1 > size {
+				// Size of requested range is larger than available data, adjust end accordingly
+				end = size - 1
+			}
+
+			writeBlob(t, data, size, start, end, http.StatusPartialContent, w)
 		}))
 	} else {
 		// single stream
 		mux.HandleFunc("/v1/imagefile/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			writeBlob(t, data, 0, size-1, http.StatusOK, w)
+			writeBlob(t, data, size, 0, size-1, http.StatusOK, w)
 		}))
 	}
 
@@ -137,17 +144,24 @@ func mockLibraryServer(t *testing.T, data []byte, multistream bool) *httptest.Se
 	return httptest.NewServer(mux)
 }
 
-func writeBlob(t *testing.T, buf []byte, start, end int64, code int, w http.ResponseWriter) {
+func writeBlob(t *testing.T, buf []byte, size, start, end int64, code int, w http.ResponseWriter) {
 	t.Helper()
 
+	// contentLength varies depending if Range request is being made
+	contentLength := size
+
 	// Set up response headers
-	w.Header().Set("Content-Length", strconv.FormatInt(end-start+1, 10))
 	w.Header().Set("Content-Type", "application/octet-stream")
 
 	// Ensure 'Content-Range' header is included if HTTP status is 206 (Partial Content)
 	if code == http.StatusPartialContent {
-		w.Header().Set("Content-Range", fmt.Sprintf("bytes %d-%d/%d", start, end, len(buf)))
+		// Reports range length *not* content length
+		contentLength = end - start + 1
+
+		w.Header().Set("Content-Range", fmt.Sprintf("bytes %d-%d/%d", start, end, size))
 	}
+
+	w.Header().Set("Content-Length", strconv.FormatInt(contentLength, 10))
 
 	w.WriteHeader(code)
 
@@ -196,17 +210,24 @@ func TestLibraryDownloadImage(t *testing.T) {
 		name                string
 		spec                *Downloader
 		multistreamDownload bool
+		size                int64
 	}{
-		{"SingleStream", DefaultDownloadSpec, false},
-		{"MultiStream", DefaultDownloadSpec, true},
+		{"SingleStream", DefaultDownloadSpec, false, -1},
+		{"SingleStreamPartSizeMatchesImageSize", &Downloader{Concurrency: 4, PartSize: 64 * 1024}, false, 64 * 1024},
+		{"SingleStreamPartSizeGreaterThanImageSize", &Downloader{Concurrency: 4, PartSize: 64 * 1024}, false, 64*1024 - 1},
+		{"SingleStreamPartSizeLessThanImageSize", &Downloader{Concurrency: 4, PartSize: 64*1024 - 1}, false, 64 * 1024},
+		{"MultiStream", DefaultDownloadSpec, true, -1},
+		{"MultiStreamPartSizeEqualsImageSize", &Downloader{Concurrency: 4, PartSize: 64 * 1024}, true, 64 * 1024},
+		{"MultiStreamPartSizeGreaterThanImageSize", &Downloader{Concurrency: 4, PartSize: 64 * 1024}, true, 64*1024 - 1},
+		{"MultiStreamPartSizeLessThanImageSize", &Downloader{Concurrency: 4, PartSize: 64*1024 - 1}, true, 64 * 1024},
 	}
 
 	for _, tt := range tests {
 		tt := tt
 
 		t.Run(tt.name, func(t *testing.T) {
-			// Generate random bytes
-			imageData := generateSampleData(t)
+			// Generate random bytes; if tt.size == -1, generate random number of bytes
+			imageData := generateSampleData(t, tt.size)
 			size := int64(len(imageData))
 
 			testLogger.Logf("Generated %d bytes of mock image data", size)
