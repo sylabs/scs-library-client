@@ -17,6 +17,8 @@ import (
 	"strings"
 )
 
+var errUnauthorized = errors.New("unauthorized")
+
 // Downloader defines concurrency (# of requests) and part size for download operation.
 type Downloader struct {
 	// Concurrency defines concurrency for multi-part downloads.
@@ -30,6 +32,9 @@ type Downloader struct {
 	// Deprecated: this value will be ignored. It is retained for backwards compatibility.
 	BufferSize int64
 }
+
+// DefaultDownloadSpec is used when 'spec' argument to DownloadImage() is nil
+var DefaultDownloadSpec = &Downloader{Concurrency: 4, PartSize: 64 * 1024}
 
 // NoopProgressBar implements ProgressBarInterface to allow disabling the progress bar
 type NoopProgressBar struct{}
@@ -83,6 +88,10 @@ func (c *Client) DownloadImage(ctx context.Context, dst *os.File, arch, path, ta
 		pb = &NoopProgressBar{}
 	}
 
+	if spec == nil {
+		spec = DefaultDownloadSpec
+	}
+
 	if strings.Contains(path, ":") {
 		return fmt.Errorf("malformed image path: %s", path)
 	}
@@ -111,13 +120,8 @@ func (c *Client) libraryDownloadImage(ctx context.Context, arch, name, tag strin
 		c.logger.Log("The image returned may not be the requested architecture")
 	}
 
-	apiPath := fmt.Sprintf("v1/imagefile/%v:%v", name, tag)
-	q := url.Values{}
-	q.Add("arch", arch)
-
-	c.logger.Logf("Pulling from URL: %s", apiPath)
-
-	customHTTPClient := &http.Client{
+	// Create custom HTTP client for handling (potential) redirection from 'v1/imagefile'
+	httpClient := &http.Client{
 		Transport: c.httpClient.Transport,
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			if req.Response.StatusCode == http.StatusSeeOther {
@@ -133,57 +137,122 @@ func (c *Client) libraryDownloadImage(ctx context.Context, arch, name, tag strin
 		Timeout: c.httpClient.Timeout,
 	}
 
-	req, err := c.newRequest(ctx, http.MethodGet, apiPath, q.Encode(), nil)
-	if err != nil {
-		return err
-	}
-
-	res, err := customHTTPClient.Do(req)
-	if err != nil {
-		return err
-	}
-	defer res.Body.Close()
-
-	if res.StatusCode == http.StatusNotFound {
-		return fmt.Errorf("requested image was not found in the library")
-	}
-
-	if res.StatusCode == http.StatusOK {
-		// Library endpoint does not provide HTTP redirection response, treat as single stream download
-
-		c.logger.Log("Library endpoint does not support concurrent downloads; reverting to single stream")
-
-		size, err := parseContentLengthHeader(res.Header.Get("Content-Length"))
-		if err != nil {
-			return err
-		}
-
-		return c.download(ctx, dst, res.Body, size, pb)
-	}
-
-	if res.StatusCode != http.StatusSeeOther {
-		return fmt.Errorf("unexpected HTTP status %d: %v", res.StatusCode, err)
-	}
-
-	// Get image metadata to determine image size
-	img, err := c.GetImage(ctx, arch, fmt.Sprintf("%v:%v", name, tag))
-	if err != nil {
-		return err
-	}
-
-	redirectURL, err := url.Parse(res.Header.Get("Location"))
-	if err != nil {
-		return err
-	}
-
 	var creds credentials
-	if c.authToken != "" && samehost(c.baseURL, redirectURL) {
+	if c.authToken != "" {
 		// Only include credentials if redirected to same host as base URL
 		creds = bearerTokenCredentials{authToken: c.authToken}
 	}
 
-	// Use redirect URL to download artifact
-	return c.multipartDownload(ctx, redirectURL.String(), creds, dst, img.Size, spec, pb)
+	q := url.Values{}
+	q.Add("arch", arch)
+
+	u := c.baseURL.ResolveReference(&url.URL{Path: fmt.Sprintf("v1/imagefile/%v:%v", name, tag), RawQuery: q.Encode()})
+
+	c.logger.Logf("Performing initial pull request from %v", u.String())
+
+	for {
+		// Perform ranged GET request to get first part of image
+		req, err := c.newRangeGetRequest(ctx, creds, u.String(), 0, spec.PartSize-1)
+		if err != nil {
+			return err
+		}
+		res, err := httpClient.Do(req)
+		if err != nil {
+			return err
+		}
+		defer res.Body.Close()
+
+		switch res.StatusCode {
+		case http.StatusNotFound:
+			return fmt.Errorf("requested image was not found in the library")
+		case http.StatusOK:
+			// HTTP server does not handle HTTP range requests
+			c.logger.Log("Server does not support HTTP range requests, falling back to single stream download")
+
+			size, err := parseContentLengthHeader(res.Header.Get("Content-Length"))
+			if err != nil {
+				return err
+			}
+
+			return c.handleSinglePartDownloadResponse(ctx, dst, res.Body, size, pb)
+		case http.StatusSeeOther:
+			u, err = url.Parse(res.Header.Get("Location"))
+			if err != nil {
+				return err
+			}
+
+			c.logger.Logf("Redirected to %v", u.String())
+
+			if creds != nil && !samehost(c.baseURL, u) {
+				// Only include credentials if redirected to same host as base URL
+				creds = nil
+			}
+
+			// Use default HTTP client for redirect
+			httpClient = c.httpClient
+
+			// Reattempt GET request to redirected URL
+			continue
+		case http.StatusPartialContent:
+			return c.handleMultipartDownloadResponse(ctx, res, dst, creds, u, spec, pb)
+		default:
+			return c.requestErrorHandler(res.StatusCode)
+		}
+	}
+}
+
+func (c *Client) requestErrorHandler(code int) error {
+	if code == http.StatusUnauthorized {
+		return errUnauthorized
+	}
+	return fmt.Errorf("unexpected HTTP status %d", code)
+}
+
+func (c *Client) handleMultipartDownloadResponse(ctx context.Context, res *http.Response, dst io.WriterAt, creds credentials, u *url.URL, spec *Downloader, pb ProgressBar) error {
+	size, err := parseContentRange(res.Header.Get("Content-Range"))
+	if err != nil {
+		return err
+	}
+
+	// Initialize progress bar
+	pb.Init(size)
+	defer pb.Wait()
+
+	defer func() {
+		// Ensure progress bar is properly aborted in the event of an error
+		if err != nil {
+			pb.Abort(true)
+		}
+	}()
+
+	// Write first part to dst
+	if _, err = io.Copy(&filePartDescriptor{start: 0, end: size - 1, w: dst}, res.Body); err != nil {
+		return err
+	}
+
+	// Continue with successive parts (part number >= 2)
+	return c.downloadParts(ctx, u.String(), creds, dst, size, spec, 1, pb)
+}
+
+func (c *Client) newRangeGetRequest(ctx context.Context, creds credentials, u string, start, end int64) (*http.Request, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("Range", fmt.Sprintf("bytes=%d-%d", start, end))
+
+	if creds != nil {
+		if err := creds.ModifyRequest(req); err != nil {
+			return nil, err
+		}
+	}
+
+	if c.userAgent != "" {
+		req.Header.Set("User-Agent", c.userAgent)
+	}
+
+	return req, nil
 }
 
 // samehost returns true if host1 and host2 are, in fact, the same host by
@@ -206,8 +275,8 @@ func parseContentLengthHeader(val string) (int64, error) {
 	return size, nil
 }
 
-// download implements a simple, single stream downloader
-func (c *Client) download(ctx context.Context, w io.WriterAt, r io.Reader, size int64, pb ProgressBar) error {
+// handleSinglePartDownloadResponse implements a simple, single stream downloader
+func (c *Client) handleSinglePartDownloadResponse(ctx context.Context, w io.WriterAt, r io.Reader, size int64, pb ProgressBar) error {
 	pb.Init(size)
 	defer pb.Wait()
 

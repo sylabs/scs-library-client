@@ -13,6 +13,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"reflect"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -72,8 +73,8 @@ func generateSampleData(t *testing.T) []byte {
 
 // mockLibraryServer returns *httptest.Server that mocks Cloud Library server; in particular,
 // it has handlers for /version, /v1/images, /v1/imagefile, and /v1/imagepart
-func mockLibraryServer(t *testing.T, sampleBytes []byte, multistream bool) *httptest.Server {
-	size := int64(len(sampleBytes))
+func mockLibraryServer(t *testing.T, data []byte, multistream bool) *httptest.Server {
+	size := int64(len(data))
 
 	mux := http.NewServeMux()
 
@@ -120,12 +121,12 @@ func mockLibraryServer(t *testing.T, sampleBytes []byte, multistream bool) *http
 				t.Fatal("Missing HTTP Range header")
 			}
 
-			writeBlob(t, sampleBytes, start, end, http.StatusPartialContent, w)
+			writeBlob(t, data, start, end, http.StatusPartialContent, w)
 		}))
 	} else {
 		// single stream
 		mux.HandleFunc("/v1/imagefile/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			writeBlob(t, sampleBytes, 0, size-1, http.StatusOK, w)
+			writeBlob(t, data, 0, size-1, http.StatusOK, w)
 		}))
 	}
 
@@ -136,16 +137,22 @@ func mockLibraryServer(t *testing.T, sampleBytes []byte, multistream bool) *http
 	return httptest.NewServer(mux)
 }
 
-func writeBlob(t *testing.T, sampleBytes []byte, start, end int64, code int, w http.ResponseWriter) {
+func writeBlob(t *testing.T, buf []byte, start, end int64, code int, w http.ResponseWriter) {
 	t.Helper()
 
 	// Set up response headers
-	w.Header().Set("Content-Length", fmt.Sprintf("%v", end-start+1))
+	w.Header().Set("Content-Length", strconv.FormatInt(end-start+1, 10))
 	w.Header().Set("Content-Type", "application/octet-stream")
+
+	// Ensure 'Content-Range' header is included if HTTP status is 206 (Partial Content)
+	if code == http.StatusPartialContent {
+		w.Header().Set("Content-Range", fmt.Sprintf("bytes %d-%d/%d", start, end, len(buf)))
+	}
+
 	w.WriteHeader(code)
 
 	// Write image data
-	if _, err := w.Write(sampleBytes[start : end+1]); err != nil {
+	if _, err := w.Write(buf[start : end+1]); err != nil {
 		t.Fatalf("error writing response: %v", err)
 	}
 }
@@ -187,26 +194,28 @@ func TestSameHost(t *testing.T) {
 func TestLibraryDownloadImage(t *testing.T) {
 	tests := []struct {
 		name                string
+		spec                *Downloader
 		multistreamDownload bool
 	}{
-		{"SingleStream", false},
-		{"MultiStream", true},
+		{"SingleStream", DefaultDownloadSpec, false},
+		{"MultiStream", DefaultDownloadSpec, true},
 	}
 
 	for _, tt := range tests {
 		tt := tt
 
 		t.Run(tt.name, func(t *testing.T) {
-			// Generate random bytes to simulate file; upto 256k
-			sampleBytes := generateSampleData(t)
-			size := int64(len(sampleBytes))
+			// Generate random bytes
+			imageData := generateSampleData(t)
+			size := int64(len(imageData))
 
-			testLogger.Logf("Generated %v bytes of mock image data", size)
+			testLogger.Logf("Generated %d bytes of mock image data", size)
 
-			hash := sha256.Sum256(sampleBytes)
+			// Calculate hash of sample image data used to compare with what was actually downloaded
+			hash := sha256.Sum256(imageData)
 
 			// Create mock library server that responds to '/version' and '/v1/imagefile' only
-			srv := mockLibraryServer(t, sampleBytes, tt.multistreamDownload)
+			srv := mockLibraryServer(t, imageData, tt.multistreamDownload)
 			defer srv.Close()
 
 			// Initialize scs-library-client
@@ -224,11 +233,11 @@ func TestLibraryDownloadImage(t *testing.T) {
 				"entity/collection/container",
 				"tag",
 				dst,
-				&Downloader{Concurrency: 4, PartSize: 64 * 1024},
+				tt.spec,
 				&NoopProgressBar{},
 			)
 			if err != nil {
-				t.Fatalf("unexpected error: %v", err)
+				t.Fatal(err)
 			}
 
 			// Compare sha256 hash of data sent with hash of data received

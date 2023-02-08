@@ -10,7 +10,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"net/http"
 	"strconv"
 	"strings"
 
@@ -43,22 +42,25 @@ func minInt64(a, b int64) int64 {
 	return b
 }
 
-// Download performs download of contents at url by writing 'size' bytes to 'dst' using credentials 'c'.
+// multipartDownload performs download of contents at url by writing 'size' bytes to 'dst' using credentials 'c'.
 func (c *Client) multipartDownload(ctx context.Context, u string, creds credentials, w io.WriterAt, size int64, spec *Downloader, pb ProgressBar) error {
 	if size <= 0 {
 		return fmt.Errorf("invalid image size (%v)", size)
 	}
 
-	// Initialize the progress bar using passed size
-	pb.Init(size)
+	return c.downloadParts(ctx, u, creds, w, size, spec, 0, pb)
+}
 
-	// Clean up (remove) progress bar after download
-	defer pb.Wait()
-
+func (c *Client) downloadParts(ctx context.Context, u string, creds credentials, w io.WriterAt, size int64, spec *Downloader, partOffset int, pb ProgressBar) error {
 	// Calculate # of parts
 	parts := uint(1 + (size-1)/spec.PartSize)
 
-	c.logger.Logf("size: %d, parts: %d, streams: %d, partsize: %d", size, parts, spec.Concurrency, spec.PartSize)
+	concurrency := spec.Concurrency
+	if parts < concurrency {
+		concurrency = parts
+	}
+
+	c.logger.Logf("size: %d, parts: %d, streams: %d, partsize: %d", size, parts, concurrency, spec.PartSize)
 
 	g, ctx := errgroup.WithContext(ctx)
 
@@ -66,12 +68,19 @@ func (c *Client) multipartDownload(ctx context.Context, u string, creds credenti
 	ch := make(chan filePartDescriptor, parts)
 
 	// Create download part workers
-	for n := uint(0); n < spec.Concurrency; n++ {
-		g.Go(c.downloadWorker(ctx, u, creds, ch, pb))
+	for n := uint(0); n < concurrency; n++ {
+		g.Go(func() error {
+			if err := c.downloadWorker(ctx, u, creds, ch, pb); err != nil {
+				pb.Abort(true)
+
+				return err
+			}
+			return nil
+		})
 	}
 
 	// Add part download requests
-	for n := uint(0); n < parts; n++ {
+	for n := uint(partOffset); n < parts; n++ {
 		partSize := minInt64(spec.PartSize, size-int64(n)*spec.PartSize)
 
 		ch <- filePartDescriptor{start: int64(n) * spec.PartSize, end: int64(n)*spec.PartSize + partSize - 1, w: w}
@@ -84,39 +93,28 @@ func (c *Client) multipartDownload(ctx context.Context, u string, creds credenti
 	return g.Wait()
 }
 
-func (c *Client) downloadWorker(ctx context.Context, u string, creds credentials, ch chan filePartDescriptor, pb ProgressBar) func() error {
-	return func() error {
-		// Iterate on channel 'ch' to handle download part requests
-		for ps := range ch {
-			written, err := c.downloadBlobPart(ctx, creds, u, &ps)
-			if err != nil {
-				// Cleanly abort progress bar on error
-				pb.Abort(true)
+func (c *Client) downloadWorker(ctx context.Context, u string, creds credentials, ch chan filePartDescriptor, pb ProgressBar) error {
+	// Iterate on channel 'ch' to handle download part requests
+	for ps := range ch {
+		written, err := c.downloadBlobPart(ctx, creds, u, &ps)
+		if err != nil {
+			// Cleanly abort progress bar on error
+			pb.Abort(true)
 
-				return err
-			}
-
-			// Increase progress bar by number of bytes downloaded/written
-			pb.IncrBy(int(written))
+			return err
 		}
-		return nil
+
+		// Increase progress bar by number of bytes downloaded/written
+		pb.IncrBy(int(written))
 	}
+	return nil
 }
 
 func (c *Client) downloadBlobPart(ctx context.Context, creds credentials, u string, ps *filePartDescriptor) (int64, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
+	req, err := c.newRangeGetRequest(ctx, creds, u, ps.start, ps.end)
 	if err != nil {
 		return 0, err
 	}
-
-	if creds != nil {
-		if err := creds.ModifyRequest(req); err != nil {
-			return 0, err
-		}
-	}
-
-	req.Header.Add("Range", fmt.Sprintf("bytes=%d-%d", ps.start, ps.end))
-
 	res, err := c.httpClient.Do(req)
 	if err != nil {
 		return 0, err
