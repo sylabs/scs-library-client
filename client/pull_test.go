@@ -75,7 +75,7 @@ func generateSampleData(t *testing.T, size int64) []byte {
 
 // mockLibraryServer returns *httptest.Server that mocks Cloud Library server; in particular,
 // it has handlers for /version, /v1/images, /v1/imagefile, and /v1/imagepart
-func mockLibraryServer(t *testing.T, data []byte, multistream bool) *httptest.Server {
+func mockLibraryServer(t *testing.T, data []byte, multistream bool, redirectHost string) *httptest.Server {
 	size := int64(len(data))
 
 	mux := http.NewServeMux()
@@ -100,13 +100,26 @@ func mockLibraryServer(t *testing.T, data []byte, multistream bool) *httptest.Se
 		}))
 
 		mux.HandleFunc("/v1/imagefile/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			redirectURL := &url.URL{
-				Scheme: "http",
-				Host:   r.Host,
-				Path:   "/v1/imagepart/" + strings.TrimPrefix(r.URL.Path, "/v1/imagefile/"),
+			var redirectURL *url.URL
+
+			if redirectHost != "" {
+				var err error
+
+				redirectURL, err = url.Parse(redirectHost)
+				if err != nil {
+					t.Fatalf("Error parsing redirect host %v: %v", redirectHost, err)
+				}
+
+				redirectURL.Path = "/v1/imagepart/" + strings.TrimPrefix(r.URL.Path, "/v1/imagefile/")
+			} else {
+				redirectURL = &url.URL{
+					Scheme: "http",
+					Host:   r.Host,
+					Path:   "/v1/imagepart/" + strings.TrimPrefix(r.URL.Path, "/v1/imagefile/"),
+				}
 			}
-			w.Header().Set("Location", redirectURL.String())
-			w.WriteHeader(http.StatusSeeOther)
+
+			http.Redirect(w, r, redirectURL.String(), http.StatusSeeOther)
 		}))
 
 		mux.HandleFunc("/v1/imagepart/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -203,23 +216,56 @@ func TestSameHost(t *testing.T) {
 	}
 }
 
+// testRoundTripper implements an interceptor for HTTP requests to ensure Authorization header
+// is not set on requests made to redirected host
+type testRoundTripper struct {
+	t       *testing.T
+	baseURL *url.URL
+}
+
+func (rt *testRoundTripper) RoundTrip(r *http.Request) (*http.Response, error) {
+	if v := r.Header.Get("Authorization"); v != "" {
+		if !samehost(rt.baseURL, r.URL) {
+			rt.t.Fatal("Authorization header should *NOT* be set if redirected to different host")
+		}
+	}
+
+	return http.DefaultTransport.RoundTrip(r)
+}
+
+func newTestHTTPClient(t *testing.T, baseURL string) *http.Client {
+	t.Helper()
+
+	u, err := url.Parse(baseURL)
+	if err != nil {
+		t.Fatalf("Error parsing base URL %v: %v", baseURL, err)
+	}
+
+	return &http.Client{Transport: &testRoundTripper{t: t, baseURL: u}}
+}
+
 // TestLibraryDownloadImage downloads random image data from mock library and compares hash to
 // ensure download integrity.
 func TestLibraryDownloadImage(t *testing.T) {
 	tests := []struct {
 		name                string
+		authToken           string
 		spec                *Downloader
 		multistreamDownload bool
+		redirectOtherHost   bool
 		size                int64
 	}{
-		{"SingleStream", DefaultDownloadSpec, false, -1},
-		{"SingleStreamPartSizeMatchesImageSize", &Downloader{Concurrency: 4, PartSize: 64 * 1024}, false, 64 * 1024},
-		{"SingleStreamPartSizeGreaterThanImageSize", &Downloader{Concurrency: 4, PartSize: 64 * 1024}, false, 64*1024 - 1},
-		{"SingleStreamPartSizeLessThanImageSize", &Downloader{Concurrency: 4, PartSize: 64*1024 - 1}, false, 64 * 1024},
-		{"MultiStream", DefaultDownloadSpec, true, -1},
-		{"MultiStreamPartSizeEqualsImageSize", &Downloader{Concurrency: 4, PartSize: 64 * 1024}, true, 64 * 1024},
-		{"MultiStreamPartSizeGreaterThanImageSize", &Downloader{Concurrency: 4, PartSize: 64 * 1024}, true, 64*1024 - 1},
-		{"MultiStreamPartSizeLessThanImageSize", &Downloader{Concurrency: 4, PartSize: 64*1024 - 1}, true, 64 * 1024},
+		{"SingleStream", "", DefaultDownloadSpec, false, false, -1},
+		{"SingleStreamWithBearerToken", "xxxxx", DefaultDownloadSpec, false, false, -1},
+		{"SingleStreamPartSizeMatchesImageSize", "", &Downloader{Concurrency: 4, PartSize: 64 * 1024}, false, false, 64 * 1024},
+		{"SingleStreamPartSizeGreaterThanImageSize", "", &Downloader{Concurrency: 4, PartSize: 64 * 1024}, false, false, 64*1024 - 1},
+		{"SingleStreamPartSizeLessThanImageSize", "", &Downloader{Concurrency: 4, PartSize: 64*1024 - 1}, false, false, 64 * 1024},
+		{"MultiStream", "", DefaultDownloadSpec, false, true, -1},
+		{"MultiStreamWithBearerToken", "yyyyy", DefaultDownloadSpec, true, false, -1},
+		{"MultiStreamWithBearerTokenWithOtherHostRedirect", "yyyyy", DefaultDownloadSpec, true, true, -1},
+		{"MultiStreamPartSizeEqualsImageSize", "", &Downloader{Concurrency: 4, PartSize: 64 * 1024}, false, true, 64 * 1024},
+		{"MultiStreamPartSizeGreaterThanImageSize", "", &Downloader{Concurrency: 4, PartSize: 64 * 1024}, false, true, 64*1024 - 1},
+		{"MultiStreamPartSizeLessThanImageSize", "", &Downloader{Concurrency: 4, PartSize: 64*1024 - 1}, false, true, 64 * 1024},
 	}
 
 	for _, tt := range tests {
@@ -235,12 +281,29 @@ func TestLibraryDownloadImage(t *testing.T) {
 			// Calculate hash of sample image data used to compare with what was actually downloaded
 			hash := sha256.Sum256(imageData)
 
-			// Create mock library server that responds to '/version' and '/v1/imagefile' only
-			srv := mockLibraryServer(t, imageData, tt.multistreamDownload)
+			// Create server optionally used for redirects; for the astute reviewer, you'll notice this
+			// is being allocated even though it is not always being used. I didn't want to overcomplicate
+			// the code by having conditionals to only allocate when it's needed. The overhead is *very*
+			// slight, so I think this is good for now.
+			fileSrv := mockLibraryServer(t, imageData, tt.multistreamDownload, "")
+			defer fileSrv.Close()
+
+			// Create mock library server
+			redirectHost := ""
+			if tt.redirectOtherHost {
+				redirectHost = fileSrv.URL
+			}
+
+			srv := mockLibraryServer(t, imageData, tt.multistreamDownload, redirectHost)
 			defer srv.Close()
 
 			// Initialize scs-library-client
-			c, err := NewClient(&Config{BaseURL: srv.URL, Logger: testLogger})
+			c, err := NewClient(&Config{
+				BaseURL:    srv.URL,
+				Logger:     testLogger,
+				AuthToken:  tt.authToken,
+				HTTPClient: newTestHTTPClient(t, srv.URL),
+			})
 			if err != nil {
 				t.Fatalf("error initializing client: %v", err)
 			}
