@@ -1,3 +1,8 @@
+// Copyright (c) 2022-2023, Sylabs Inc. All rights reserved.
+// This software is licensed under a 3-clause BSD license. Please consult the
+// LICENSE.md file distributed with the sources of this project regarding your
+// rights to use or distribute this software.
+
 package client
 
 import (
@@ -34,12 +39,15 @@ func TestOciRegistryAuth(t *testing.T) {
 				response := struct {
 					Token       string `json:"token"`
 					RegistryURI string `json:"url"`
+					Name        string `json:"name"`
 				}{
 					Token:       "xxx",
 					RegistryURI: ociRegistryURI,
 				}
 
-				if v := r.URL.Query().Get("namespace"); v == "" {
+				if v := r.URL.Query().Get("namespace"); v != "" {
+					response.Name = v
+				} else {
 					t.Fatal("Query string \"namespace\" not set")
 				}
 
@@ -62,7 +70,7 @@ func TestOciRegistryAuth(t *testing.T) {
 				t.Fatalf("error initializing client: %v", err)
 			}
 
-			u, creds, err := c.ociRegistryAuth(context.Background(), "testproject/testrepo", []accessType{accessTypePull})
+			u, creds, name, err := c.ociRegistryAuth(context.Background(), "testproject/testrepo", []accessType{accessTypePull})
 			if tt.directOciDownloadSupported && err != nil {
 				t.Fatalf("error getting OCI registry credentials: %v", err)
 			} else if !tt.directOciDownloadSupported && err == nil {
@@ -70,6 +78,10 @@ func TestOciRegistryAuth(t *testing.T) {
 			}
 
 			if tt.directOciDownloadSupported {
+				if got, want := name, "testproject/testrepo"; got != want {
+					t.Fatalf("unexpected OCI artifact name: got %v, want %v", got, want)
+				}
+
 				if got, want := u.String(), ociRegistryURI; got != want {
 					t.Fatalf("unexpected OCI registry URI: got %v, want %v", got, want)
 				}

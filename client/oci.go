@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2022, Sylabs Inc. All rights reserved.
+// Copyright (c) 2018-2023, Sylabs Inc. All rights reserved.
 // This software is licensed under a 3-clause BSD license. Please consult the
 // LICENSE.md file distributed with the sources of this project regarding your
 // rights to use or distribute this software.
@@ -31,7 +31,7 @@ const mediaTypeSIFLayer = "application/vnd.sylabs.sif.layer.v1.sif"
 // directly from OCI registry.
 //
 // Returns url and credentials (if applicable) for that url.
-func (c *Client) ociRegistryAuth(ctx context.Context, name string, accessTypes []accessType) (*url.URL, *bearerTokenCredentials, error) {
+func (c *Client) ociRegistryAuth(ctx context.Context, name string, accessTypes []accessType) (*url.URL, *bearerTokenCredentials, string, error) {
 	// Build raw query string to get token for specified namespace and access
 	v := url.Values{}
 	v.Set("namespace", name)
@@ -45,7 +45,7 @@ func (c *Client) ociRegistryAuth(ctx context.Context, name string, accessTypes [
 
 	req, err := c.newRequest(ctx, http.MethodGet, "v1/oci-redirect", v.Encode(), nil)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, "", err
 	}
 
 	if c.UserAgent != "" {
@@ -54,30 +54,31 @@ func (c *Client) ociRegistryAuth(ctx context.Context, name string, accessTypes [
 
 	res, err := c.HTTPClient.Do(req)
 	if err != nil {
-		return nil, nil, fmt.Errorf("error determining direct OCI registry access: %w", err)
+		return nil, nil, "", fmt.Errorf("error determining direct OCI registry access: %w", err)
 	}
 	defer res.Body.Close()
 
 	if res.StatusCode != http.StatusOK {
-		return nil, nil, fmt.Errorf("error determining direct OCI registry access: %w", err)
+		return nil, nil, "", fmt.Errorf("error determining direct OCI registry access: %w", err)
 	}
 
 	type ociDownloadRedirectResponse struct {
 		Token       string `json:"token"`
 		RegistryURI string `json:"url"`
+		Name        string `json:"name"`
 	}
 
 	var ociArtifactSpec ociDownloadRedirectResponse
 
 	if err := json.NewDecoder(res.Body).Decode(&ociArtifactSpec); err != nil {
-		return nil, nil, fmt.Errorf("error decoding direct OCI registry access response: %w", err)
+		return nil, nil, "", fmt.Errorf("error decoding direct OCI registry access response: %w", err)
 	}
 
 	endpoint, err := url.Parse(ociArtifactSpec.RegistryURI)
 	if err != nil {
-		return nil, nil, fmt.Errorf("malformed OCI registry URI %v: %v", ociArtifactSpec.RegistryURI, err)
+		return nil, nil, "", fmt.Errorf("malformed OCI registry URI %v: %v", ociArtifactSpec.RegistryURI, err)
 	}
-	return endpoint, &bearerTokenCredentials{authToken: ociArtifactSpec.Token}, nil
+	return endpoint, &bearerTokenCredentials{authToken: ociArtifactSpec.Token}, ociArtifactSpec.Name, nil
 }
 
 const (
@@ -621,24 +622,29 @@ func (r *ociRegistry) getImageConfig(ctx context.Context, creds credentials, nam
 
 var errOCIDownloadNotSupported = errors.New("not supported")
 
-func (c *Client) newOCIRegistry(ctx context.Context, name string, accessTypes []accessType) (*ociRegistry, *bearerTokenCredentials, error) {
+func (c *Client) newOCIRegistry(ctx context.Context, name string, accessTypes []accessType) (*ociRegistry, *bearerTokenCredentials, string, error) {
 	// Attempt to obtain (direct) OCI registry auth token
-	registryURI, creds, err := c.ociRegistryAuth(ctx, name, accessTypes)
+	registryURI, creds, resolvedName, err := c.ociRegistryAuth(ctx, name, accessTypes)
 	if err != nil {
-		return nil, nil, errOCIDownloadNotSupported
+		return nil, nil, "", errOCIDownloadNotSupported
 	}
 
 	// Download directly from OCI registry
 	c.Logger.Logf("Using OCI registry endpoint %v", registryURI)
+	if resolvedName != name {
+		c.Logger.Logf("OCI artifact name \"%v\" mapped to \"%v\"", resolvedName, name)
+	}
 
-	return &ociRegistry{baseURL: registryURI, httpClient: c.HTTPClient, logger: c.Logger}, creds, nil
+	return &ociRegistry{baseURL: registryURI, httpClient: c.HTTPClient, logger: c.Logger}, creds, resolvedName, nil
 }
 
 func (c *Client) ociDownloadImage(ctx context.Context, arch, name, tag string, w io.WriterAt, spec *Downloader, pb ProgressBar) error {
-	reg, creds, err := c.newOCIRegistry(ctx, name, []accessType{accessTypePull})
+	reg, creds, resolvedName, err := c.newOCIRegistry(ctx, name, []accessType{accessTypePull})
 	if err != nil {
 		return err
 	}
+
+	name = resolvedName
 
 	// Fetch image manifest to get image details
 	id, err := reg.getImageDetails(ctx, creds, name, tag, arch)
@@ -663,10 +669,12 @@ func (e *unexpectedImageDigest) Error() string {
 }
 
 func (c *Client) ociUploadImage(ctx context.Context, r io.Reader, size int64, name, arch string, tags []string, description, hash string, callback UploadCallback) error {
-	reg, creds, err := c.newOCIRegistry(ctx, name, []accessType{accessTypePull, accessTypePush})
+	reg, creds, resolvedName, err := c.newOCIRegistry(ctx, name, []accessType{accessTypePull, accessTypePush})
 	if err != nil {
 		return err
 	}
+
+	name = resolvedName
 
 	sifHeader := bytes.NewBuffer(make([]byte, 0, sifHeaderSize))
 
