@@ -449,7 +449,11 @@ func (r *ociRegistry) doRequestWithCredentials(req *http.Request, creds credenti
 	if code := res.StatusCode; code/100 != 2 {
 		defer res.Body.Close()
 
-		return nil, fmt.Errorf("unexpected HTTP status %v", res.StatusCode)
+		if code == http.StatusUnauthorized {
+			return nil, ErrUnauthorized
+		}
+
+		return nil, fmt.Errorf("unexpected http status %v", res.StatusCode)
 	}
 
 	return res, nil
@@ -492,6 +496,10 @@ func (r *ociRegistry) doRequest(req *http.Request, creds credentials, opts ...mo
 
 			opts = append(opts, withAuthenticateHeader(res.Header.Get("WWW-Authenticate")))
 			return r.retryRequestWithCredentials(req, creds, opts...)
+		}
+
+		if code == http.StatusUnauthorized {
+			return nil, ErrUnauthorized
 		}
 
 		return nil, fmt.Errorf("unexpected http status %v", code)
