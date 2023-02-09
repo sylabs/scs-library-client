@@ -19,9 +19,13 @@ func TestOciRegistryAuth(t *testing.T) {
 	tests := []struct {
 		name                       string
 		directOciDownloadSupported bool
+		ref                        string
+		mappedRef                  string
 	}{
-		{"Basic", true},
-		{"NotSupported", false},
+		{"Basic", true, "entity/collection/container", "entity/collection/container"},
+		{"TwoElements", true, "entity/container", "entity/container"},
+		{"ShortName", true, "alpine", "library/default/alpine"},
+		{"NotSupported", false, "", ""},
 	}
 
 	for _, tt := range tests {
@@ -43,11 +47,10 @@ func TestOciRegistryAuth(t *testing.T) {
 				}{
 					Token:       "xxx",
 					RegistryURI: ociRegistryURI,
+					Name:        tt.mappedRef,
 				}
 
-				if v := r.URL.Query().Get("namespace"); v != "" {
-					response.Name = v
-				} else {
+				if v := r.URL.Query().Get("namespace"); v == "" {
 					t.Fatal("Query string \"namespace\" not set")
 				}
 
@@ -61,34 +64,38 @@ func TestOciRegistryAuth(t *testing.T) {
 			}))
 			defer testShimSrv.Close()
 
-			c, err := NewClient(&Config{
+			clientCfg := &Config{
 				BaseURL:   testShimSrv.URL,
 				Logger:    &stdLogger{},
 				UserAgent: "scs-library-client-unit-tests/1.0",
-			})
+			}
+
+			c, err := NewClient(clientCfg)
 			if err != nil {
 				t.Fatalf("error initializing client: %v", err)
 			}
 
-			u, creds, name, err := c.ociRegistryAuth(context.Background(), "testproject/testrepo", []accessType{accessTypePull})
+			u, creds, name, err := c.ociRegistryAuth(context.Background(), tt.ref, []accessType{accessTypePull})
 			if tt.directOciDownloadSupported && err != nil {
 				t.Fatalf("error getting OCI registry credentials: %v", err)
 			} else if !tt.directOciDownloadSupported && err == nil {
 				t.Fatal("unexpected success")
 			}
 
-			if tt.directOciDownloadSupported {
-				if got, want := name, "testproject/testrepo"; got != want {
-					t.Fatalf("unexpected OCI artifact name: got %v, want %v", got, want)
-				}
+			if !tt.directOciDownloadSupported {
+				return
+			}
 
-				if got, want := u.String(), ociRegistryURI; got != want {
-					t.Fatalf("unexpected OCI registry URI: got %v, want %v", got, want)
-				}
+			if got, want := name, tt.mappedRef; got != want {
+				t.Fatalf("unexpected OCI artifact name: got %v, want %v", got, want)
+			}
 
-				if creds == nil {
-					t.Fatal("expecting bearer token credential")
-				}
+			if got, want := u.String(), ociRegistryURI; got != want {
+				t.Fatalf("unexpected OCI registry URI: got %v, want %v", got, want)
+			}
+
+			if creds == nil {
+				t.Fatal("expecting bearer token credential")
 			}
 		})
 	}
