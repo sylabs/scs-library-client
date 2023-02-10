@@ -158,16 +158,17 @@ func (c *Client) ConcurrentDownloadImage(ctx context.Context, dst *os.File, arch
 	}
 
 	// Check for direct OCI registry access
-	if err := c.ociDownloadImage(ctx, arch, name, tag, dst, spec, pb); err == nil {
-		return err
-	} else if !errors.Is(err, errOCIDownloadNotSupported) {
-		// Return OCI download error or fallback to legacy download
-		return err
+	if err := c.ociDownloadImage(ctx, arch, name, tag, dst, spec, pb); err != nil {
+		if !errors.Is(err, errOCIDownloadNotSupported) {
+			// Return OCI download error or fallback to legacy download
+			return err
+		}
+
+		c.Logger.Log("Fallback to (legacy) library download")
+
+		return c.legacyDownloadImage(ctx, arch, name, tag, dst, spec, pb)
 	}
-
-	c.Logger.Log("Fallback to (legacy) library download")
-
-	return c.legacyDownloadImage(ctx, arch, name, tag, dst, spec, pb)
+	return nil
 }
 
 func (c *Client) legacyDownloadImage(ctx context.Context, arch, name, tag string, dst io.WriterAt, spec *Downloader, pb ProgressBar) error {
