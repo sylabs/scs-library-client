@@ -40,6 +40,10 @@ func (c *Client) ociRegistryAuth(ctx context.Context, name string, accessTypes [
 	v := url.Values{}
 	v.Set("namespace", name)
 
+	// Setting 'mapped' to '1' (true) enables support for mapping short library refs to
+	// fully-qualified name
+	v.Set("mapped", strconv.Itoa(1))
+
 	ats := make([]string, 0, len(accessTypes))
 	for _, at := range accessTypes {
 		ats = append(ats, string(at))
