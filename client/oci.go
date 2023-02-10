@@ -634,6 +634,7 @@ func (r *ociRegistry) getImageConfig(ctx context.Context, creds credentials, nam
 
 var errOCIDownloadNotSupported = errors.New("not supported")
 
+// newOCIRegistry returns *ociRegistry, credentials for that registry, and the (optionally) remapped image name
 func (c *Client) newOCIRegistry(ctx context.Context, name string, accessTypes []accessType) (*ociRegistry, *bearerTokenCredentials, string, error) {
 	// Attempt to obtain (direct) OCI registry auth token
 	originalName := name
