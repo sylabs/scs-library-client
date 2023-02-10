@@ -212,7 +212,7 @@ func seedRandomNumberGenerator(t *testing.T) {
 	if _, err := crypto_rand.Read(b[:]); err != nil {
 		t.Fatalf("error seeding random number generator: %v", err)
 	}
-	math_rand.Seed(int64(binary.LittleEndian.Uint64(b[:])))
+	math_rand.New(math_rand.NewSource(int64(binary.LittleEndian.Uint64(b[:]))))
 }
 
 // mockLibraryServer returns *httptest.Server that mocks Cloud Library server; in particular,
