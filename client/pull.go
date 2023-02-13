@@ -12,7 +12,6 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"os"
 	"strconv"
 	"strings"
 )
@@ -83,7 +82,7 @@ type ProgressBar interface {
 // only files larger than Downloader.PartSize. It will automatically adjust the
 // concurrency for source files that do not meet minimum size for multi-part
 // downloads.
-func (c *Client) DownloadImage(ctx context.Context, dst *os.File, arch, path, tag string, spec *Downloader, pb ProgressBar) error {
+func (c *Client) DownloadImage(ctx context.Context, dst io.WriterAt, arch, path, tag string, spec *Downloader, pb ProgressBar) error {
 	if pb == nil {
 		pb = &NoopProgressBar{}
 	}
