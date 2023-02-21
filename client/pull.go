@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2022, Sylabs Inc. All rights reserved.
+// Copyright (c) 2018-2023, Sylabs Inc. All rights reserved.
 // This software is licensed under a 3-clause BSD license. Please consult the
 // LICENSE.md file distributed with the sources of this project regarding your
 // rights to use or distribute this software.
@@ -62,6 +62,9 @@ func (c *Client) DownloadImage(ctx context.Context, w io.Writer, arch, path, tag
 		err := jsonresp.ReadError(res.Body)
 		if err != nil {
 			return fmt.Errorf("download did not succeed: %v", err)
+		}
+		if res.StatusCode == http.StatusUnauthorized {
+			return ErrUnauthorized
 		}
 		return fmt.Errorf("unexpected http status code: %d", res.StatusCode)
 	}
@@ -228,7 +231,10 @@ func (c *Client) legacyDownloadImage(ctx context.Context, arch, name, tag string
 	}
 
 	if res.StatusCode != http.StatusSeeOther {
-		return fmt.Errorf("unexpected HTTP status %d: %v", res.StatusCode, err)
+		if res.StatusCode == http.StatusUnauthorized {
+			return ErrUnauthorized
+		}
+		return fmt.Errorf("unexpected http status %d", res.StatusCode)
 	}
 
 	// Get image metadata to determine image size

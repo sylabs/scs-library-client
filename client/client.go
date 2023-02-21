@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2022, Sylabs Inc. All rights reserved.
+// Copyright (c) 2019-2023, Sylabs Inc. All rights reserved.
 // This software is licensed under a 3-clause BSD license. Please consult the LICENSE.md file
 // distributed with the sources of this project regarding your rights to use or distribute this
 // software.
@@ -7,6 +7,7 @@ package client
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -15,6 +16,9 @@ import (
 
 	"github.com/go-log/log"
 )
+
+// ErrUnauthorized represents HTTP status "401 Unauthorized"
+var ErrUnauthorized = errors.New("unauthorized")
 
 // Config contains the client configuration.
 type Config struct {
