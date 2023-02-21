@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2022, Sylabs Inc. All rights reserved.
+// Copyright (c) 2019-2023, Sylabs Inc. All rights reserved.
 // This software is licensed under a 3-clause BSD license. Please consult the LICENSE.md file
 // distributed with the sources of this project regarding your rights to use or distribute this
 // software.
@@ -98,9 +98,14 @@ func NewClient(cfg *Config) (*Client, error) {
 	return c, nil
 }
 
-// newRequestWithURL returns a new Request given a method, url, and (optional) body.
-func (c *Client) newRequestWithURL(ctx context.Context, method, url string, body io.Reader) (*http.Request, error) {
-	r, err := http.NewRequestWithContext(ctx, method, url, body)
+// newRequest returns a new Request given a method, relative path, rawQuery, and (optional) body.
+func (c *Client) newRequest(ctx context.Context, method, path, rawQuery string, body io.Reader) (*http.Request, error) {
+	u := c.BaseURL.ResolveReference(&url.URL{
+		Path:     path,
+		RawQuery: rawQuery,
+	})
+
+	r, err := http.NewRequestWithContext(ctx, method, u.String(), body)
 	if err != nil {
 		return nil, err
 	}
@@ -116,13 +121,4 @@ func (c *Client) newRequestWithURL(ctx context.Context, method, url string, body
 	}
 
 	return r, nil
-}
-
-// newRequest returns a new Request given a method, relative path, rawQuery, and (optional) body.
-func (c *Client) newRequest(ctx context.Context, method, path, rawQuery string, body io.Reader) (*http.Request, error) {
-	u := c.BaseURL.ResolveReference(&url.URL{
-		Path:     path,
-		RawQuery: rawQuery,
-	})
-	return c.newRequestWithURL(ctx, method, u.String(), body)
 }
