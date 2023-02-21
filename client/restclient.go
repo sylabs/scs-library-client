@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019, Sylabs Inc. All rights reserved.
+// Copyright (c) 2018-2023, Sylabs Inc. All rights reserved.
 // This software is licensed under a 3-clause BSD license. Please consult the
 // LICENSE.md file distributed with the sources of this project regarding your
 // rights to use or distribute this software.
@@ -22,17 +22,17 @@ import (
 var ErrNotFound = errors.New("not found")
 
 func (c *Client) apiGet(ctx context.Context, path string) (objJSON []byte, err error) {
-	c.Logger.Logf("apiGet calling %s", path)
+	c.logger.Logf("apiGet calling %s", path)
 	return c.doGETRequest(ctx, path)
 }
 
 func (c *Client) apiCreate(ctx context.Context, url string, o interface{}) (objJSON []byte, err error) {
-	c.Logger.Logf("apiCreate calling %s", url)
+	c.logger.Logf("apiCreate calling %s", url)
 	return c.doPOSTRequest(ctx, url, o)
 }
 
 func (c *Client) apiUpdate(ctx context.Context, url string, o interface{}) (objJSON []byte, err error) {
-	c.Logger.Logf("apiUpdate calling %s", url)
+	c.logger.Logf("apiUpdate calling %s", url)
 	return c.doPUTRequest(ctx, url, o)
 }
 
@@ -75,7 +75,7 @@ func (c *Client) commonRequestHandler(ctx context.Context, method string, path s
 		return []byte{}, fmt.Errorf("error creating %s request:\n\t%v", method, err)
 	}
 
-	res, err := c.HTTPClient.Do(req)
+	res, err := c.httpClient.Do(req)
 	if err != nil {
 		return []byte{}, fmt.Errorf("error making request to server:\n\t%v", err)
 	}

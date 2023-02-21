@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2022, Sylabs Inc. All rights reserved.
+// Copyright (c) 2018-2023, Sylabs Inc. All rights reserved.
 // This software is licensed under a 3-clause BSD license. Please consult the
 // LICENSE.md file distributed with the sources of this project regarding your
 // rights to use or distribute this software.
@@ -48,11 +48,11 @@ func (c *Client) ociRegistryAuth(ctx context.Context, name string, accessTypes [
 		return nil, nil, err
 	}
 
-	if c.UserAgent != "" {
-		req.Header.Set("User-Agent", c.UserAgent)
+	if c.userAgent != "" {
+		req.Header.Set("User-Agent", c.userAgent)
 	}
 
-	res, err := c.HTTPClient.Do(req)
+	res, err := c.httpClient.Do(req)
 	if err != nil {
 		return nil, nil, fmt.Errorf("error determining direct OCI registry access: %w", err)
 	}
@@ -629,9 +629,9 @@ func (c *Client) newOCIRegistry(ctx context.Context, name string, accessTypes []
 	}
 
 	// Download directly from OCI registry
-	c.Logger.Logf("Using OCI registry endpoint %v", registryURI)
+	c.logger.Logf("Using OCI registry endpoint %v", registryURI)
 
-	return &ociRegistry{baseURL: registryURI, httpClient: c.HTTPClient, logger: c.Logger}, creds, nil
+	return &ociRegistry{baseURL: registryURI, httpClient: c.httpClient, logger: c.logger}, creds, nil
 }
 
 func (c *Client) ociDownloadImage(ctx context.Context, arch, name, tag string, w io.WriterAt, spec *Downloader, pb ProgressBar) error {
@@ -714,7 +714,7 @@ func (c *Client) ociUploadImage(ctx context.Context, r io.Reader, size int64, na
 		}
 
 	} else {
-		c.Logger.Logf("Skipping image blob upload (matching hash exists)")
+		c.logger.Logf("Skipping image blob upload (matching hash exists)")
 
 		id = imageDigest
 
@@ -754,7 +754,7 @@ func (c *Client) ociUploadImage(ctx context.Context, r io.Reader, size int64, na
 
 	// Add tags
 	for _, ref := range tags {
-		c.Logger.Logf("Tag: %v", ref)
+		c.logger.Logf("Tag: %v", ref)
 
 		if _, err := reg.uploadManifest(ctx, creds, name, ref, idx, v1.MediaTypeImageIndex); err != nil {
 			return fmt.Errorf("error uploading index")
