@@ -150,6 +150,38 @@ func writeBlob(t *testing.T, sampleBytes []byte, start, end int64, code int, w h
 	}
 }
 
+func TestSameHost(t *testing.T) {
+	tests := []struct {
+		name  string
+		host1 string
+		host2 string
+		same  bool
+	}{
+		{"Simple", "http://testhost", "http://testhost", true},
+		{"SimpleHTTPS", "https://testhost", "https://testhost", true},
+		{"SimpleWithPort", "http://testhost:1234", "http://testhost:1234", true},
+		{"MismatchedScheme", "https://anotherhost", "http://anotherhost", false},
+		{"DifferentHostNames", "https://testhost1", "https://testhost2", false},
+		{"DifferentHostNamesAndScheme", "http://testhost1", "https://testhost2", false},
+		{"WithCreds", "http://user:password@testhost1", "http://testhost1", true},
+		{"FullyQualified", "http://testhost.testdomain", "http://testhost.testdomain", true},
+		{"QualifiedVsNot", "http://testhost", "http://testhost.testdomain", false},
+		{"UpperAndLowercase", "http://TESTHOST", "http://testhost", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			host1, _ := url.Parse(tt.host1)
+			host2, _ := url.Parse(tt.host2)
+
+			result := samehost(host1, host2)
+			if got, want := result, tt.same; got != want {
+				t.Fatalf("Unexpected results: host1 %v, host2 %v: got %v, want %v)", host1.String(), host2.String(), got, want)
+			}
+		})
+	}
+}
+
 // TestLegacyDownloadImage downloads random image data from mock library and compares hash to
 // ensure download integrity.
 func TestLegacyDownloadImage(t *testing.T) {
