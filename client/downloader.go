@@ -58,7 +58,7 @@ func (c *Client) multipartDownload(ctx context.Context, u string, creds credenti
 	// Calculate # of parts
 	parts := uint(1 + (size-1)/spec.PartSize)
 
-	c.Logger.Logf("size: %d, parts: %d, streams: %d, partsize: %d", size, parts, spec.Concurrency, spec.PartSize)
+	c.logger.Logf("size: %d, parts: %d, streams: %d, partsize: %d", size, parts, spec.Concurrency, spec.PartSize)
 
 	g, ctx := errgroup.WithContext(ctx)
 
@@ -117,7 +117,7 @@ func (c *Client) downloadBlobPart(ctx context.Context, creds credentials, u stri
 
 	req.Header.Add("Range", fmt.Sprintf("bytes=%d-%d", ps.start, ps.end))
 
-	res, err := c.HTTPClient.Do(req)
+	res, err := c.httpClient.Do(req)
 	if err != nil {
 		return 0, err
 	}

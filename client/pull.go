@@ -100,25 +100,25 @@ func (c *Client) DownloadImage(ctx context.Context, dst *os.File, arch, path, ta
 		return err
 	}
 
-	c.Logger.Log("Fallback to (legacy) library download")
+	c.logger.Log("Fallback to (legacy) library download")
 
 	return c.legacyDownloadImage(ctx, arch, name, tag, dst, spec, pb)
 }
 
 func (c *Client) legacyDownloadImage(ctx context.Context, arch, name, tag string, dst io.WriterAt, spec *Downloader, pb ProgressBar) error {
 	if arch != "" && !c.apiAtLeast(ctx, APIVersionV2ArchTags) {
-		c.Logger.Log("This library does not support architecture specific tags")
-		c.Logger.Log("The image returned may not be the requested architecture")
+		c.logger.Log("This library does not support architecture specific tags")
+		c.logger.Log("The image returned may not be the requested architecture")
 	}
 
 	apiPath := fmt.Sprintf("v1/imagefile/%v:%v", name, tag)
 	q := url.Values{}
 	q.Add("arch", arch)
 
-	c.Logger.Logf("Pulling from URL: %s", apiPath)
+	c.logger.Logf("Pulling from URL: %s", apiPath)
 
 	customHTTPClient := &http.Client{
-		Transport: c.HTTPClient.Transport,
+		Transport: c.httpClient.Transport,
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			if req.Response.StatusCode == http.StatusSeeOther {
 				return http.ErrUseLastResponse
@@ -129,8 +129,8 @@ func (c *Client) legacyDownloadImage(ctx context.Context, arch, name, tag string
 			}
 			return nil
 		},
-		Jar:     c.HTTPClient.Jar,
-		Timeout: c.HTTPClient.Timeout,
+		Jar:     c.httpClient.Jar,
+		Timeout: c.httpClient.Timeout,
 	}
 
 	req, err := c.newRequest(ctx, http.MethodGet, apiPath, q.Encode(), nil)
@@ -151,7 +151,7 @@ func (c *Client) legacyDownloadImage(ctx context.Context, arch, name, tag string
 	if res.StatusCode == http.StatusOK {
 		// Library endpoint does not provide HTTP redirection response, treat as single stream download
 
-		c.Logger.Log("Library endpoint does not support concurrent downloads; reverting to single stream")
+		c.logger.Log("Library endpoint does not support concurrent downloads; reverting to single stream")
 
 		size, err := parseContentLengthHeader(res.Header.Get("Content-Length"))
 		if err != nil {
@@ -177,9 +177,9 @@ func (c *Client) legacyDownloadImage(ctx context.Context, arch, name, tag string
 	}
 
 	var creds credentials
-	if c.AuthToken != "" && samehost(c.BaseURL, redirectURL) {
+	if c.authToken != "" && samehost(c.baseURL, redirectURL) {
 		// Only include credentials if redirected to same host as base URL
-		creds = bearerTokenCredentials{authToken: c.AuthToken}
+		creds = bearerTokenCredentials{authToken: c.authToken}
 	}
 
 	// Use redirect URL to download artifact
@@ -221,7 +221,7 @@ func (c *Client) download(ctx context.Context, w io.WriterAt, r io.Reader, size 
 		return err
 	}
 
-	c.Logger.Logf("Downloaded %v byte(s)", written)
+	c.logger.Logf("Downloaded %v byte(s)", written)
 
 	return nil
 }

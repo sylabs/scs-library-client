@@ -1,4 +1,4 @@
-// Copyright (c) 2018, Sylabs Inc. All rights reserved.
+// Copyright (c) 2018-2023, Sylabs Inc. All rights reserved.
 // This software is licensed under a 3-clause BSD license. Please consult the
 // LICENSE.md file distributed with the sources of this project regarding your
 // rights to use or distribute this software.
@@ -138,10 +138,10 @@ func (c *Client) setTags(ctx context.Context, containerID, imageID string, tags 
 	}
 
 	for _, tag := range tags {
-		c.Logger.Logf("Setting tag %s", tag)
+		c.logger.Logf("Setting tag %s", tag)
 
 		if _, ok := existingTags[tag]; ok {
-			c.Logger.Logf("%s replaces an existing tag", tag)
+			c.logger.Logf("%s replaces an existing tag", tag)
 		}
 
 		imgTag := ImageTag{
@@ -159,12 +159,12 @@ func (c *Client) setTags(ctx context.Context, containerID, imageID string, tags 
 // getTags returns a tag map for the specified containerID
 func (c *Client) getTags(ctx context.Context, containerID string) (TagMap, error) {
 	url := fmt.Sprintf("v1/tags/%s", containerID)
-	c.Logger.Logf("getTags calling %s", url)
+	c.logger.Logf("getTags calling %s", url)
 	req, err := c.newRequest(ctx, http.MethodGet, url, "", nil)
 	if err != nil {
 		return nil, fmt.Errorf("error creating request to server:\n\t%v", err)
 	}
-	res, err := c.HTTPClient.Do(req)
+	res, err := c.httpClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("error making request to server:\n\t%v", err)
 	}
@@ -187,7 +187,7 @@ func (c *Client) getTags(ctx context.Context, containerID string) (TagMap, error
 // setTag sets tag on specified containerID
 func (c *Client) setTag(ctx context.Context, containerID string, t ImageTag) error {
 	url := "v1/tags/" + containerID
-	c.Logger.Logf("setTag calling %s", url)
+	c.logger.Logf("setTag calling %s", url)
 	s, err := json.Marshal(t)
 	if err != nil {
 		return fmt.Errorf("error encoding object to JSON:\n\t%v", err)
@@ -196,7 +196,7 @@ func (c *Client) setTag(ctx context.Context, containerID string, t ImageTag) err
 	if err != nil {
 		return fmt.Errorf("error creating POST request:\n\t%v", err)
 	}
-	res, err := c.HTTPClient.Do(req)
+	res, err := c.httpClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("error making request to server:\n\t%v", err)
 	}
@@ -220,10 +220,10 @@ func (c *Client) setTagsV2(ctx context.Context, containerID, arch string, imageI
 	}
 
 	for _, tag := range tags {
-		c.Logger.Logf("Setting tag %s", tag)
+		c.logger.Logf("Setting tag %s", tag)
 
 		if _, ok := existingTags[arch][tag]; ok {
-			c.Logger.Logf("%s replaces an existing tag for arch %s", tag, arch)
+			c.logger.Logf("%s replaces an existing tag for arch %s", tag, arch)
 		}
 
 		imgTag := ArchImageTag{
@@ -242,12 +242,12 @@ func (c *Client) setTagsV2(ctx context.Context, containerID, arch string, imageI
 // getTagsV2 returns a arch->tag map for the specified containerID
 func (c *Client) getTagsV2(ctx context.Context, containerID string) (ArchTagMap, error) {
 	url := fmt.Sprintf("v2/tags/%s", containerID)
-	c.Logger.Logf("getTagsV2 calling %s", url)
+	c.logger.Logf("getTagsV2 calling %s", url)
 	req, err := c.newRequest(ctx, http.MethodGet, url, "", nil)
 	if err != nil {
 		return nil, fmt.Errorf("error creating request to server:\n\t%v", err)
 	}
-	res, err := c.HTTPClient.Do(req)
+	res, err := c.httpClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("error making request to server:\n\t%v", err)
 	}
@@ -270,7 +270,7 @@ func (c *Client) getTagsV2(ctx context.Context, containerID string) (ArchTagMap,
 // setTag sets an arch->tag on specified containerID
 func (c *Client) setTagV2(ctx context.Context, containerID string, t ArchImageTag) error {
 	url := "v2/tags/" + containerID
-	c.Logger.Logf("setTag calling %s", url)
+	c.logger.Logf("setTag calling %s", url)
 	s, err := json.Marshal(t)
 	if err != nil {
 		return fmt.Errorf("error encoding object to JSON:\n\t%v", err)
@@ -279,7 +279,7 @@ func (c *Client) setTagV2(ctx context.Context, containerID string, t ArchImageTa
 	if err != nil {
 		return fmt.Errorf("error creating POST request:\n\t%v", err)
 	}
-	res, err := c.HTTPClient.Do(req)
+	res, err := c.httpClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("error making request to server:\n\t%v", err)
 	}

@@ -1,4 +1,4 @@
-// Copyright (c) 2019, Sylabs Inc. All rights reserved.
+// Copyright (c) 2019-2023, Sylabs Inc. All rights reserved.
 // This software is licensed under a 3-clause BSD license. Please consult the LICENSE.md file
 // distributed with the sources of this project regarding your rights to use or distribute this
 // software.
@@ -34,7 +34,7 @@ func (c *Client) GetVersion(ctx context.Context) (vi VersionInfo, err error) {
 		return VersionInfo{}, err
 	}
 
-	res, err := c.HTTPClient.Do(req)
+	res, err := c.httpClient.Do(req)
 	if err != nil {
 		return VersionInfo{}, err
 	}
@@ -53,17 +53,17 @@ func (c *Client) apiAtLeast(ctx context.Context, reqVersion string) bool {
 	if err != nil || vi.APIVersion == "" {
 		// unable to get cloud-library server API version, fallback to lowest
 		// common denominator
-		c.Logger.Logf("Unable to determine remote API version: %v", err)
+		c.logger.Logf("Unable to determine remote API version: %v", err)
 		return false
 	}
 	v, err := semver.Make(vi.APIVersion)
 	if err != nil {
-		c.Logger.Logf("Unable to decode remote API version: %v", err)
+		c.logger.Logf("Unable to decode remote API version: %v", err)
 		return false
 	}
 	minRequiredVers, err := semver.Make(reqVersion)
 	if err != nil {
-		c.Logger.Logf("Unable to decode minimum required version: %v", err)
+		c.logger.Logf("Unable to decode minimum required version: %v", err)
 		return false
 	}
 	return v.GTE(minRequiredVers)
