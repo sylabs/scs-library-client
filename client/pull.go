@@ -92,20 +92,20 @@ func (c *Client) DownloadImage(ctx context.Context, dst *os.File, arch, path, ta
 		tag = "latest"
 	}
 
-	// Check for direct OCI registry access
-	if err := c.ociDownloadImage(ctx, arch, name, tag, dst, spec, pb); err == nil {
-		return err
-	} else if !errors.Is(err, errOCIDownloadNotSupported) {
-		// Return OCI download error or fallback to legacy download
-		return err
+	// Attempt to download from OCI registry directly
+	if err := c.ociDownloadImage(ctx, arch, name, tag, dst, spec, pb); err != nil {
+		if !errors.Is(err, errOCIDownloadNotSupported) {
+			return err
+		}
+
+		c.logger.Log("Fallback to (legacy) library download")
+
+		return c.libraryDownloadImage(ctx, arch, name, tag, dst, spec, pb)
 	}
-
-	c.logger.Log("Fallback to (legacy) library download")
-
-	return c.legacyDownloadImage(ctx, arch, name, tag, dst, spec, pb)
+	return nil
 }
 
-func (c *Client) legacyDownloadImage(ctx context.Context, arch, name, tag string, dst io.WriterAt, spec *Downloader, pb ProgressBar) error {
+func (c *Client) libraryDownloadImage(ctx context.Context, arch, name, tag string, dst io.WriterAt, spec *Downloader, pb ProgressBar) error {
 	if arch != "" && !c.apiAtLeast(ctx, APIVersionV2ArchTags) {
 		c.logger.Log("This library does not support architecture specific tags")
 		c.logger.Log("The image returned may not be the requested architecture")
