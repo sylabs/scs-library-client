@@ -182,9 +182,9 @@ func TestSameHost(t *testing.T) {
 	}
 }
 
-// TestLegacyDownloadImage downloads random image data from mock library and compares hash to
+// TestLibraryDownloadImage downloads random image data from mock library and compares hash to
 // ensure download integrity.
-func TestLegacyDownloadImage(t *testing.T) {
+func TestLibraryDownloadImage(t *testing.T) {
 	tests := []struct {
 		name                string
 		multistreamDownload bool
@@ -218,7 +218,7 @@ func TestLegacyDownloadImage(t *testing.T) {
 			// Initialize sink for downloaded sample image
 			dst := &inMemoryBuffer{buf: make([]byte, size)}
 
-			err = c.legacyDownloadImage(
+			err = c.libraryDownloadImage(
 				context.Background(),
 				"amd64",
 				"entity/collection/container",
