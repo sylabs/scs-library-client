@@ -89,7 +89,7 @@ func parseRangeHeader(t *testing.T, val string) (int64, int64) {
 	return start, end
 }
 
-func TestMultistreamDownloader(t *testing.T) {
+func TestMultipartDownload(t *testing.T) {
 	const src = "123456789012345678901234567890"
 	size := int64(len(src))
 
@@ -148,7 +148,7 @@ func TestMultistreamDownloader(t *testing.T) {
 			dst := &inMemoryBuffer{buf: make([]byte, size)}
 
 			// Start download
-			err = c.multipartDownload(context.Background(), srv.URL, creds, dst, tt.size, tt.spec, &NoopProgressBar{})
+			err = c.downloadParts(context.Background(), srv.URL, creds, dst, tt.size, tt.spec, 0, &NoopProgressBar{})
 			if tt.expectErr && err == nil {
 				t.Fatal("unexpected success")
 			}

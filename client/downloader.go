@@ -8,7 +8,6 @@ package client
 import (
 	"context"
 	"errors"
-	"fmt"
 	"io"
 	"strconv"
 	"strings"
@@ -40,15 +39,6 @@ func minInt64(a, b int64) int64 {
 		return a
 	}
 	return b
-}
-
-// multipartDownload performs download of contents at url by writing 'size' bytes to 'dst' using credentials 'c'.
-func (c *Client) multipartDownload(ctx context.Context, u string, creds credentials, w io.WriterAt, size int64, spec *Downloader, pb ProgressBar) error {
-	if size <= 0 {
-		return fmt.Errorf("invalid image size (%v)", size)
-	}
-
-	return c.downloadParts(ctx, u, creds, w, size, spec, 0, pb)
 }
 
 func (c *Client) downloadParts(ctx context.Context, u string, creds credentials, w io.WriterAt, size int64, spec *Downloader, partOffset int, pb ProgressBar) error {

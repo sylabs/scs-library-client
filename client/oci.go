@@ -668,7 +668,7 @@ func (c *Client) ociDownloadImage(ctx context.Context, arch, name, tag string, w
 
 	imageURI := reg.baseURL.ResolveReference(&url.URL{Path: fmt.Sprintf("v2/%v/blobs/%v", name, id.Digest)}).String()
 
-	return c.multipartDownload(ctx, imageURI, creds, w, id.Size, spec, pb)
+	return c.downloadParts(ctx, imageURI, creds, w, id.Size, spec, 0, pb)
 }
 
 const sifHeaderSize = 32768
