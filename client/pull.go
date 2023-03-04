@@ -165,16 +165,6 @@ func (c *Client) libraryDownloadImage(ctx context.Context, arch, name, tag strin
 		defer res.Body.Close()
 
 		switch res.StatusCode {
-		case http.StatusOK:
-			// HTTP server does not handle HTTP range requests
-			c.logger.Log("Server does not support HTTP range requests, falling back to single stream download")
-
-			size, err := parseContentLengthHeader(res.Header.Get("Content-Length"))
-			if err != nil {
-				return err
-			}
-
-			return c.handleSinglePartDownloadResponse(ctx, dst, res.Body, size, pb)
 		case http.StatusSeeOther:
 			u, err = url.Parse(res.Header.Get("Location"))
 			if err != nil {
@@ -188,8 +178,10 @@ func (c *Client) libraryDownloadImage(ctx context.Context, arch, name, tag strin
 
 			// Reattempt GET request to redirected URL
 			continue
+		case http.StatusOK:
+			return c.singlePartDownload(ctx, res, dst, pb)
 		case http.StatusPartialContent:
-			return c.handleMultipartDownloadResponse(ctx, res, dst, creds, u, spec, pb)
+			return c.multiPartDownload(ctx, res, dst, creds, u, spec, pb)
 		default:
 			return c.requestErrorHandler(res.StatusCode)
 		}
@@ -207,7 +199,7 @@ func (c *Client) requestErrorHandler(code int) error {
 	}
 }
 
-func (c *Client) handleMultipartDownloadResponse(ctx context.Context, res *http.Response, dst io.WriterAt, creds credentials, u *url.URL, spec *Downloader, pb ProgressBar) error {
+func (c *Client) multiPartDownload(ctx context.Context, res *http.Response, w io.WriterAt, creds credentials, u *url.URL, spec *Downloader, pb ProgressBar) error {
 	size, err := parseContentRange(res.Header.Get("Content-Range"))
 	if err != nil {
 		return err
@@ -225,12 +217,12 @@ func (c *Client) handleMultipartDownloadResponse(ctx context.Context, res *http.
 	}()
 
 	// Write first part to dst
-	if _, err = io.Copy(&filePartDescriptor{start: 0, end: size - 1, w: dst}, res.Body); err != nil {
+	if _, err = io.Copy(&filePartDescriptor{start: 0, end: size - 1, w: w}, res.Body); err != nil {
 		return err
 	}
 
 	// Continue with successive parts (part number >= 2)
-	return c.downloadParts(ctx, u.String(), creds, dst, size, spec, 1, pb)
+	return c.downloadParts(ctx, u.String(), creds, w, size, spec, 1, pb)
 }
 
 func (c *Client) newRangeGetRequest(ctx context.Context, creds credentials, u string, start, end int64) (*http.Request, error) {
@@ -274,12 +266,20 @@ func parseContentLengthHeader(val string) (int64, error) {
 	return size, nil
 }
 
-// handleSinglePartDownloadResponse implements a simple, single stream downloader
-func (c *Client) handleSinglePartDownloadResponse(ctx context.Context, w io.WriterAt, r io.Reader, size int64, pb ProgressBar) error {
+// singlePartDownload implements a simple, single stream downloader
+func (c *Client) singlePartDownload(ctx context.Context, res *http.Response, w io.WriterAt, pb ProgressBar) error {
+	// HTTP server does not handle HTTP range requests
+	c.logger.Log("Server does not support HTTP range requests, falling back to single stream download")
+
+	size, err := parseContentLengthHeader(res.Header.Get("Content-Length"))
+	if err != nil {
+		return err
+	}
+
 	pb.Init(size)
 	defer pb.Wait()
 
-	proxyReader := pb.ProxyReader(r)
+	proxyReader := pb.ProxyReader(res.Body)
 	defer proxyReader.Close()
 
 	written, err := io.Copy(&filePartDescriptor{start: 0, end: size - 1, w: w}, proxyReader)
