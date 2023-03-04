@@ -16,7 +16,10 @@ import (
 	"strings"
 )
 
-var errUnauthorized = errors.New("unauthorized")
+var (
+	errUnauthorized  = errors.New("unauthorized")
+	errImageNotFound = errors.New("requested image was not found in the library")
+)
 
 // Downloader defines concurrency (# of requests) and part size for download operation.
 type Downloader struct {
@@ -162,8 +165,6 @@ func (c *Client) libraryDownloadImage(ctx context.Context, arch, name, tag strin
 		defer res.Body.Close()
 
 		switch res.StatusCode {
-		case http.StatusNotFound:
-			return fmt.Errorf("requested image was not found in the library")
 		case http.StatusOK:
 			// HTTP server does not handle HTTP range requests
 			c.logger.Log("Server does not support HTTP range requests, falling back to single stream download")
@@ -201,10 +202,14 @@ func (c *Client) libraryDownloadImage(ctx context.Context, arch, name, tag strin
 }
 
 func (c *Client) requestErrorHandler(code int) error {
-	if code == http.StatusUnauthorized {
+	switch code {
+	case http.StatusNotFound:
+		return errImageNotFound
+	case http.StatusUnauthorized:
 		return errUnauthorized
+	default:
+		return fmt.Errorf("unexpected HTTP status %d", code)
 	}
-	return fmt.Errorf("unexpected HTTP status %d", code)
 }
 
 func (c *Client) handleMultipartDownloadResponse(ctx context.Context, res *http.Response, dst io.WriterAt, creds credentials, u *url.URL, spec *Downloader, pb ProgressBar) error {
