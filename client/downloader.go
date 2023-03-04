@@ -8,6 +8,7 @@ package client
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"strconv"
 	"strings"
@@ -42,6 +43,10 @@ func minInt64(a, b int64) int64 {
 }
 
 func (c *Client) downloadParts(ctx context.Context, u string, creds credentials, w io.WriterAt, size int64, spec *Downloader, partOffset int, pb ProgressBar) error {
+	if size <= 0 {
+		return fmt.Errorf("invalid image size (%v)", size)
+	}
+
 	// Calculate # of parts
 	parts := uint(1 + (size-1)/spec.PartSize)
 
