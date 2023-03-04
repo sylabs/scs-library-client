@@ -119,18 +119,20 @@ func (c *Client) downloadBlobPart(ctx context.Context, creds credentials, u stri
 	return io.Copy(ps, res.Body)
 }
 
+var errInvalidContentRangeHeader = errors.New("unexpected/malformed Content-Range header")
+
 // parseContentRange parses "Content-Range" header (eg. "Content-Range: bytes 0-1000/2000") and returns size
 func parseContentRange(val string) (int64, error) {
 	e := strings.Split(val, " ")
 
 	if !strings.EqualFold(e[0], "bytes") {
-		return 0, errors.New("unexpected/malformed value")
+		return 0, errInvalidContentRangeHeader
 	}
 
 	rangeElems := strings.Split(e[1], "/")
 
 	if len(rangeElems) != 2 {
-		return 0, errors.New("unexpected/malformed value")
+		return 0, errInvalidContentRangeHeader
 	}
 
 	return strconv.ParseInt(rangeElems[1], 10, 0)
