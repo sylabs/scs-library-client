@@ -139,12 +139,6 @@ func (c *Client) libraryDownloadImage(ctx context.Context, arch, name, tag strin
 		Timeout: c.httpClient.Timeout,
 	}
 
-	var creds credentials
-	if c.authToken != "" {
-		// Only include credentials if redirected to same host as base URL
-		creds = bearerTokenCredentials{authToken: c.authToken}
-	}
-
 	q := url.Values{}
 	q.Add("arch", arch)
 
@@ -153,6 +147,12 @@ func (c *Client) libraryDownloadImage(ctx context.Context, arch, name, tag strin
 	c.logger.Logf("Performing initial pull request from %v", u.String())
 
 	for {
+		var creds credentials
+		if c.authToken != "" && samehost(c.baseURL, u) {
+			// Only include credentials if redirected to same host as base URL
+			creds = bearerTokenCredentials{authToken: c.authToken}
+		}
+
 		// Perform ranged GET request to get first part of image
 		req, err := c.newRangeGetRequest(ctx, creds, u.String(), 0, spec.PartSize-1)
 		if err != nil {
@@ -182,11 +182,6 @@ func (c *Client) libraryDownloadImage(ctx context.Context, arch, name, tag strin
 			}
 
 			c.logger.Logf("Redirected to %v", u.String())
-
-			if creds != nil && !samehost(c.baseURL, u) {
-				// Only include credentials if redirected to same host as base URL
-				creds = nil
-			}
 
 			// Use default HTTP client for redirect
 			httpClient = c.httpClient
