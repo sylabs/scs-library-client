@@ -6,8 +6,11 @@
 package client
 
 import (
+	"crypto/md5"
+	"fmt"
 	"os"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -265,5 +268,41 @@ func Test_sha256sum(t *testing.T) {
 	}
 	if shasum != expectedSha256 {
 		t.Errorf("sha256sum returned %v - expected %v", shasum, expectedSha256)
+	}
+}
+
+func Test_md5sum(t *testing.T) {
+	tests := []struct {
+		name       string
+		testString string
+	}{
+		{
+			name:       "CompleteString",
+			testString: "thisIsAFullString",
+		},
+		{
+			name:       "EmptyString",
+			testString: "",
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+
+		t.Run(tt.name, func(t *testing.T) {
+			gotResult, gotBytes, err := md5sum(strings.NewReader(tt.testString))
+			if err != nil {
+				t.Fatalf("error %v:", err)
+			}
+
+			data := fmt.Sprintf("%x", md5.Sum([]byte(tt.testString)))
+			if wantResult := data; gotResult != wantResult {
+				t.Fatalf("GOT: %v, WANT: %v", gotResult, wantResult)
+			}
+
+			if wantBytes := int64(len(tt.testString)); gotBytes != wantBytes {
+				t.Fatalf("GOT: %v, WANT: %v", gotBytes, wantBytes)
+			}
+		})
 	}
 }

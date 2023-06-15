@@ -9,8 +9,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"testing"
 
@@ -116,6 +118,12 @@ func (m *v2ImageUploadMockService) Run() {
 	mux.HandleFunc("/v2/imagefile/5cb9c34d7d960d82f5f5bc55", m.MockImageFileEndpoint)
 	mux.HandleFunc("/fake/s3/endpoint", m.MockS3PresignedURLPUTEndpoint)
 	mux.HandleFunc("/v2/imagefile/5cb9c34d7d960d82f5f5bc55/_complete", m.MockImageFileCompleteEndpoint)
+	mux.HandleFunc("/v2/imagefile/5cb9c34d7d960d82f5f5bc55/_multipart", m.MockImageFileMultipart)
+	mux.HandleFunc("/v2/imagefile/5cb9c34d7d960d82f5f5bc55/_multipart_abort", m.MockImageFileMultipartAbort)
+	mux.HandleFunc("/v2/imagefile/5cb9c34d7d960d82f5f5bc55/_multipart_complete", m.MockImageFileMultipartComplete)
+	mux.HandleFunc("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("Unhandled URL: %v", r.URL)
+	}))
 	m.httpServer = httptest.NewServer(mux)
 	m.httpAddr = m.httpServer.Listener.Addr().String()
 	m.baseURI = "http://" + m.httpAddr
@@ -154,12 +162,12 @@ func (m *v2ImageUploadMockService) MockImageFileEndpoint(w http.ResponseWriter, 
 	m.initCalled = true
 }
 
-func (m *v2ImageUploadMockService) MockS3PresignedURLPUTEndpoint(w http.ResponseWriter, r *http.Request) {
+func (m *v2ImageUploadMockService) MockS3PresignedURLPUTEndpoint(w http.ResponseWriter, _ *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	m.putCalled = true
 }
 
-func (m *v2ImageUploadMockService) MockImageFileCompleteEndpoint(w http.ResponseWriter, r *http.Request) {
+func (m *v2ImageUploadMockService) MockImageFileCompleteEndpoint(w http.ResponseWriter, _ *http.Request) {
 	response := UploadImageComplete{
 		Quota: QuotaResponse{
 			QuotaTotalBytes: testQuotaTotalBytes,
@@ -169,10 +177,51 @@ func (m *v2ImageUploadMockService) MockImageFileCompleteEndpoint(w http.Response
 	}
 
 	if err := jsonresp.WriteResponse(w, &response, http.StatusOK); err != nil {
-		fmt.Printf("error: %v\n", err)
+		m.t.Fatalf("error writing JSON response: %v", err)
 	}
 
 	m.completeCalled = true
+}
+
+func (m *v2ImageUploadMockService) MockImageFileMultipart(w http.ResponseWriter, r *http.Request) {
+	var req MultipartUploadStartRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	response := MultipartUpload{}
+
+	if req.Size == 0 {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	if err := jsonresp.WriteResponse(w, &response, http.StatusOK); err != nil {
+		m.t.Fatalf("error writing JSON response (%v): %v", r.URL, err)
+	}
+}
+
+func (m *v2ImageUploadMockService) MockImageFileMultipartAbort(w http.ResponseWriter, _ *http.Request) {
+	w.WriteHeader(http.StatusOK)
+}
+
+func (m *v2ImageUploadMockService) MockImageFileMultipartComplete(w http.ResponseWriter, r *http.Request) {
+	var req CompleteMultipartUploadRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	response := UploadImageComplete{}
+
+	if req.UploadID == "1" {
+		response.ContainerURL = "test"
+	}
+
+	if err := jsonresp.WriteResponse(w, &response, http.StatusOK); err != nil {
+		m.t.Fatalf("error writing JSON response (%v): %v", r.URL, err)
+	}
 }
 
 func Test_legacyPostFileV2(t *testing.T) {
@@ -256,6 +305,188 @@ func Test_legacyPostFileV2(t *testing.T) {
 
 			if !m.completeCalled {
 				t.Errorf("image upload complete request was not made")
+			}
+		})
+	}
+}
+
+func Test_abortMultipartUpload(t *testing.T) {
+	tests := []struct {
+		name        string
+		imageID     string
+		uploadID    string
+		expectError bool
+	}{
+		{
+			name:        "Basic",
+			imageID:     "5cb9c34d7d960d82f5f5bc55",
+			uploadID:    "uploadID",
+			expectError: false,
+		},
+		{
+			name:        "Invalid",
+			uploadID:    "uploadID",
+			expectError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			m := v2ImageUploadMockService{
+				t: t,
+			}
+
+			m.Run()
+			defer m.Stop()
+
+			c, err := NewClient(&Config{AuthToken: testToken, BaseURL: m.baseURI})
+			if err != nil {
+				t.Errorf("Error initializing client: %v", err)
+			}
+
+			u := uploadManager{
+				ImageID:  tt.imageID,
+				UploadID: tt.uploadID,
+			}
+
+			err = c.abortMultipartUpload(context.Background(), &u)
+			if (err != nil) != tt.expectError {
+				t.Fatal(err)
+			}
+		})
+	}
+}
+
+func Test_completeMultipartUpload(t *testing.T) {
+	tests := []struct {
+		name        string
+		imageID     string
+		uploadID    string
+		expectError bool
+	}{
+		{
+			name:        "WithContainerURL",
+			imageID:     "5cb9c34d7d960d82f5f5bc55",
+			uploadID:    "1",
+			expectError: false,
+		},
+		{
+			name:        "WithoutContainerURL",
+			imageID:     "5cb9c34d7d960d82f5f5bc55",
+			uploadID:    "2",
+			expectError: false,
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			m := v2ImageUploadMockService{
+				t: t,
+			}
+
+			m.Run()
+			defer m.Stop()
+
+			c, err := NewClient(&Config{AuthToken: testToken, BaseURL: m.baseURI})
+			if err != nil {
+				t.Errorf("Error initializing client: %v", err)
+			}
+
+			u := uploadManager{
+				ImageID:  tt.imageID,
+				UploadID: tt.uploadID,
+			}
+
+			completedParts := []CompletedPart{
+				{
+					PartNumber: 10,
+					Token:      testToken,
+				},
+			}
+
+			_, err = c.completeMultipartUpload(context.Background(), &completedParts, &u)
+			if (err != nil) != tt.expectError {
+				t.Fatal(err)
+			}
+		})
+	}
+}
+
+func Test_remoteSHA256ChecksumSupport(t *testing.T) {
+	tests := []struct {
+		name        string
+		headerValue string
+		expectValue bool
+	}{
+		{
+			name:        "ExpectedQueryString",
+			headerValue: "x-amz-content-sha256",
+			expectValue: true,
+		},
+		{
+			name:        "OtherQueryString",
+			headerValue: "differentValue",
+			expectValue: false,
+		},
+		{
+			name:        "Empty",
+			headerValue: "",
+			expectValue: false,
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			uri := fmt.Sprintf("http://server?X-Amz-SignedHeaders=%v", tt.headerValue)
+			u, _ := url.Parse(uri)
+			if got, want := remoteSHA256ChecksumSupport(u), tt.expectValue; got != want {
+				t.Fatalf("unexpected results: Got: %v, Want: %v", got, want)
+			}
+		})
+	}
+}
+
+func Test_startMultipartUpload(t *testing.T) {
+	tests := []struct {
+		name        string
+		imageID     string
+		fileSize    int64
+		expectError bool
+	}{
+		{
+			name:        "FileSize",
+			imageID:     "5cb9c34d7d960d82f5f5bc55",
+			fileSize:    1000,
+			expectError: false,
+		},
+		{
+			name:        "EmptyFileSize",
+			imageID:     "5cb9c34d7d960d82f5f5bc55",
+			fileSize:    0,
+			expectError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			m := v2ImageUploadMockService{
+				t: t,
+			}
+			m.Run()
+			defer m.Stop()
+
+			c, err := NewClient(&Config{AuthToken: testToken, BaseURL: m.baseURI})
+			if err != nil {
+				t.Errorf("Error initializing client: %v", err)
+			}
+
+			_, err = c.startMultipartUpload(context.Background(), tt.fileSize, tt.imageID)
+			if (err != nil) != tt.expectError {
+				t.Fatal(err)
 			}
 		})
 	}

@@ -48,7 +48,7 @@ type defaultUploadCallback struct {
 	r io.Reader
 }
 
-func (c *defaultUploadCallback) InitUpload(s int64, r io.Reader) {
+func (c *defaultUploadCallback) InitUpload(_ int64, r io.Reader) {
 	c.r = r
 }
 
