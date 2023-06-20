@@ -6,8 +6,10 @@
 package client
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -805,40 +807,83 @@ func Test_setTags(t *testing.T) {
 	}
 }
 
+type mockTransport struct {
+	defaultRoundTrip http.RoundTripper
+}
+
+func (t *mockTransport) RoundTrip(r *http.Request) (*http.Response, error) {
+	if r.Method != http.MethodPost {
+		return t.defaultRoundTrip.RoundTrip(r)
+	}
+
+	fakeErr := jsonresp.Error{Code: 1234, Message: "hello"}
+
+	jsonrespErr := struct {
+		Error jsonresp.Error `json:"error"`
+	}{Error: fakeErr}
+
+	buf, err := json.Marshal(&jsonrespErr)
+	if err != nil {
+		panic(err)
+	}
+
+	return &http.Response{
+		ContentLength: int64(len(buf)),
+		Body:          io.NopCloser(bytes.NewReader(buf)),
+		StatusCode:    http.StatusBadRequest,
+	}, nil
+}
+
 func Test_setTagsV2(t *testing.T) {
 	tests := []struct {
-		description  string
-		code         int
-		reqCallback  func(*http.Request, *testing.T)
-		containerRef string
-		imageRef     string
-		arch         string
-		tags         []string
-		expectError  bool
+		description        string
+		code               int
+		reqCallback        func(*http.Request, *testing.T)
+		containerRef       string
+		imageRef           string
+		arch               string
+		tags               []string
+		useCustomTransport bool
+		expectError        bool
 	}{
 		{
-			description:  "Valid Request",
-			code:         http.StatusOK,
-			containerRef: "test",
-			imageRef:     "5cb9c34d7d960d82f5f5bc53",
-			arch:         archIntel,
-			tags:         []string{"tag1", "tag2", "tag3"},
-			expectError:  false,
+			description:        "Valid Request",
+			code:               http.StatusOK,
+			containerRef:       "test",
+			imageRef:           "5cb9c34d7d960d82f5f5bc53",
+			arch:               archIntel,
+			tags:               []string{"tag1", "tag2", "tag3"},
+			useCustomTransport: false,
+			expectError:        false,
 		},
 		{
-			description:  "Error response",
-			code:         http.StatusInternalServerError,
-			containerRef: "test",
-			imageRef:     "5cb9c34d7d960d82f5f5bc54",
-			arch:         archIntel,
-			tags:         []string{"tag1", "tag2", "tag3"},
-			expectError:  true,
+			description:        "Error response",
+			code:               http.StatusInternalServerError,
+			containerRef:       "test",
+			imageRef:           "5cb9c34d7d960d82f5f5bc54",
+			arch:               archIntel,
+			tags:               []string{"tag1", "tag2", "tag3"},
+			useCustomTransport: false,
+			expectError:        true,
+		},
+		{
+			description:        "json error",
+			code:               http.StatusOK,
+			containerRef:       "test",
+			imageRef:           "5cb9c34d7d960d82f5f5bc53",
+			arch:               archIntel,
+			tags:               []string{"tag1", "tag2", "tag3"},
+			useCustomTransport: true,
+			expectError:        true,
 		},
 	}
 
 	// Loop over test cases
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.description, func(t *testing.T) {
+			t.Parallel()
+
 			m := mockService{
 				t:           t,
 				code:        tt.code,
@@ -849,18 +894,90 @@ func Test_setTagsV2(t *testing.T) {
 			m.Run()
 			defer m.Stop()
 
+			var cfg *Config
+			if tt.useCustomTransport {
+				defaultTransport := http.DefaultTransport.(*http.Transport).Clone()
+				httpClient := &http.Client{Transport: &mockTransport{defaultRoundTrip: defaultTransport}}
+
+				cfg = &Config{AuthToken: testToken, BaseURL: m.baseURI, HTTPClient: httpClient}
+			} else {
+				cfg = &Config{AuthToken: testToken, BaseURL: m.baseURI}
+			}
+
+			c, err := NewClient(cfg)
+			if err != nil {
+				t.Errorf("Error initializing client: %v", err)
+			}
+
+			if err := c.setTagsV2(context.Background(), tt.containerRef, tt.imageRef, tt.arch, tt.tags); (err != nil) != tt.expectError {
+				t.Fatalf("unexpected error: %v", err)
+				return
+			}
+		})
+	}
+}
+
+func Test_setTagV2(t *testing.T) {
+	tests := []struct {
+		name        string
+		code        int
+		reqCallback func(*http.Request, *testing.T)
+		containerID string
+		arch        string
+		tag         string
+		imageID     string
+		expectError bool
+	}{
+		{
+			name:        "Valid",
+			code:        http.StatusOK,
+			containerID: "test",
+			arch:        archIntel,
+			tag:         "tag1",
+			imageID:     "5cb9c34d7d960d82f5f5bc54",
+			expectError: false,
+		},
+		{
+			name:        "Error",
+			code:        http.StatusInternalServerError,
+			containerID: "test",
+			arch:        archIntel,
+			tag:         "tag1",
+			imageID:     "5cb9c34d7d960d82f5f5bc54",
+			expectError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			m := mockService{
+				t:           t,
+				code:        tt.code,
+				reqCallback: tt.reqCallback,
+				httpPath:    "/v2/tags/" + tt.containerID,
+			}
+
+			m.Run()
+			defer m.Stop()
+
 			c, err := NewClient(&Config{AuthToken: testToken, BaseURL: m.baseURI})
 			if err != nil {
 				t.Errorf("Error initializing client: %v", err)
 			}
 
-			err = c.setTagsV2(context.Background(), tt.containerRef, tt.imageRef, tt.arch, tt.tags)
+			a := ArchImageTag{
+				tt.arch,
+				tt.tag,
+				tt.imageID,
+			}
+
+			err = c.setTagV2(context.Background(), tt.containerID, a)
 
 			if err != nil && !tt.expectError {
 				t.Errorf("Unexpected error: %v", err)
-			}
-			if err == nil && tt.expectError {
-				t.Errorf("Unexpected success. Expected error.")
 			}
 		})
 	}

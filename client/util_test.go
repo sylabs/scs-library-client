@@ -297,11 +297,11 @@ func Test_md5sum(t *testing.T) {
 
 			data := fmt.Sprintf("%x", md5.Sum([]byte(tt.testString)))
 			if wantResult := data; gotResult != wantResult {
-				t.Fatalf("GOT: %v, WANT: %v", gotResult, wantResult)
+				t.Fatalf("got: %v, want: %v", gotResult, wantResult)
 			}
 
 			if wantBytes := int64(len(tt.testString)); gotBytes != wantBytes {
-				t.Fatalf("GOT: %v, WANT: %v", gotBytes, wantBytes)
+				t.Fatalf("got: %v, want: %v", gotBytes, wantBytes)
 			}
 		})
 	}
