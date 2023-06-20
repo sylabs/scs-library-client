@@ -73,6 +73,8 @@ func TestParseContentRange(t *testing.T) {
 }
 
 func parseRangeHeader(t *testing.T, val string) (int64, int64) {
+	t.Helper()
+
 	if val == "" {
 		return 0, 0
 	}

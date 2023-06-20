@@ -30,6 +30,8 @@ const (
 	OptionS3Compliant = "s3compliant"
 )
 
+var errInvalidImageID = errors.New("invalid image id")
+
 // UploadCallback defines an interface used to perform a call-out to
 // set up the source file Reader.
 type UploadCallback interface {
@@ -48,7 +50,7 @@ type defaultUploadCallback struct {
 	r io.Reader
 }
 
-func (c *defaultUploadCallback) InitUpload(s int64, r io.Reader) {
+func (c *defaultUploadCallback) InitUpload(_ int64, r io.Reader) {
 	c.r = r
 }
 
@@ -636,6 +638,10 @@ func (c *Client) completeMultipartUpload(ctx context.Context, completedParts *[]
 
 func (c *Client) abortMultipartUpload(ctx context.Context, m *uploadManager) error {
 	c.logger.Logf("Aborting multipart upload ID: %s", m.UploadID)
+
+	if m.ImageID == "" {
+		return errInvalidImageID
+	}
 
 	uri := fmt.Sprintf("v2/imagefile/%s/_multipart_abort", m.ImageID)
 

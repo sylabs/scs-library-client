@@ -8,9 +8,13 @@ package client
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/opencontainers/go-digest"
+	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 func TestOciRegistryAuth(t *testing.T) {
@@ -96,6 +100,69 @@ func TestOciRegistryAuth(t *testing.T) {
 
 			if creds == nil {
 				t.Fatal("expecting bearer token credential")
+			}
+		})
+	}
+}
+
+func Test_getManifestFromIndex(t *testing.T) {
+	tests := []struct {
+		name         string
+		arch         string
+		media        string
+		architecture string
+		expectError  bool
+	}{
+		{
+			name:         "Basic",
+			arch:         "test",
+			media:        v1.MediaTypeImageManifest,
+			architecture: "test",
+			expectError:  false,
+		},
+		{
+			name:        "No matching OS",
+			arch:        "test",
+			media:       "hello",
+			expectError: true,
+		},
+		{
+			name:        "Empty Arch",
+			arch:        "",
+			media:       v1.MediaTypeImageManifest,
+			expectError: false,
+		},
+		{
+			name:        "Unspecified Arch",
+			expectError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			r := ociRegistry{}
+
+			p := v1.Platform{Architecture: tt.architecture}
+
+			d := v1.Descriptor{
+				MediaType: tt.media,
+				Platform:  &p,
+				Digest:    digest.Digest(fmt.Sprintf("%x", 12345)),
+			}
+
+			v := v1.Index{Manifests: []v1.Descriptor{d}}
+
+			got, err := r.getManifestFromIndex(v, tt.arch)
+			if (err != nil) != tt.expectError {
+				t.Fatalf("Unexpected error: %v", err)
+			}
+
+			if want := d.Digest; got != "" && got != want {
+				t.Fatalf("got: %v, want: %v", got, want)
 			}
 		})
 	}
