@@ -115,7 +115,7 @@ type basicCredentials struct {
 	password string
 }
 
-func (c basicCredentials) ModifyRequest(r *http.Request, opts ...modifyRequestOption) error {
+func (c basicCredentials) ModifyRequest(r *http.Request, _ ...modifyRequestOption) error {
 	r.SetBasicAuth(c.username, c.password)
 	return nil
 }
@@ -124,7 +124,7 @@ type bearerTokenCredentials struct {
 	authToken string
 }
 
-func (c bearerTokenCredentials) ModifyRequest(r *http.Request, opts ...modifyRequestOption) error {
+func (c bearerTokenCredentials) ModifyRequest(r *http.Request, _ ...modifyRequestOption) error {
 	if c.authToken != "" {
 		r.Header.Set("Authorization", fmt.Sprintf("Bearer %v", c.authToken))
 	}
@@ -403,7 +403,7 @@ func parseAuthHeader(authenticateHeader string) (authHeader, error) {
 
 type noneCreds struct{}
 
-func (c *noneCreds) ModifyRequest(r *http.Request, opts ...modifyRequestOption) error {
+func (c *noneCreds) ModifyRequest(r *http.Request, _ ...modifyRequestOption) error {
 	r.Header.Set("Authorization", "none")
 
 	return nil
@@ -690,7 +690,7 @@ func (e *unexpectedImageDigest) Error() string {
 	return fmt.Sprintf("unexpected image digest: %v != %v", e.got, e.want)
 }
 
-func (c *Client) ociUploadImage(ctx context.Context, r io.Reader, size int64, name, arch string, tags []string, description, hash string, callback UploadCallback) error {
+func (c *Client) ociUploadImage(ctx context.Context, r io.Reader, size int64, name, _ string, tags []string, description, hash string, callback UploadCallback) error {
 	reg, creds, name, err := c.newOCIRegistry(ctx, name, []accessType{accessTypePull, accessTypePush})
 	if err != nil {
 		return err

@@ -764,90 +764,90 @@ func Test_remoteSHA256ChecksumSupport(t *testing.T) {
 	}
 }
 
-// func Test_legacyPostFileV2(t *testing.T) {
-// 	tests := []struct {
-// 		name     string
-// 		imageRef string
-// 		testFile string
-// 	}{
-// 		{
-// 			name:     "Basic",
-// 			imageRef: "5cb9c34d7d960d82f5f5bc55",
-// 			testFile: "test_data/test_sha256",
-// 		},
-// 	}
+func Test_legacyPostFileV2(t *testing.T) {
+	tests := []struct {
+		name     string
+		imageRef string
+		testFile string
+	}{
+		{
+			name:     "Basic",
+			imageRef: "5cb9c34d7d960d82f5f5bc55",
+			testFile: "test_data/test_sha256",
+		},
+	}
 
-// 	for _, tt := range tests {
-// 		tt := tt
+	for _, tt := range tests {
+		tt := tt
 
-// 		t.Run(tt.name, func(t *testing.T) {
-// 			m := v2ImageUploadMockService{
-// 				t: t,
-// 			}
+		t.Run(tt.name, func(t *testing.T) {
+			m := v2ImageUploadMockService{
+				t: t,
+			}
 
-// 			m.Run()
-// 			defer m.Stop()
+			m.Run()
+			defer m.Stop()
 
-// 			c := initClient(t, m.baseURI)
-// 			f, err := os.Open(tt.testFile)
-// 			if err != nil {
-// 				t.Errorf("Error opening file %s for reading: %v", tt.testFile, err)
-// 			}
-// 			defer f.Close()
+			c := initClient(t, m.baseURI)
+			f, err := os.Open(tt.testFile)
+			if err != nil {
+				t.Errorf("Error opening file %s for reading: %v", tt.testFile, err)
+			}
+			defer f.Close()
 
-// 			fi, err := f.Stat()
-// 			if err != nil {
-// 				t.Errorf("Error stats for file %s: %v", tt.testFile, err)
-// 			}
-// 			fileSize := fi.Size()
+			fi, err := f.Stat()
+			if err != nil {
+				t.Errorf("Error stats for file %s: %v", tt.testFile, err)
+			}
+			fileSize := fi.Size()
 
-// 			// calculate sha256 checksum
-// 			sha256checksum, _, err := sha256sum(f)
-// 			if err != nil {
-// 				t.Fatalf("error calculating sha256 checksum: %v", err)
-// 			}
+			// calculate sha256 checksum
+			sha256checksum, _, err := sha256sum(f)
+			if err != nil {
+				t.Fatalf("error calculating sha256 checksum: %v", err)
+			}
 
-// 			_, err = f.Seek(0, 0)
-// 			if err != nil {
-// 				t.Fatalf("unexpected error seeking in sample data file: %v", err)
-// 			}
+			_, err = f.Seek(0, 0)
+			if err != nil {
+				t.Fatalf("unexpected error seeking in sample data file: %v", err)
+			}
 
-// 			callback := &defaultUploadCallback{r: f}
+			callback := &defaultUploadCallback{r: f}
 
-// 			// include sha256 checksum in metadata
-// 			resp, err := c.legacyPostFileV2(context.Background(), fileSize, tt.imageRef, callback, map[string]string{
-// 				"sha256sum": sha256checksum,
-// 			})
-// 			if err != nil {
-// 				t.Fatalf("unexpected error: %v", err)
-// 			}
+			// include sha256 checksum in metadata
+			resp, err := c.legacyPostFileV2(context.Background(), fileSize, tt.imageRef, callback, map[string]string{
+				"sha256sum": sha256checksum,
+			})
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
 
-// 			if got, want := resp.Quota.QuotaUsageBytes, testQuotaUsageBytes; got != want {
-// 				t.Errorf("got quota usage %v, want %v", got, want)
-// 			}
+			if got, want := resp.Quota.QuotaUsageBytes, testQuotaUsageBytes; got != want {
+				t.Errorf("got quota usage %v, want %v", got, want)
+			}
 
-// 			if got, want := resp.Quota.QuotaTotalBytes, testQuotaTotalBytes; got != want {
-// 				t.Errorf("got quota total %v, want %v", got, want)
-// 			}
+			if got, want := resp.Quota.QuotaTotalBytes, testQuotaTotalBytes; got != want {
+				t.Errorf("got quota total %v, want %v", got, want)
+			}
 
-// 			if got, want := resp.ContainerURL, testContainerURL; got != want {
-// 				t.Errorf("got container URL %v, want %v", got, want)
-// 			}
+			if got, want := resp.ContainerURL, testContainerURL; got != want {
+				t.Errorf("got container URL %v, want %v", got, want)
+			}
 
-// 			if !m.initCalled {
-// 				t.Errorf("init image upload request was not made")
-// 			}
+			if !m.initCalled {
+				t.Errorf("init image upload request was not made")
+			}
 
-// 			if !m.putCalled {
-// 				t.Errorf("file PUT request was not made")
-// 			}
+			if !m.putCalled {
+				t.Errorf("file PUT request was not made")
+			}
 
-// 			if !m.completeCalled {
-// 				t.Errorf("image upload complete request was not made")
-// 			}
-// 		})
-// 	}
-// }
+			if !m.completeCalled {
+				t.Errorf("image upload complete request was not made")
+			}
+		})
+	}
+}
 
 func Test_legacyPostFileV2URL(t *testing.T) {
 	s3Server := mockS3Server(t, http.StatusOK)
@@ -873,65 +873,6 @@ func Test_legacyPostFileV2URL(t *testing.T) {
 				commonHandler(t, http.StatusOK, w)
 
 				resp := UploadImageResponse{Data: UploadImage{UploadURL: tt.url}}
-
-				if err := json.NewEncoder(w).Encode(&resp); err != nil {
-					t.Fatalf("Error encoding JSON response: %v", err)
-				}
-			}))
-
-			libraryServer := httptest.NewServer(h)
-			defer libraryServer.Close()
-
-			c := initClient(t, libraryServer.URL)
-
-			r := strings.NewReader(testPayload)
-
-			etag, err := c.legacyPostFileV2(
-				context.Background(),
-				0,
-				"xxx",
-				&defaultUploadCallback{r: r},
-				map[string]string{"sha256sum": "xxx"},
-			)
-			if (err != nil) != tt.expectError {
-				t.Fatalf("unexpected error: %v", err)
-			}
-
-			_ = etag
-		})
-	}
-}
-
-func Test_legacyPostFileV2(t *testing.T) {
-	tests := []struct {
-		name         string
-		s3StatusCode int
-		statusCode   int
-		expectError  bool
-	}{
-		{"basic", http.StatusOK, http.StatusOK, false},
-		{"badRequest", http.StatusBadRequest, http.StatusBadRequest, true},
-		{"internalServerError", http.StatusInternalServerError, http.StatusInternalServerError, true},
-		{"okBadRequest", http.StatusOK, http.StatusBadRequest, true},
-		{"badRequestOK", http.StatusBadRequest, http.StatusOK, true},
-		{"internalOK", http.StatusInternalServerError, http.StatusOK, true},
-		{"okInternal", http.StatusOK, http.StatusInternalServerError, true},
-		{"internalBadRequest", http.StatusInternalServerError, http.StatusBadRequest, true},
-		{"badRequestInternal", http.StatusBadRequest, http.StatusInternalServerError, true},
-	}
-
-	for _, tt := range tests {
-		tt := tt
-
-		t.Run(tt.name, func(t *testing.T) {
-			s3Server := mockS3Server(t, tt.s3StatusCode)
-			defer s3Server.Close()
-
-			h := http.NewServeMux()
-			h.HandleFunc("/v2/imagefile/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				commonHandler(t, tt.statusCode, w)
-
-				resp := UploadImageResponse{Data: UploadImage{UploadURL: s3Server.URL}}
 
 				if err := json.NewEncoder(w).Encode(&resp); err != nil {
 					t.Fatalf("Error encoding JSON response: %v", err)
