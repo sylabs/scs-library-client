@@ -50,6 +50,8 @@ func (l *stdLogger) Logf(f string, v ...interface{}) {
 }
 
 func parseRangeHeader(t *testing.T, val string) (int64, int64) {
+	t.Helper()
+
 	if val == "" {
 		return 0, 0
 	}

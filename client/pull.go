@@ -279,7 +279,7 @@ func parseContentLengthHeader(val string) (int64, error) {
 }
 
 // download implements a simple, single stream downloader
-func (c *Client) download(ctx context.Context, w io.WriterAt, r io.Reader, size int64, pb ProgressBar) error {
+func (c *Client) download(_ context.Context, w io.WriterAt, r io.Reader, size int64, pb ProgressBar) error {
 	pb.Init(size)
 	defer pb.Wait()
 

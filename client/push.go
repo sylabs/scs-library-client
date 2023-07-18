@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020, Sylabs Inc. All rights reserved.
+// Copyright (c) 2018-2023, Sylabs Inc. All rights reserved.
 // This software is licensed under a 3-clause BSD license. Please consult the
 // LICENSE.md file distributed with the sources of this project regarding your
 // rights to use or distribute this software.
@@ -48,7 +48,7 @@ type defaultUploadCallback struct {
 	r io.Reader
 }
 
-func (c *defaultUploadCallback) InitUpload(s int64, r io.Reader) {
+func (c *defaultUploadCallback) InitUpload(_ int64, r io.Reader) {
 	c.r = r
 }
 
@@ -278,7 +278,10 @@ func (c *Client) postFile(ctx context.Context, fileSize int64, imageID string, c
 	c.Logger.Logf("postFile calling %s", postURL)
 
 	// Make an upload request
-	req, _ := c.newRequest(ctx, http.MethodPost, postURL, "", callback.GetReader())
+	req, err := c.newRequest(ctx, http.MethodPost, postURL, "", callback.GetReader())
+	if err != nil {
+		return nil, err
+	}
 	// Content length is required by the API
 	req.ContentLength = fileSize
 	res, err := c.HTTPClient.Do(req)
