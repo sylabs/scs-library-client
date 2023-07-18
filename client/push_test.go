@@ -242,8 +242,6 @@ func Test_UploadImageBadPath(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
-
 		t.Run(tt.name, func(t *testing.T) {
 			h := http.NewServeMux()
 			h.HandleFunc("/v1/imagefile/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -386,8 +384,6 @@ func Test_UploadImage(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
-
 		t.Run(tt.name, func(t *testing.T) {
 			s3Server := mockS3Server(t, tt.s3StatusCode)
 			defer s3Server.Close()
@@ -514,8 +510,6 @@ func Test_postFileV2(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
-
 		t.Run(tt.name, func(t *testing.T) {
 			h := http.NewServeMux()
 			h.HandleFunc("/v2/imagefile/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -599,8 +593,6 @@ func Test_postFileV2Multipart(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
-
 		t.Run(tt.name, func(t *testing.T) {
 			s3Server := mockS3Server(t, tt.s3StatusCode)
 			defer s3Server.Close()
@@ -674,8 +666,6 @@ func Test_getPartSize(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
-
 		t.Run(tt.name, func(t *testing.T) {
 			if got, want := getPartSize(tt.bytesRemaining, tt.partSize), tt.want; got != want {
 				t.Fatalf("got: %v, want: %v", got, want)
@@ -699,8 +689,6 @@ func Test_startMultipartUpload(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
-
 		t.Run(tt.name, func(t *testing.T) {
 			h := http.NewServeMux()
 			h.HandleFunc("/v2/imagefile/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -749,8 +737,6 @@ func Test_remoteSHA256ChecksumSupport(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
-
 		t.Run(tt.name, func(t *testing.T) {
 			q := url.Values{}
 
@@ -778,8 +764,6 @@ func Test_legacyPostFileV2(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
-
 		t.Run(tt.name, func(t *testing.T) {
 			m := v2ImageUploadMockService{
 				t: t,
@@ -865,8 +849,6 @@ func Test_legacyPostFileV2URL(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
-
 		t.Run(tt.name, func(t *testing.T) {
 			h := http.NewServeMux()
 			h.HandleFunc("/v2/imagefile/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -964,8 +946,6 @@ func Test_multipartUploadPart(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
-
 		t.Run(tt.name, func(t *testing.T) {
 			s3Server := mockS3Server(t, tt.s3StatusCode)
 			defer s3Server.Close()
@@ -1026,8 +1006,6 @@ func Test_completeMultipartUpload(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
-
 		t.Run(tt.name, func(t *testing.T) {
 			h := http.NewServeMux()
 			h.HandleFunc("/v2/imagefile/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -1080,8 +1058,6 @@ func Test_abortMultipartUpload(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
-
 		t.Run(tt.name, func(t *testing.T) {
 			h := http.NewServeMux()
 			h.HandleFunc("/v2/imagefile/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
