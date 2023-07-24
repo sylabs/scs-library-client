@@ -19,6 +19,8 @@ import (
 	jsonresp "github.com/sylabs/json-resp"
 )
 
+var errRequestedImageNotFound = fmt.Errorf("requested image was not found in the library")
+
 // DownloadImage will retrieve an image from the Container Library, saving it
 // into the specified io.Writer. The timeout value for this operation is set
 // within the context. It is recommended to use a large value (ie. 1800 seconds)
@@ -30,7 +32,7 @@ func (c *Client) DownloadImage(ctx context.Context, w io.Writer, arch, path, tag
 	}
 
 	if strings.Contains(path, ":") {
-		return fmt.Errorf("malformed image path: %s", path)
+		return fmt.Errorf("%w: malformed image path: %s", errBadRequest, path)
 	}
 
 	if tag == "" {
@@ -55,18 +57,18 @@ func (c *Client) DownloadImage(ctx context.Context, w io.Writer, arch, path, tag
 	defer res.Body.Close()
 
 	if res.StatusCode == http.StatusNotFound {
-		return fmt.Errorf("requested image was not found in the library")
+		return errRequestedImageNotFound
 	}
 
 	if res.StatusCode != http.StatusOK {
 		err := jsonresp.ReadError(res.Body)
 		if err != nil {
-			return fmt.Errorf("download did not succeed: %v", err)
+			return fmt.Errorf("download did not succeed: %w", err)
 		}
 		if res.StatusCode == http.StatusUnauthorized {
 			return ErrUnauthorized
 		}
-		return fmt.Errorf("unexpected http status code: %d", res.StatusCode)
+		return fmt.Errorf("%w: unexpected http status code: %d", errHTTP, res.StatusCode)
 	}
 
 	c.Logger.Logf("OK response received, beginning body download")
@@ -152,7 +154,7 @@ func (c *Client) ConcurrentDownloadImage(ctx context.Context, dst *os.File, arch
 	}
 
 	if strings.Contains(path, ":") {
-		return fmt.Errorf("malformed image path: %s", path)
+		return fmt.Errorf("%w: malformed image path: %s", errBadRequest, path)
 	}
 
 	name := strings.TrimPrefix(path, "/")
@@ -194,7 +196,7 @@ func (c *Client) legacyDownloadImage(ctx context.Context, arch, name, tag string
 			}
 			maxRedir := 10
 			if len(via) >= maxRedir {
-				return fmt.Errorf("stopped after %d redirects", maxRedir)
+				return fmt.Errorf("%w: stopped after %d redirects", errHTTP, maxRedir)
 			}
 			return nil
 		},
@@ -214,7 +216,7 @@ func (c *Client) legacyDownloadImage(ctx context.Context, arch, name, tag string
 	defer res.Body.Close()
 
 	if res.StatusCode == http.StatusNotFound {
-		return fmt.Errorf("requested image was not found in the library")
+		return errRequestedImageNotFound
 	}
 
 	if res.StatusCode == http.StatusOK {
@@ -234,7 +236,7 @@ func (c *Client) legacyDownloadImage(ctx context.Context, arch, name, tag string
 		if res.StatusCode == http.StatusUnauthorized {
 			return ErrUnauthorized
 		}
-		return fmt.Errorf("unexpected http status %d", res.StatusCode)
+		return fmt.Errorf("%w: unexpected http status %d", errHTTP, res.StatusCode)
 	}
 
 	// Get image metadata to determine image size
@@ -273,7 +275,7 @@ func parseContentLengthHeader(val string) (int64, error) {
 	}
 	size, err := strconv.ParseInt(val, 10, 64)
 	if err != nil {
-		return -1, fmt.Errorf("parsing Content-Length header %v: %v", val, err)
+		return -1, fmt.Errorf("parsing Content-Length header %v: %w", val, err)
 	}
 	return size, nil
 }

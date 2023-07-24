@@ -77,7 +77,7 @@ func NewClient(cfg *Config) (*Client, error) {
 		return nil, err
 	}
 	if baseURL.Scheme != "http" && baseURL.Scheme != "https" {
-		return nil, fmt.Errorf("unsupported protocol scheme %q", baseURL.Scheme)
+		return nil, fmt.Errorf("%w: unsupported protocol scheme %q", errHTTP, baseURL.Scheme)
 	}
 
 	c := &Client{

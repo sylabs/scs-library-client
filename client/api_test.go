@@ -1,4 +1,4 @@
-// Copyright (c) 2018, Sylabs Inc. All rights reserved.
+// Copyright (c) 2018-2023, Sylabs Inc. All rights reserved.
 // This software is licensed under a 3-clause BSD license. Please consult the
 // LICENSE.md file distributed with the sources of this project regarding your
 // rights to use or distribute this software.
@@ -8,6 +8,7 @@ package client
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -261,8 +262,8 @@ func Test_getEntity(t *testing.T) {
 			if err == nil && tt.expectError {
 				t.Errorf("Unexpected success. Expected error.")
 			}
-			if err != nil && err == ErrNotFound && tt.expectFound {
-				t.Errorf("Got found %v - expected %v", err != ErrNotFound, tt.expectFound)
+			if err != nil && errors.Is(err, ErrNotFound) && tt.expectFound {
+				t.Errorf("Got found %v - expected %v", !errors.Is(err, ErrNotFound), tt.expectFound)
 			}
 			if !reflect.DeepEqual(entity, tt.expectEntity) {
 				t.Errorf("Got entity %v - expected %v", entity, tt.expectEntity)
@@ -341,8 +342,8 @@ func Test_getCollection(t *testing.T) {
 			if err == nil && tt.expectError {
 				t.Errorf("Unexpected success. Expected error.")
 			}
-			if err != nil && err == ErrNotFound && tt.expectFound {
-				t.Errorf("Got found %v - expected %v", err != ErrNotFound, tt.expectFound)
+			if err != nil && errors.Is(err, ErrNotFound) && tt.expectFound {
+				t.Errorf("Got found %v - expected %v", !errors.Is(err, ErrNotFound), tt.expectFound)
 			}
 			if !reflect.DeepEqual(collection, tt.expectCollection) {
 				t.Errorf("Got entity %v - expected %v", collection, tt.expectCollection)
@@ -421,8 +422,8 @@ func Test_getContainer(t *testing.T) {
 			if err == nil && tt.expectError {
 				t.Errorf("Unexpected success. Expected error.")
 			}
-			if err != nil && err != ErrNotFound && tt.expectFound {
-				t.Errorf("Got found %v - expected %v", err != ErrNotFound, tt.expectFound)
+			if err != nil && !errors.Is(err, ErrNotFound) && tt.expectFound {
+				t.Errorf("Got found %v - expected %v", !errors.Is(err, ErrNotFound), tt.expectFound)
 			}
 			if !reflect.DeepEqual(container, tt.expectContainer) {
 				t.Errorf("Got container %v - expected %v", container, tt.expectContainer)
@@ -505,8 +506,8 @@ func Test_getImage(t *testing.T) {
 			if err == nil && tt.expectError {
 				t.Errorf("Unexpected success. Expected error.")
 			}
-			if err != nil && err != ErrNotFound && tt.expectFound {
-				t.Errorf("Got found %v - expected %v", err != ErrNotFound, tt.expectFound)
+			if err != nil && !errors.Is(err, ErrNotFound) && tt.expectFound {
+				t.Errorf("Got found %v - expected %v", !errors.Is(err, ErrNotFound), tt.expectFound)
 			}
 			if !reflect.DeepEqual(image, tt.expectImage) {
 				t.Errorf("Got image %v - expected %v", image, tt.expectImage)

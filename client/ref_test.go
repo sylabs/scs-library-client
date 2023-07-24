@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2022, Sylabs Inc. All rights reserved.
+// Copyright (c) 2018-2023, Sylabs Inc. All rights reserved.
 // This software is licensed under a 3-clause BSD license. Please consult the
 // LICENSE.md file distributed with the sources of this project regarding your
 // rights to use or distribute this software.
@@ -6,6 +6,7 @@
 package client
 
 import (
+	"errors"
 	"reflect"
 	"testing"
 )
@@ -150,7 +151,7 @@ func TestParse(t *testing.T) {
 				t.Fatalf("got err %v, want %v", err, tt.wantErr)
 			}
 			if tt.wantErrSpecific != nil {
-				if got, want := err, tt.wantErrSpecific; got != want {
+				if got, want := err, tt.wantErrSpecific; !errors.Is(got, want) {
 					t.Fatalf("got err %v, want %v", got, want)
 				}
 			}
@@ -312,7 +313,7 @@ func TestParseAmbiguous(t *testing.T) {
 				t.Fatalf("got err %v, want %v", err, tt.wantErr)
 			}
 			if tt.wantErrSpecific != nil {
-				if got, want := err, tt.wantErrSpecific; got != want {
+				if got, want := err, tt.wantErrSpecific; !errors.Is(got, want) {
 					t.Fatalf("got err %v, want %v", got, want)
 				}
 			}

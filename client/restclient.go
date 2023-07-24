@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019, Sylabs Inc. All rights reserved.
+// Copyright (c) 2018-2023, Sylabs Inc. All rights reserved.
 // This software is licensed under a 3-clause BSD license. Please consult the
 // LICENSE.md file distributed with the sources of this project regarding your
 // rights to use or distribute this software.
@@ -59,7 +59,7 @@ func (c *Client) commonRequestHandler(ctx context.Context, method string, path s
 	if method != "GET" && method != "DELETE" {
 		s, err := json.Marshal(o)
 		if err != nil {
-			return []byte{}, fmt.Errorf("error encoding object to JSON:\n\t%v", err)
+			return []byte{}, fmt.Errorf("error encoding object to JSON:\n\t%w", err)
 		}
 		payload = bytes.NewBuffer(s)
 	}
@@ -67,17 +67,17 @@ func (c *Client) commonRequestHandler(ctx context.Context, method string, path s
 	// split url containing query into component pieces (path and raw query)
 	u, err := url.Parse(path)
 	if err != nil {
-		return []byte{}, fmt.Errorf("error parsing url:\n\t%v", err)
+		return []byte{}, fmt.Errorf("error parsing url:\n\t%w", err)
 	}
 
 	req, err := c.newRequest(ctx, method, u.Path, u.RawQuery, payload)
 	if err != nil {
-		return []byte{}, fmt.Errorf("error creating %s request:\n\t%v", method, err)
+		return []byte{}, fmt.Errorf("error creating %s request:\n\t%w", method, err)
 	}
 
 	res, err := c.HTTPClient.Do(req)
 	if err != nil {
-		return []byte{}, fmt.Errorf("error making request to server:\n\t%v", err)
+		return []byte{}, fmt.Errorf("error making request to server:\n\t%w", err)
 	}
 	defer res.Body.Close()
 
@@ -88,13 +88,13 @@ func (c *Client) commonRequestHandler(ctx context.Context, method string, path s
 	if !isValidStatusCode(res.StatusCode, acceptedStatusCodes) {
 		err := jsonresp.ReadError(res.Body)
 		if err != nil {
-			return []byte{}, fmt.Errorf("request did not succeed: %v", err)
+			return []byte{}, fmt.Errorf("request did not succeed: %w", err)
 		}
-		return []byte{}, fmt.Errorf("request did not succeed: http status code: %d", res.StatusCode)
+		return []byte{}, fmt.Errorf("%w: request did not succeed: http status code: %d", errHTTP, res.StatusCode)
 	}
 	objJSON, err = io.ReadAll(res.Body)
 	if err != nil {
-		return []byte{}, fmt.Errorf("error reading response from server:\n\t%v", err)
+		return []byte{}, fmt.Errorf("error reading response from server:\n\t%w", err)
 	}
 	return objJSON, nil
 }

@@ -19,6 +19,11 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
+var (
+	errGettingPresignedURL = errors.New("error getting presigned URL")
+	errParsingPresignedURL = errors.New("error parsing presigned URL")
+)
+
 const (
 	// minimumPartSize is the minimum size of a part in a multipart upload;
 	// this liberty is taken by defining this value on the client-side to
@@ -83,7 +88,7 @@ func calculateChecksums(r io.Reader) (string, string, int64, error) {
 
 		md5checksum, fileSize, err = md5sum(tr)
 		if err != nil {
-			return fmt.Errorf("error calculating MD5 checksum: %v", err)
+			return fmt.Errorf("error calculating MD5 checksum: %w", err)
 		}
 		return nil
 	})
@@ -93,7 +98,7 @@ func calculateChecksums(r io.Reader) (string, string, int64, error) {
 		var err error
 		sha256checksum, _, err = sha256sum(pr)
 		if err != nil {
-			return fmt.Errorf("error calculating SHA checksum: %v", err)
+			return fmt.Errorf("error calculating SHA checksum: %w", err)
 		}
 		return nil
 	})
@@ -108,23 +113,23 @@ func calculateChecksums(r io.Reader) (string, string, int64, error) {
 // prevent timeout when uploading large images.
 func (c *Client) UploadImage(ctx context.Context, r io.ReadSeeker, path, arch string, tags []string, description string, callback UploadCallback) (*UploadImageComplete, error) {
 	if !IsLibraryPushRef(path) {
-		return nil, fmt.Errorf("malformed image path: %s", path)
+		return nil, fmt.Errorf("%w: malformed image path: %s", errBadRequest, path)
 	}
 
 	entityName, collectionName, containerName, parsedTags := ParseLibraryPath(path)
 	if len(parsedTags) != 0 {
-		return nil, fmt.Errorf("malformed image path: %s", path)
+		return nil, fmt.Errorf("%w: malformed image path: %s", errBadRequest, path)
 	}
 
 	// calculate sha256 and md5 checksums
 	md5Checksum, imageHash, fileSize, err := calculateChecksums(r)
 	if err != nil {
-		return nil, fmt.Errorf("error calculating checksums: %v", err)
+		return nil, fmt.Errorf("error calculating checksums: %w", err)
 	}
 
 	// rollback to top of file
 	if _, err = r.Seek(0, io.SeekStart); err != nil {
-		return nil, fmt.Errorf("error seeking to start stream: %v", err)
+		return nil, fmt.Errorf("error seeking to start stream: %w", err)
 	}
 
 	c.Logger.Logf("Image hash computed as %s", imageHash)
@@ -141,7 +146,7 @@ func (c *Client) UploadImage(ctx context.Context, r io.ReadSeeker, path, arch st
 	// Find or create entity
 	entity, err := c.getEntity(ctx, entityName)
 	if err != nil {
-		if err != ErrNotFound {
+		if !errors.Is(err, ErrNotFound) {
 			return nil, err
 		}
 		c.Logger.Logf("Entity %s does not exist in library - creating it.", entityName)
@@ -155,7 +160,7 @@ func (c *Client) UploadImage(ctx context.Context, r io.ReadSeeker, path, arch st
 	qualifiedCollectionName := fmt.Sprintf("%s/%s", entityName, collectionName)
 	collection, err := c.getCollection(ctx, qualifiedCollectionName)
 	if err != nil {
-		if err != ErrNotFound {
+		if !errors.Is(err, ErrNotFound) {
 			return nil, err
 		}
 		// create collection
@@ -170,7 +175,7 @@ func (c *Client) UploadImage(ctx context.Context, r io.ReadSeeker, path, arch st
 	computedName := fmt.Sprintf("%s/%s", qualifiedCollectionName, containerName)
 	container, err := c.getContainer(ctx, computedName)
 	if err != nil {
-		if err != ErrNotFound {
+		if !errors.Is(err, ErrNotFound) {
 			return nil, err
 		}
 		// Create container
@@ -184,7 +189,7 @@ func (c *Client) UploadImage(ctx context.Context, r io.ReadSeeker, path, arch st
 	// Find or create image
 	image, err := c.GetImage(ctx, arch, computedName+":"+"sha256."+imageHash)
 	if err != nil {
-		if err != ErrNotFound {
+		if !errors.Is(err, ErrNotFound) {
 			return nil, err
 		}
 		// Create image
@@ -286,14 +291,14 @@ func (c *Client) postFile(ctx context.Context, fileSize int64, imageID string, c
 	req.ContentLength = fileSize
 	res, err := c.HTTPClient.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("error uploading file to server: %s", err.Error())
+		return nil, fmt.Errorf("error uploading file to server: %w", err)
 	}
 	defer res.Body.Close()
 	if res.StatusCode != http.StatusOK {
 		if err := jsonresp.ReadError(res.Body); err != nil {
-			return nil, fmt.Errorf("sending file did not succeed: %v", err)
+			return nil, fmt.Errorf("sending file did not succeed: %w", err)
 		}
-		return nil, fmt.Errorf("sending file did not succeed: http status code %d", res.StatusCode)
+		return nil, fmt.Errorf("%w: sending file did not succeed: http status code %d", errHTTP, res.StatusCode)
 	}
 	return nil, nil
 }
@@ -314,7 +319,7 @@ func (c *Client) postFileV2(ctx context.Context, r io.ReadSeeker, fileSize int64
 		if err != nil {
 			// if the error is anything other than ErrNotFound, fallback to legacy (single part)
 			// uploader.
-			if err != ErrNotFound {
+			if !errors.Is(err, ErrNotFound) {
 				return nil, err
 			}
 			// fallthrough to legacy (single part) uploader
@@ -475,12 +480,12 @@ func (c *Client) legacyPostFileV2(ctx context.Context, fileSize int64, imageID s
 	// upload (PUT) directly to S3 presigned URL provided above
 	presignedURL := res.Data.UploadURL
 	if presignedURL == "" {
-		return nil, fmt.Errorf("error getting presigned URL")
+		return nil, errGettingPresignedURL
 	}
 
 	parsedURL, err := url.Parse(presignedURL)
 	if err != nil {
-		return nil, fmt.Errorf("error parsing presigned URL")
+		return nil, errParsingPresignedURL
 	}
 
 	// parse presigned URL to determine if we need to send sha256 checksum
@@ -488,7 +493,7 @@ func (c *Client) legacyPostFileV2(ctx context.Context, fileSize int64, imageID s
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPut, presignedURL, callback.GetReader())
 	if err != nil {
-		return nil, fmt.Errorf("error creating request: %v", err)
+		return nil, fmt.Errorf("error creating request: %w", err)
 	}
 
 	req.ContentLength = fileSize
@@ -501,18 +506,18 @@ func (c *Client) legacyPostFileV2(ctx context.Context, fileSize int64, imageID s
 	resp, err := c.HTTPClient.Do(req)
 	callback.Finish()
 	if err != nil {
-		return nil, fmt.Errorf("error uploading image: %v", err)
+		return nil, fmt.Errorf("error uploading image: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("error uploading image: HTTP status %d", resp.StatusCode)
+		return nil, fmt.Errorf("%w: error uploading image: HTTP status %d", errHTTP, resp.StatusCode)
 	}
 
 	// send (PUT) image upload completion
 	objJSON, err = c.apiUpdate(ctx, postURL+"/_complete", UploadImageCompleteRequest{})
 	if err != nil {
-		return nil, fmt.Errorf("error sending upload complete request: %v", err)
+		return nil, fmt.Errorf("error sending upload complete request: %w", err)
 	}
 
 	if len(objJSON) == 0 {
@@ -522,7 +527,7 @@ func (c *Client) legacyPostFileV2(ctx context.Context, fileSize int64, imageID s
 
 	var uploadResp UploadImageCompleteResponse
 	if err := json.Unmarshal(objJSON, &uploadResp); err != nil {
-		return nil, fmt.Errorf("error decoding upload response: %v", err)
+		return nil, fmt.Errorf("error decoding upload response: %w", err)
 	}
 	return &uploadResp.Data, nil
 }
@@ -576,7 +581,7 @@ func (c *Client) multipartUploadPart(ctx context.Context, partNumber int, m *upl
 	// send request to S3
 	req, err := http.NewRequestWithContext(ctx, http.MethodPut, res.Data.PresignedURL, io.LimitReader(callback.GetReader(), m.Size))
 	if err != nil {
-		return "", fmt.Errorf("error creating request: %v", err)
+		return "", fmt.Errorf("error creating request: %w", err)
 	}
 
 	// add headers to be signed
@@ -587,7 +592,7 @@ func (c *Client) multipartUploadPart(ctx context.Context, partNumber int, m *upl
 
 	resp, err := c.HTTPClient.Do(req)
 	if err != nil {
-		c.Logger.Logf("Failure uploading to presigned URL: %v", err)
+		c.Logger.Logf("Failure uploading to presigned URL: %w", err)
 		return "", err
 	}
 	defer resp.Body.Close()
@@ -595,7 +600,7 @@ func (c *Client) multipartUploadPart(ctx context.Context, partNumber int, m *upl
 	// process response from S3
 	if resp.StatusCode != http.StatusOK {
 		c.Logger.Logf("Object store returned an error: %d", resp.StatusCode)
-		return "", fmt.Errorf("object store returned an error: %d", resp.StatusCode)
+		return "", fmt.Errorf("%w: object store returned an error: %d", errHTTP, resp.StatusCode)
 	}
 
 	etag := resp.Header.Get("ETag")
