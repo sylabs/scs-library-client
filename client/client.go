@@ -7,7 +7,6 @@ package client
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -16,9 +15,6 @@ import (
 
 	"github.com/go-log/log"
 )
-
-// ErrUnauthorized represents HTTP status "401 Unauthorized"
-var ErrUnauthorized = errors.New("unauthorized")
 
 // Config contains the client configuration.
 type Config struct {

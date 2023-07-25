@@ -8,12 +8,9 @@ package client
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/url"
 )
-
-var errQueryValueMustBeSpecified = errors.New("search query ('value') must be specified")
 
 // Search performs a library search, returning any matching collections,
 // containers, entities, or images.

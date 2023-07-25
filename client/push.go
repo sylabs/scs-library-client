@@ -19,11 +19,6 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-var (
-	errGettingPresignedURL = errors.New("error getting presigned URL")
-	errParsingPresignedURL = errors.New("error parsing presigned URL")
-)
-
 const (
 	// minimumPartSize is the minimum size of a part in a multipart upload;
 	// this liberty is taken by defining this value on the client-side to

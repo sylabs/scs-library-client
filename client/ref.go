@@ -6,28 +6,12 @@
 package client
 
 import (
-	"errors"
 	"net/url"
 	"strings"
 )
 
 // Scheme is the required scheme for Library URIs.
 const Scheme = "library"
-
-var (
-	// ErrRefSchemeNotValid represents a ref with an invalid scheme.
-	ErrRefSchemeNotValid = errors.New("library: ref scheme not valid")
-	// ErrRefUserNotPermitted represents a ref with an invalid user.
-	ErrRefUserNotPermitted = errors.New("library: user not permitted in ref")
-	// ErrRefQueryNotPermitted represents a ref with an invalid query.
-	ErrRefQueryNotPermitted = errors.New("library: query not permitted in ref")
-	// ErrRefFragmentNotPermitted represents a ref with an invalid fragment.
-	ErrRefFragmentNotPermitted = errors.New("library: fragment not permitted in ref")
-	// ErrRefPathNotValid represents a ref with an invalid path.
-	ErrRefPathNotValid = errors.New("library: ref path not valid")
-	// ErrRefTagsNotValid represents a ref with invalid tags.
-	ErrRefTagsNotValid = errors.New("library: ref tags not valid")
-)
 
 // A Ref represents a parsed Library URI.
 //

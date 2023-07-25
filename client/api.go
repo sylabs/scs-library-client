@@ -9,15 +9,12 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
 
 	jsonresp "github.com/sylabs/json-resp"
 )
-
-var errHTTP = errors.New("http error")
 
 // getEntity returns the specified entity; returns ErrNotFound if entity is not
 // found, otherwise error

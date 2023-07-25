@@ -7,7 +7,6 @@ package client
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -15,11 +14,6 @@ import (
 	"strings"
 
 	"golang.org/x/sync/errgroup"
-)
-
-var (
-	errBadRequest               = errors.New("bad request")
-	errUnexpectedMalformedValue = errors.New("unexpected/malformed value")
 )
 
 // filePartDescriptor defines one part of multipart download.

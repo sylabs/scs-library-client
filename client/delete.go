@@ -2,11 +2,8 @@ package client
 
 import (
 	"context"
-	"errors"
 	"net/url"
 )
-
-var errImageRefArchRequired = errors.New("imageRef and arch are required")
 
 // DeleteImage deletes requested imageRef.
 func (c *Client) DeleteImage(ctx context.Context, imageRef, arch string) error {
