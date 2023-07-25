@@ -6,7 +6,6 @@ linters:
     - containedctx
     - contextcheck
     - decorder
-    - depguard
     - dogsled
     - errcheck
     - errchkjson
@@ -14,6 +13,7 @@ linters:
     - goconst
     - gocritic
     - gocyclo
+    - goerr113
     - gofumpt
     - goimports
     - goprintffuncname

@@ -1,4 +1,4 @@
-// Copyright (c) 2018, Sylabs Inc. All rights reserved.
+// Copyright (c) 2018-2023, Sylabs Inc. All rights reserved.
 // This software is licensed under a 3-clause BSD license. Please consult the
 // LICENSE.md file distributed with the sources of this project regarding your
 // rights to use or distribute this software.
@@ -25,7 +25,7 @@ func (c *Client) getEntity(ctx context.Context, entityRef string) (*Entity, erro
 	}
 	var res EntityResponse
 	if err := json.Unmarshal(entJSON, &res); err != nil {
-		return nil, fmt.Errorf("error decoding entity: %v", err)
+		return nil, fmt.Errorf("error decoding entity: %w", err)
 	}
 	return &res.Data, nil
 }
@@ -39,7 +39,7 @@ func (c *Client) getCollection(ctx context.Context, collectionRef string) (*Coll
 	}
 	var res CollectionResponse
 	if err := json.Unmarshal(colJSON, &res); err != nil {
-		return nil, fmt.Errorf("error decoding collection: %v", err)
+		return nil, fmt.Errorf("error decoding collection: %w", err)
 	}
 	return &res.Data, nil
 }
@@ -53,7 +53,7 @@ func (c *Client) getContainer(ctx context.Context, containerRef string) (*Contai
 	}
 	var res ContainerResponse
 	if err := json.Unmarshal(conJSON, &res); err != nil {
-		return nil, fmt.Errorf("error decoding container: %v", err)
+		return nil, fmt.Errorf("error decoding container: %w", err)
 	}
 	return &res.Data, nil
 }
@@ -70,7 +70,7 @@ func (c *Client) createEntity(ctx context.Context, name string) (*Entity, error)
 	}
 	var res EntityResponse
 	if err := json.Unmarshal(entJSON, &res); err != nil {
-		return nil, fmt.Errorf("error decoding entity: %v", err)
+		return nil, fmt.Errorf("error decoding entity: %w", err)
 	}
 	return &res.Data, nil
 }
@@ -88,7 +88,7 @@ func (c *Client) createCollection(ctx context.Context, name string, entityID str
 	}
 	var res CollectionResponse
 	if err := json.Unmarshal(colJSON, &res); err != nil {
-		return nil, fmt.Errorf("error decoding collection: %v", err)
+		return nil, fmt.Errorf("error decoding collection: %w", err)
 	}
 	return &res.Data, nil
 }
@@ -106,7 +106,7 @@ func (c *Client) createContainer(ctx context.Context, name string, collectionID 
 	}
 	var res ContainerResponse
 	if err := json.Unmarshal(conJSON, &res); err != nil {
-		return nil, fmt.Errorf("error decoding container: %v", err)
+		return nil, fmt.Errorf("error decoding container: %w", err)
 	}
 	return &res.Data, nil
 }
@@ -124,7 +124,7 @@ func (c *Client) createImage(ctx context.Context, hash string, containerID strin
 	}
 	var res ImageResponse
 	if err := json.Unmarshal(imgJSON, &res); err != nil {
-		return nil, fmt.Errorf("error decoding image: %v", err)
+		return nil, fmt.Errorf("error decoding image: %w", err)
 	}
 	return &res.Data, nil
 }
@@ -162,24 +162,24 @@ func (c *Client) getTags(ctx context.Context, containerID string) (TagMap, error
 	c.Logger.Logf("getTags calling %s", url)
 	req, err := c.newRequest(ctx, http.MethodGet, url, "", nil)
 	if err != nil {
-		return nil, fmt.Errorf("error creating request to server:\n\t%v", err)
+		return nil, fmt.Errorf("error creating request to server:\n\t%w", err)
 	}
 	res, err := c.HTTPClient.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("error making request to server:\n\t%v", err)
+		return nil, fmt.Errorf("error making request to server:\n\t%w", err)
 	}
 	defer res.Body.Close()
 	if res.StatusCode != http.StatusOK {
 		err := jsonresp.ReadError(res.Body)
 		if err != nil {
-			return nil, fmt.Errorf("creation did not succeed: %v", err)
+			return nil, fmt.Errorf("creation did not succeed: %w", err)
 		}
-		return nil, fmt.Errorf("unexpected http status code: %d", res.StatusCode)
+		return nil, fmt.Errorf("%w: unexpected http status code: %d", errHTTP, res.StatusCode)
 	}
 	var tagRes TagsResponse
 	err = json.NewDecoder(res.Body).Decode(&tagRes)
 	if err != nil {
-		return nil, fmt.Errorf("error decoding tags: %v", err)
+		return nil, fmt.Errorf("error decoding tags: %w", err)
 	}
 	return tagRes.Data, nil
 }
@@ -190,23 +190,23 @@ func (c *Client) setTag(ctx context.Context, containerID string, t ImageTag) err
 	c.Logger.Logf("setTag calling %s", url)
 	s, err := json.Marshal(t)
 	if err != nil {
-		return fmt.Errorf("error encoding object to JSON:\n\t%v", err)
+		return fmt.Errorf("error encoding object to JSON:\n\t%w", err)
 	}
 	req, err := c.newRequest(ctx, http.MethodPost, url, "", bytes.NewBuffer(s))
 	if err != nil {
-		return fmt.Errorf("error creating POST request:\n\t%v", err)
+		return fmt.Errorf("error creating POST request:\n\t%w", err)
 	}
 	res, err := c.HTTPClient.Do(req)
 	if err != nil {
-		return fmt.Errorf("error making request to server:\n\t%v", err)
+		return fmt.Errorf("error making request to server:\n\t%w", err)
 	}
 	defer res.Body.Close()
 	if res.StatusCode != http.StatusOK {
 		err := jsonresp.ReadError(res.Body)
 		if err != nil {
-			return fmt.Errorf("creation did not succeed: %v", err)
+			return fmt.Errorf("creation did not succeed: %w", err)
 		}
-		return fmt.Errorf("creation did not succeed: http status code: %d", res.StatusCode)
+		return fmt.Errorf("%w: creation did not succeed: http status code: %d", errHTTP, res.StatusCode)
 	}
 	return nil
 }
@@ -245,24 +245,24 @@ func (c *Client) getTagsV2(ctx context.Context, containerID string) (ArchTagMap,
 	c.Logger.Logf("getTagsV2 calling %s", url)
 	req, err := c.newRequest(ctx, http.MethodGet, url, "", nil)
 	if err != nil {
-		return nil, fmt.Errorf("error creating request to server:\n\t%v", err)
+		return nil, fmt.Errorf("error creating request to server:\n\t%w", err)
 	}
 	res, err := c.HTTPClient.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("error making request to server:\n\t%v", err)
+		return nil, fmt.Errorf("error making request to server:\n\t%w", err)
 	}
 	defer res.Body.Close()
 	if res.StatusCode != http.StatusOK {
 		err := jsonresp.ReadError(res.Body)
 		if err != nil {
-			return nil, fmt.Errorf("creation did not succeed: %v", err)
+			return nil, fmt.Errorf("creation did not succeed: %w", err)
 		}
-		return nil, fmt.Errorf("unexpected http status code: %d", res.StatusCode)
+		return nil, fmt.Errorf("%w: unexpected http status code: %d", errHTTP, res.StatusCode)
 	}
 	var tagRes ArchTagsResponse
 	err = json.NewDecoder(res.Body).Decode(&tagRes)
 	if err != nil {
-		return nil, fmt.Errorf("error decoding tags: %v", err)
+		return nil, fmt.Errorf("error decoding tags: %w", err)
 	}
 	return tagRes.Data, nil
 }
@@ -273,23 +273,23 @@ func (c *Client) setTagV2(ctx context.Context, containerID string, t ArchImageTa
 	c.Logger.Logf("setTag calling %s", url)
 	s, err := json.Marshal(t)
 	if err != nil {
-		return fmt.Errorf("error encoding object to JSON:\n\t%v", err)
+		return fmt.Errorf("error encoding object to JSON:\n\t%w", err)
 	}
 	req, err := c.newRequest(ctx, http.MethodPost, url, "", bytes.NewBuffer(s))
 	if err != nil {
-		return fmt.Errorf("error creating POST request:\n\t%v", err)
+		return fmt.Errorf("error creating POST request:\n\t%w", err)
 	}
 	res, err := c.HTTPClient.Do(req)
 	if err != nil {
-		return fmt.Errorf("error making request to server:\n\t%v", err)
+		return fmt.Errorf("error making request to server:\n\t%w", err)
 	}
 	defer res.Body.Close()
 	if res.StatusCode != http.StatusOK {
 		err := jsonresp.ReadError(res.Body)
 		if err != nil {
-			return fmt.Errorf("creation did not succeed: %v", err)
+			return fmt.Errorf("creation did not succeed: %w", err)
 		}
-		return fmt.Errorf("creation did not succeed: http status code: %d", res.StatusCode)
+		return fmt.Errorf("%w: creation did not succeed: http status code: %d", errHTTP, res.StatusCode)
 	}
 	return nil
 }
@@ -310,7 +310,7 @@ func (c *Client) GetImage(ctx context.Context, arch string, imageRef string) (*I
 	}
 	var res ImageResponse
 	if err := json.Unmarshal(imgJSON, &res); err != nil {
-		return nil, fmt.Errorf("error decoding image: %v", err)
+		return nil, fmt.Errorf("error decoding image: %w", err)
 	}
 	return &res.Data, nil
 }

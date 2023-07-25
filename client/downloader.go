@@ -1,4 +1,4 @@
-// Copyright (c) 2021-2022, Sylabs Inc. All rights reserved.
+// Copyright (c) 2021-2023, Sylabs Inc. All rights reserved.
 // This software is licensed under a 3-clause BSD license. Please consult the
 // LICENSE.md file distributed with the sources of this project regarding your
 // rights to use or distribute this software.
@@ -7,7 +7,6 @@ package client
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -46,7 +45,7 @@ func minInt64(a, b int64) int64 {
 // Download performs download of contents at url by writing 'size' bytes to 'dst' using credentials 'c'.
 func (c *Client) multipartDownload(ctx context.Context, u string, creds credentials, w io.WriterAt, size int64, spec *Downloader, pb ProgressBar) error {
 	if size <= 0 {
-		return fmt.Errorf("invalid image size (%v)", size)
+		return fmt.Errorf("%w: invalid image size (%v)", errBadRequest, size)
 	}
 
 	// Initialize the progress bar using passed size
@@ -131,13 +130,13 @@ func parseContentRange(val string) (int64, error) {
 	e := strings.Split(val, " ")
 
 	if !strings.EqualFold(e[0], "bytes") {
-		return 0, errors.New("unexpected/malformed value")
+		return 0, errUnexpectedMalformedValue
 	}
 
 	rangeElems := strings.Split(e[1], "/")
 
 	if len(rangeElems) != 2 {
-		return 0, errors.New("unexpected/malformed value")
+		return 0, errUnexpectedMalformedValue
 	}
 
 	return strconv.ParseInt(rangeElems[1], 10, 0)

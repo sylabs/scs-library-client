@@ -1,4 +1,4 @@
-// Copyright (c) 2018, Sylabs Inc. All rights reserved.
+// Copyright (c) 2018-2023, Sylabs Inc. All rights reserved.
 // This software is licensed under a 3-clause BSD license. Please consult the
 // LICENSE.md file distributed with the sources of this project regarding your
 // rights to use or distribute this software.
@@ -41,11 +41,11 @@ func (c *Client) Search(ctx context.Context, args map[string]string) (*SearchRes
 	// "value" is minimally required in "args"
 	value, ok := args["value"]
 	if !ok {
-		return nil, fmt.Errorf("search query ('value') must be specified")
+		return nil, errQueryValueMustBeSpecified
 	}
 
 	if len(value) < 3 {
-		return nil, fmt.Errorf("bad query '%s'. You must search for at least 3 characters", value)
+		return nil, fmt.Errorf("%w: bad query '%s'. You must search for at least 3 characters", errBadRequest, value)
 	}
 
 	v := url.Values{}
@@ -60,7 +60,7 @@ func (c *Client) Search(ctx context.Context, args map[string]string) (*SearchRes
 
 	var res SearchResponse
 	if err := json.Unmarshal(resJSON, &res); err != nil {
-		return nil, fmt.Errorf("error decoding results: %v", err)
+		return nil, fmt.Errorf("error decoding results: %w", err)
 	}
 
 	return &res.Data, nil

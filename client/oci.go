@@ -88,7 +88,7 @@ func (c *Client) ociRegistryAuth(ctx context.Context, name string, accessTypes [
 
 	endpoint, err := url.Parse(ociArtifactSpec.RegistryURI)
 	if err != nil {
-		return nil, nil, "", fmt.Errorf("malformed OCI registry URI %v: %v", ociArtifactSpec.RegistryURI, err)
+		return nil, nil, "", fmt.Errorf("malformed OCI registry URI %v: %w", ociArtifactSpec.RegistryURI, err)
 	}
 	return endpoint, &bearerTokenCredentials{authToken: ociArtifactSpec.Token}, name, nil
 }
@@ -150,8 +150,6 @@ type ociRegistry struct {
 	logger     log.Logger
 }
 
-var errArchNotSpecified = errors.New("architecture not specified")
-
 func (r *ociRegistry) getManifestFromIndex(idx v1.Index, arch string) (digest.Digest, error) {
 	// If arch not supplied, return single manifest or error.
 	if arch == "" {
@@ -176,7 +174,7 @@ func (r *ociRegistry) getManifestFromIndex(idx v1.Index, arch string) (digest.Di
 	}
 
 	// If we make it here, no matching OS/architecture was found.
-	return "", fmt.Errorf("no matching OS/architecture (%v) found", arch)
+	return "", fmt.Errorf("%w: no matching OS/architecture (%v) found", errOCIRegistry, arch)
 }
 
 func (r *ociRegistry) getImageManifest(ctx context.Context, creds credentials, name, tag, arch string) (digest.Digest, v1.Manifest, error) {
@@ -200,12 +198,12 @@ func (r *ociRegistry) getImageDetails(ctx context.Context, creds credentials, na
 	}
 
 	if got, want := m.Config.MediaType, mediaTypeSIFConfig; got != want {
-		return v1.Descriptor{}, fmt.Errorf("unexpected media type error (got %v, want %v)", got, want)
+		return v1.Descriptor{}, fmt.Errorf("%w: unexpected media type error (got %v, want %v)", errOCIRegistry, got, want)
 	}
 
 	// There should always be exactly one layer (the image blob).
 	if n := len(m.Layers); n != 1 {
-		return v1.Descriptor{}, fmt.Errorf("unexpected # of layers: %v", n)
+		return v1.Descriptor{}, fmt.Errorf("%w: unexpected # of layers: %v", errOCIRegistry, n)
 	}
 
 	// If architecture was supplied, ensure the image config matches.
@@ -334,8 +332,6 @@ func parsePairs(value string) map[string]string {
 	return m
 }
 
-var errInvalidAuthHeader = errors.New("invalid auth header")
-
 type authHeader struct {
 	at      authType
 	realm   string
@@ -428,8 +424,6 @@ func withHTTPClient(client *http.Client) modifyRequestOption {
 	}
 }
 
-var errResetHTTPBody = errors.New("unable to reset HTTP request body")
-
 func (r *ociRegistry) doRequestWithCredentials(req *http.Request, creds credentials, opts ...modifyRequestOption) (*http.Response, error) {
 	opts = append(opts,
 		withUserAgent(r.userAgent),
@@ -453,7 +447,7 @@ func (r *ociRegistry) doRequestWithCredentials(req *http.Request, creds credenti
 			return nil, ErrUnauthorized
 		}
 
-		return nil, fmt.Errorf("unexpected http status %v", res.StatusCode)
+		return nil, fmt.Errorf("%w: unexpected http status %v", errHTTP, res.StatusCode)
 	}
 
 	return res, nil
@@ -502,7 +496,7 @@ func (r *ociRegistry) doRequest(req *http.Request, creds credentials, opts ...mo
 			return nil, ErrUnauthorized
 		}
 
-		return nil, fmt.Errorf("unexpected http status %v", code)
+		return nil, fmt.Errorf("%w: unexpected http status %v", errHTTP, code)
 	}
 
 	return res, nil
@@ -587,8 +581,6 @@ func (r *ociRegistry) downloadBlob(ctx context.Context, creds credentials, name 
 	return io.Copy(w, res.Body)
 }
 
-var errArchitectureNotPresent = errors.New("architecture not present")
-
 // validateImageConfig validates ic, and returns an error when ic is invalid.
 func validateImageConfig(ic imageConfig) error {
 	if ic.Architecture == "" {
@@ -616,8 +608,6 @@ func (e *unexpectedArchitectureError) Is(target error) bool {
 		(e.want == t.want || t.want == "")
 }
 
-var errDigestNotVerified = errors.New("digest not verified")
-
 func (r *ociRegistry) getImageConfig(ctx context.Context, creds credentials, name string, d digest.Digest) (imageConfig, error) {
 	var b bytes.Buffer
 	if _, err := r.downloadBlob(ctx, creds, name, d, "", &b); err != nil {
@@ -639,8 +629,6 @@ func (r *ociRegistry) getImageConfig(ctx context.Context, creds credentials, nam
 
 	return ic, nil
 }
-
-var errOCIDownloadNotSupported = errors.New("not supported")
 
 // newOCIRegistry returns *ociRegistry, credentials for that registry, and the (optionally) remapped image name
 func (c *Client) newOCIRegistry(ctx context.Context, name string, accessTypes []accessType) (*ociRegistry, *bearerTokenCredentials, string, error) {
@@ -747,7 +735,7 @@ func (c *Client) ociUploadImage(ctx context.Context, r io.Reader, size int64, na
 		id = imageDigest
 
 		if _, err := io.Copy(sifHeader, io.LimitReader(r, sifHeaderSize)); err != nil {
-			return fmt.Errorf("error reading local SIF file header: %v", err)
+			return fmt.Errorf("error reading local SIF file header: %w", err)
 		}
 	}
 
@@ -785,7 +773,7 @@ func (c *Client) ociUploadImage(ctx context.Context, r io.Reader, size int64, na
 		c.Logger.Logf("Tag: %v", ref)
 
 		if _, err := reg.uploadManifest(ctx, creds, name, ref, idx, v1.MediaTypeImageIndex); err != nil {
-			return fmt.Errorf("error uploading index")
+			return fmt.Errorf("error uploading index: %w", err)
 		}
 	}
 
@@ -797,7 +785,7 @@ func (r *ociRegistry) existingImageBlob(ctx context.Context, creds credentials, 
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodHead, u.String(), nil)
 	if err != nil {
-		return false, fmt.Errorf("error checking for existing layer: %v", err)
+		return false, fmt.Errorf("error checking for existing layer: %w", err)
 	}
 
 	res, err := r.doRequest(req, creds)
@@ -923,7 +911,7 @@ func (r *ociRegistry) openUploadBlobSession(ctx context.Context, creds credentia
 	// Strip prefix from Authorization header
 	parts := strings.SplitN(req.Header.Get("Authorization"), " ", 2)
 	if len(parts) != 2 {
-		return nil, nil, fmt.Errorf("malformed Authorization header (%v)", req.Header.Get("Authorization"))
+		return nil, nil, fmt.Errorf("%w malformed Authorization header (%v)", errHTTP, req.Header.Get("Authorization"))
 	}
 
 	return u, &bearerTokenCredentials{authToken: parts[1]}, nil
