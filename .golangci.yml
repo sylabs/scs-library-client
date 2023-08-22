@@ -6,7 +6,6 @@ linters:
     - containedctx
     - contextcheck
     - decorder
-    - depguard
     - dogsled
     - errcheck
     - errchkjson
