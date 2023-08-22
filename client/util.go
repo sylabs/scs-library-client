@@ -54,10 +54,13 @@ func IsImageHash(refPart string) bool {
 	return match
 }
 
-func ParseLibraryPath(libraryRef string) (entity string, collection string, container string, tags []string) {
+func ParseLibraryPath(libraryRef string) (string, string, string, []string) {
 	libraryRef = strings.TrimPrefix(libraryRef, "library://")
 
 	refParts := strings.Split(libraryRef, "/")
+
+	var entity, collection, container string
+	var tags []string
 
 	switch len(refParts) {
 	case 3:
@@ -74,11 +77,7 @@ func ParseLibraryPath(libraryRef string) (entity string, collection string, cont
 		container = refParts[0]
 	default:
 		// malformed libraryRef; must conform to "library://entity/collection/container[:tag[,tag]...]"
-		entity = ""
-		collection = ""
-		container = ""
-		tags = []string{}
-		return
+		return "", "", "", []string{}
 	}
 
 	if strings.Contains(container, ":") {
