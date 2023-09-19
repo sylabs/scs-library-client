@@ -8,7 +8,7 @@ require (
 	github.com/opencontainers/go-digest v1.0.0
 	github.com/opencontainers/image-spec v1.1.0-rc5
 	github.com/sylabs/json-resp v0.9.0
-	github.com/sylabs/sif/v2 v2.13.0
+	github.com/sylabs/sif/v2 v2.14.0
 	golang.org/x/sync v0.3.0
 )
 
