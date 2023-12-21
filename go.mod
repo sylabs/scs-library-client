@@ -8,11 +8,11 @@ require (
 	github.com/opencontainers/go-digest v1.0.0
 	github.com/opencontainers/image-spec v1.1.0-rc5
 	github.com/sylabs/json-resp v0.9.0
-	github.com/sylabs/sif/v2 v2.15.0
+	github.com/sylabs/sif/v2 v2.15.1
 	golang.org/x/sync v0.5.0
 )
 
 require (
-	github.com/google/go-containerregistry v0.16.1 // indirect
-	github.com/google/uuid v1.3.1 // indirect
+	github.com/google/go-containerregistry v0.17.0 // indirect
+	github.com/google/uuid v1.5.0 // indirect
 )
