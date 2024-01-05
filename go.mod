@@ -9,7 +9,7 @@ require (
 	github.com/opencontainers/image-spec v1.1.0-rc5
 	github.com/sylabs/json-resp v0.9.0
 	github.com/sylabs/sif/v2 v2.15.1
-	golang.org/x/sync v0.5.0
+	golang.org/x/sync v0.6.0
 )
 
 require (
