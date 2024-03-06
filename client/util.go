@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2022, Sylabs Inc. All rights reserved.
+// Copyright (c) 2018-2024, Sylabs Inc. All rights reserved.
 // This software is licensed under a 3-clause BSD license. Please consult the
 // LICENSE.md file distributed with the sources of this project regarding your
 // rights to use or distribute this software.
@@ -74,11 +74,7 @@ func ParseLibraryPath(libraryRef string) (entity string, collection string, cont
 		container = refParts[0]
 	default:
 		// malformed libraryRef; must conform to "library://entity/collection/container[:tag[,tag]...]"
-		entity = ""
-		collection = ""
-		container = ""
-		tags = []string{}
-		return
+		return "", "", "", []string{}
 	}
 
 	if strings.Contains(container, ":") {

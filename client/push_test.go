@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2023, Sylabs Inc. All rights reserved.
+// Copyright (c) 2018-2024, Sylabs Inc. All rights reserved.
 // This software is licensed under a 3-clause BSD license. Please consult the
 // LICENSE.md file distributed with the sources of this project regarding your
 // rights to use or distribute this software.
@@ -182,7 +182,7 @@ func (m *v2ImageUploadMockService) MockImageFileCompleteEndpoint(w http.Response
 func mockS3Server(t *testing.T, statusCode int) *httptest.Server {
 	t.Helper()
 
-	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		if statusCode != http.StatusOK {
 			w.WriteHeader(statusCode)
 			return
@@ -244,11 +244,11 @@ func Test_UploadImageBadPath(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			h := http.NewServeMux()
-			h.HandleFunc("/v1/imagefile/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			h.HandleFunc("/v1/imagefile/", http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 				commonHandler(t, http.StatusOK, w)
 			}))
 
-			h.HandleFunc("/v1/tags/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			h.HandleFunc("/v1/tags/", http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 				resp := TagMap{"test": "testValue"}
 
 				if err := json.NewEncoder(w).Encode(&resp); err != nil {
@@ -256,7 +256,7 @@ func Test_UploadImageBadPath(t *testing.T) {
 				}
 			}))
 
-			h.HandleFunc("/v1/entities/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			h.HandleFunc("/v1/entities/", http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 				uploadImageHelperHandler(t, http.StatusOK, w)
 				resp := Entity{ID: "testID"}
 
@@ -265,7 +265,7 @@ func Test_UploadImageBadPath(t *testing.T) {
 				}
 			}))
 
-			h.HandleFunc("/v1/collections/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			h.HandleFunc("/v1/collections/", http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 				uploadImageHelperHandler(t, http.StatusOK, w)
 				resp := Collection{
 					ID: "testID",
@@ -275,7 +275,7 @@ func Test_UploadImageBadPath(t *testing.T) {
 				}
 			}))
 
-			h.HandleFunc("/v1/containers/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			h.HandleFunc("/v1/containers/", http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 				uploadImageHelperHandler(t, http.StatusOK, w)
 
 				resp := Container{ID: "test"}
@@ -285,7 +285,7 @@ func Test_UploadImageBadPath(t *testing.T) {
 				}
 			}))
 
-			h.HandleFunc("/v1/images/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			h.HandleFunc("/v1/images/", http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 				uploadImageHelperHandler(t, http.StatusOK, w)
 
 				commonHandler(t, http.StatusOK, w)
@@ -389,11 +389,11 @@ func Test_UploadImage(t *testing.T) {
 			defer s3Server.Close()
 
 			h := http.NewServeMux()
-			h.HandleFunc("/v1/imagefile/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			h.HandleFunc("/v1/imagefile/", http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 				commonHandler(t, tt.statusCode, w)
 			}))
 
-			h.HandleFunc("/v1/tags/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			h.HandleFunc("/v1/tags/", http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 				resp := TagMap{"test": "testValue"}
 
 				if err := json.NewEncoder(w).Encode(&resp); err != nil {
@@ -401,7 +401,7 @@ func Test_UploadImage(t *testing.T) {
 				}
 			}))
 
-			h.HandleFunc("/v1/entities/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			h.HandleFunc("/v1/entities/", http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 				uploadImageHelperHandler(t, tt.codes.entity, w)
 				resp := Entity{ID: "testID"}
 
@@ -410,7 +410,7 @@ func Test_UploadImage(t *testing.T) {
 				}
 			}))
 
-			h.HandleFunc("/v1/collections/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			h.HandleFunc("/v1/collections/", http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 				uploadImageHelperHandler(t, tt.codes.collection, w)
 				resp := Collection{
 					ID: "testID",
@@ -420,7 +420,7 @@ func Test_UploadImage(t *testing.T) {
 				}
 			}))
 
-			h.HandleFunc("/v1/containers/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			h.HandleFunc("/v1/containers/", http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 				uploadImageHelperHandler(t, tt.codes.container, w)
 
 				resp := Container{ID: "test"}
@@ -430,7 +430,7 @@ func Test_UploadImage(t *testing.T) {
 				}
 			}))
 
-			h.HandleFunc("/v1/images/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			h.HandleFunc("/v1/images/", http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 				uploadImageHelperHandler(t, tt.codes.image, w)
 
 				commonHandler(t, tt.statusCode, w)
@@ -472,7 +472,7 @@ func Test_postFileWrapper(t *testing.T) {
 	defer s3Server.Close()
 
 	h := http.NewServeMux()
-	h.HandleFunc("/v1/imagefile/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+	h.HandleFunc("/v1/imagefile/", http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
 
 	libraryServer := httptest.NewServer(h)
 	defer libraryServer.Close()
@@ -851,7 +851,7 @@ func Test_legacyPostFileV2URL(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			h := http.NewServeMux()
-			h.HandleFunc("/v2/imagefile/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			h.HandleFunc("/v2/imagefile/", http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 				commonHandler(t, http.StatusOK, w)
 
 				resp := UploadImageResponse{Data: UploadImage{UploadURL: tt.url}}
@@ -1060,7 +1060,7 @@ func Test_abortMultipartUpload(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			h := http.NewServeMux()
-			h.HandleFunc("/v2/imagefile/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			h.HandleFunc("/v2/imagefile/", http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 				uploadImageHelperHandler(t, tt.statusCode, w)
 			}))
 
