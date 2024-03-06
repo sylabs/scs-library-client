@@ -10,7 +10,7 @@ linters:
     - errcheck
     - errchkjson
     - gochecknoinits
-    - goconst
+#   - goconst
     - gocritic
     - gocyclo
     - goerr113
