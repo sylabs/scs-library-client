@@ -1,6 +1,6 @@
 module github.com/sylabs/scs-library-client/v2
 
-go 1.18
+go 1.21
 
 require (
 	github.com/blang/semver/v4 v4.0.0
