@@ -121,7 +121,7 @@ func (m *v2ImageUploadMockService) Run() {
 	mux.HandleFunc("/v2/imagefile/5cb9c34d7d960d82f5f5bc55/_multipart", m.MockImageFileMultipart)
 	mux.HandleFunc("/v2/imagefile/5cb9c34d7d960d82f5f5bc55/_multipart_abort", m.MockImageFileMultipartAbort)
 	mux.HandleFunc("/v2/imagefile/5cb9c34d7d960d82f5f5bc55/_multipart_complete", m.MockImageFileMultipartComplete)
-	mux.HandleFunc("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/", http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
 		log.Printf("Unhandled URL: %v", r.URL)
 	}))
 	m.httpServer = httptest.NewServer(mux)

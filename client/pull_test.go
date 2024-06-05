@@ -77,7 +77,7 @@ func mockLibraryServer(t *testing.T, sampleBytes []byte, multistream bool) *http
 
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("/version", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/version", http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(http.StatusOK)
 
@@ -87,7 +87,7 @@ func mockLibraryServer(t *testing.T, sampleBytes []byte, multistream bool) *http
 	}))
 
 	if multistream {
-		mux.HandleFunc("/v1/images/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mux.HandleFunc("/v1/images/", http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			w.Header().Set("Content-Type", "application/json; charset=utf-8")
 			w.WriteHeader(http.StatusOK)
 
@@ -124,12 +124,12 @@ func mockLibraryServer(t *testing.T, sampleBytes []byte, multistream bool) *http
 		}))
 	} else {
 		// single stream
-		mux.HandleFunc("/v1/imagefile/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mux.HandleFunc("/v1/imagefile/", http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			writeBlob(t, sampleBytes, 0, size-1, http.StatusOK, w)
 		}))
 	}
 
-	mux.HandleFunc("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/", http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
 		t.Fatalf("Unhandled HTTP request: method=[%v], path=[%v]", r.Method, r.URL.Path)
 	}))
 
