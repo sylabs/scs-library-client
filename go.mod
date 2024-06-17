@@ -7,7 +7,7 @@ require (
 	github.com/go-log/log v0.2.0
 	github.com/opencontainers/go-digest v1.0.0
 	github.com/opencontainers/image-spec v1.1.0
-	github.com/sylabs/json-resp v0.9.2
+	github.com/sylabs/json-resp v0.9.3
 	github.com/sylabs/sif/v2 v2.16.0
 	golang.org/x/sync v0.7.0
 )
