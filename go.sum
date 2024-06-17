@@ -18,8 +18,8 @@ github.com/sebdah/goldie/v2 v2.5.3 h1:9ES/mNN+HNUbNWpVAlrzuZ7jE+Nrczbj8uFRjM7624
 github.com/sebdah/goldie/v2 v2.5.3/go.mod h1:oZ9fp0+se1eapSRjfYbsV/0Hqhbuu3bJVvKI/NNtssI=
 github.com/sergi/go-diff v1.2.0 h1:XU+rvMAioB0UC3q1MFrIQy4Vo5/4VsRDQQXHsEya6xQ=
 github.com/sergi/go-diff v1.2.0/go.mod h1:STckp+ISIX8hZLjrqAeVduY0gWCT9IjLuqbuNXdaHfM=
-github.com/sylabs/json-resp v0.9.2 h1:ipZ//OmewVSvWFt7Vz2Zr1eATWkPtHPbPpjUCyCzaII=
-github.com/sylabs/json-resp v0.9.2/go.mod h1:Q9X4wRlZNPv3x76KaL8vTCBO4aC/DP2gh13xdtEqd1g=
+github.com/sylabs/json-resp v0.9.3 h1:9GuEmBb1ZHNhVlUEI1wzQSE4ol5avakmRnmeyXfmIk0=
+github.com/sylabs/json-resp v0.9.3/go.mod h1:Q9X4wRlZNPv3x76KaL8vTCBO4aC/DP2gh13xdtEqd1g=
 github.com/sylabs/sif/v2 v2.16.0 h1:2eqaBaQQsn5DZTzm3QZm0HupZQEjNXfxRnCmtyCihEU=
 github.com/sylabs/sif/v2 v2.16.0/go.mod h1:d5TxgD/mhMUU3kWLmZmWJQ99Wg0asaTP0bq3ezR1xpg=
 golang.org/x/sync v0.7.0 h1:YsImfSBoP9QPYL0xyKJPq0gcaJdG3rInoqxTWbfQu9M=
