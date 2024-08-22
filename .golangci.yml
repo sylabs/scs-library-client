@@ -13,7 +13,7 @@ linters:
 #   - goconst
     - gocritic
     - gocyclo
-    - goerr113
+    - err113
     - gofumpt
     - goimports
     - goprintffuncname
