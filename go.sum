@@ -22,5 +22,5 @@ github.com/sylabs/json-resp v0.9.4 h1:gFvnPdfrBUQgTAFKcxW8VOTfFdj/eOwBrwSG76BwiC
 github.com/sylabs/json-resp v0.9.4/go.mod h1:Q9X4wRlZNPv3x76KaL8vTCBO4aC/DP2gh13xdtEqd1g=
 github.com/sylabs/sif/v2 v2.21.1 h1:GZ0b5//AFAqJEChd8wHV/uSKx/l1iuGYwjR8nx+4wPI=
 github.com/sylabs/sif/v2 v2.21.1/go.mod h1:YoqEGQnb5x/ItV653bawXHZJOXQaEWpGwHsSD3YePJI=
-golang.org/x/sync v0.14.0 h1:woo0S4Yywslg6hp4eUFjTVOyKt0RookbpAHG4c1HmhQ=
-golang.org/x/sync v0.14.0/go.mod h1:1dzgHSNfp02xaA81J2MS99Qcpr2w7fw1gpm99rleRqA=
+golang.org/x/sync v0.15.0 h1:KWH3jNZsfyT6xfAfKiz6MRNmd46ByHDYaZ7KSkCtdW8=
+golang.org/x/sync v0.15.0/go.mod h1:1dzgHSNfp02xaA81J2MS99Qcpr2w7fw1gpm99rleRqA=
