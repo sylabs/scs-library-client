@@ -1,5 +1,6 @@
+version: "2"
 linters:
-  disable-all: true
+  default: none
   enable:
     - bidichk
     - bodyclose
@@ -7,17 +8,13 @@ linters:
     - contextcheck
     - decorder
     - dogsled
+    - err113
     - errcheck
     - errchkjson
     - gochecknoinits
-#   - goconst
     - gocritic
     - gocyclo
-    - err113
-    - gofumpt
-    - goimports
     - goprintffuncname
-    - gosimple
     - govet
     - grouper
     - ineffassign
@@ -28,7 +25,21 @@ linters:
     - prealloc
     - revive
     - staticcheck
-    - stylecheck
-    - tenv
-    - typecheck
     - unused
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    paths:
+      - api$
+formatters:
+  enable:
+    - gofumpt
+    - goimports
+  exclusions:
+    generated: lax
+    paths:
+      - api$
