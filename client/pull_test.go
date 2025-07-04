@@ -233,7 +233,7 @@ func mockLibraryServer(t *testing.T, sampleBytes []byte, size int64, multistream
 			w.Header().Set("Content-Type", "application/json; charset=utf-8")
 			w.WriteHeader(http.StatusOK)
 
-			if _, err := w.Write([]byte(fmt.Sprintf("{\"data\": {\"size\": %v}}", size))); err != nil {
+			if _, err := fmt.Fprintf(w, "{\"data\": {\"size\": %v}}", size); err != nil {
 				t.Fatalf("error writing /v1/images response: %v", err)
 			}
 
