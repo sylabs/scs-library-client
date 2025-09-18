@@ -10,10 +10,7 @@ executors:
   golangci-lint:
     docker:
       - image: golangci/golangci-lint:v2.2
-  golang-previous:
-    docker:
-      - image: golang:1.23
-  golang-latest:
+  golang:
     docker:
       - image: golang:1.24
 
@@ -38,7 +35,7 @@ jobs:
           command: golangci-lint run
 
   check-go-mod:
-    executor: golang-latest
+    executor: golang
     steps:
       - checkout
       - run:
@@ -49,10 +46,7 @@ jobs:
           command: git diff --exit-code -- go.mod go.sum
 
   build-source:
-    parameters:
-      e:
-        type: executor
-    executor: << parameters.e >>
+    executor: golang
     steps:
       - checkout
       - run:
@@ -60,10 +54,7 @@ jobs:
           command: go build ./...
 
   unit-test:
-    parameters:
-      e:
-        type: executor
-    executor: << parameters.e >>
+    executor: golang
     steps:
       - checkout
       - run:
@@ -80,11 +71,5 @@ workflows:
       - lint-markdown
       - lint-source
       - check-go-mod
-      - build-source:
-          matrix:
-            parameters:
-              e: ["golang-previous", "golang-latest"]
-      - unit-test:
-          matrix:
-            parameters:
-              e: ["golang-previous", "golang-latest"]
+      - build-source
+      - unit-test
