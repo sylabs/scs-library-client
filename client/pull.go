@@ -27,6 +27,7 @@ type Downloader struct {
 
 	// BufferSize specifies buffer size used for multi-part downloader routine.
 	// Default is 32 KiB.
+
 	// Deprecated: this value will be ignored. It is retained for backwards compatibility.
 	BufferSize int64
 }
